@@ -28,8 +28,7 @@ Tap the Continue button in the VSCode editor to start the service
 to bring up a chat window. The chat window will be displayed in the
 VSCode editor.
 
-![alt text]("static/image.png")
+![Continue Chat](./static/image.png)
 
-Follow the standard 
 
 
