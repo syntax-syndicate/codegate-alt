@@ -151,9 +151,6 @@ check_command() {
     fi
 }
 
-# Rest of the Docker setup remains the same...
-[Previous Docker setup code continues unchanged...]
-
 # Check if Docker is installed
 echo "Checking if Docker is installed..."
 check_command "docker"
