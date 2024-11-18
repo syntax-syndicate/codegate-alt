@@ -50,7 +50,8 @@ NEW_TAB_AUTOCOMPLETE_MODEL=$(cat <<EOF
     "title": "stacklok-hosted",
     "provider": "vllm",
     "model": "Qwen/Qwen2.5-Coder-14B-Instruct",
-    "apiKey": ""
+    "apiKey": "",
+    "apiBase": "http://localhost:8989/vllm"
 }
 EOF
 )
