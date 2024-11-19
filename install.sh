@@ -187,6 +187,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     image: ghcr.io/stacklok/codegate:latest
+    pull_policy: always
     ports:
       - 8989:8989
     extra_hosts:
