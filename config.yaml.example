@@ -1,0 +1,17 @@
+# Codegate Example Configuration
+
+# Network settings
+port: 8989           # Port to listen on (1-65535)
+host: "127.0.0.1"      # Host to bind to (use 0.0.0.0 for all interfaces)
+
+# Logging configuration
+log_level: "INFO"    # One of: ERROR, WARNING, INFO, DEBUG
+log_format: "JSON"   # One of: JSON, TEXT
+
+# Note: This configuration can be overridden by:
+# 1. CLI arguments (--port, --host, --log-level, --log-format)
+# 2. Environment variables:
+#    - CODEGATE_APP_PORT
+#    - CODEGATE_APP_HOST
+#    - CODEGATE_APP_LOG_LEVEL
+#    - CODEGATE_LOG_FORMAT

@@ -1,4 +1,13 @@
-# CodeGate
+# Codegate
+
+A configurable Generative AI gateway, protecting developers from the dangers of AI.
+
+## Features
+
+- Secrets exflitration prevention
+- Secure Coding recommendations
+- Preventing AI from recommending deprecated and / or malicious libraries
+
 
 ### Installation
 
@@ -30,5 +39,70 @@ VSCode editor.
 
 ![Continue Chat](./static/image.png)
 
+## Usage
 
+### Basic Usage (Manual)
 
+Start the server with default settings:
+
+```bash
+codegate serve
+```
+
+### Custom Configuration
+
+Start with custom settings:
+
+```bash
+codegate serve --port 8989 --host 127.0.0.1 --log-level DEBUG
+```
+
+### Configuration File
+
+Use a YAML configuration file:
+
+```bash
+codegate serve --config my_config.yaml
+```
+
+Example `config.yaml`:
+
+```yaml
+port: 8989
+host: "127.0.0.1"
+log_level: "DEBUG"
+```
+
+### Environment Variables
+
+Configure using environment variables:
+
+```bash
+export CODEGATE_APP_PORT=8989
+export CODEGATE_APP_HOST=127.0.0.1
+export CODEGATE_APP_LOG_LEVEL=DEBUG
+codegate serve
+```
+
+## Development
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/stacklok/codegate.git
+cd codegate
+
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -e ".[dev]"
+```
+
+### Testing
+
+```bash
+pytest
+```
