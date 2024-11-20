@@ -1,4 +1,4 @@
-"""Codegate - A configurable service gateway."""
+"""Codegate - A Generative AI security gateway."""
 
 from importlib import metadata
 

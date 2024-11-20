@@ -22,7 +22,7 @@ When using JSON format (default), log entries include:
   "module": "MODULE_NAME",
   "message": "Log message",
   "extra": {
-    // Additional fields
+    // Additional fields as you desire
   }
 }
 ```
