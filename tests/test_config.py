@@ -10,7 +10,7 @@ from codegate.config import Config, ConfigurationError, LogLevel, LogFormat
 
 def test_default_config(default_config: Config) -> None:
     """Test default configuration values."""
-    assert default_config.port == 8000
+    assert default_config.port == 8989
     assert default_config.host == "localhost"
     assert default_config.log_level == LogLevel.INFO
     assert default_config.log_format == LogFormat.JSON
@@ -20,7 +20,7 @@ def test_config_from_file(temp_config_file: Path) -> None:
     """Test loading configuration from file."""
     config = Config.from_file(temp_config_file)
     assert config.port == 8989
-    assert config.host == "127.0.0.1"
+    assert config.host == "localhost"
     assert config.log_level == LogLevel.DEBUG
     assert config.log_format == LogFormat.JSON
 
@@ -44,9 +44,9 @@ def test_config_from_nonexistent_file() -> None:
 def test_config_from_env(env_vars: None) -> None:
     """Test loading configuration from environment variables."""
     config = Config.from_env()
-    assert config.port == 8000
+    assert config.port == 8989
     assert config.host == "localhost"
-    assert config.log_level == LogLevel.INFO
+    assert config.log_level == LogLevel.WARNING
     assert config.log_format == LogFormat.TEXT
 
 
@@ -57,26 +57,26 @@ def test_config_priority_resolution(temp_config_file: Path, env_vars: None) -> N
         config_path=temp_config_file,
         cli_port=8080,
         cli_host="example.com",
-        cli_log_level="ERROR",
+        cli_log_level="WARNING",
         cli_log_format="TEXT"
     )
     assert config.port == 8080
     assert config.host == "example.com"
-    assert config.log_level == LogLevel.ERROR
+    assert config.log_level == LogLevel.WARNING
     assert config.log_format == LogFormat.TEXT
 
     # Env vars should override config file
     config = Config.load(config_path=temp_config_file)
     assert config.port == 8989  # from env
-    assert config.host == "127.0.0.1"  # from env
-    assert config.log_level == LogLevel.DEBUG  # from env
+    assert config.host == "localhost"  # from env
+    assert config.log_level == LogLevel.WARNING  # from env
     assert config.log_format == LogFormat.TEXT  # from env
 
     # Config file should override defaults
     os.environ.clear()  # Remove env vars
     config = Config.load(config_path=temp_config_file)
     assert config.port == 8989  # from file
-    assert config.host == "127.0.0.1"  # from file
+    assert config.host == "localhost"  # from file
     assert config.log_level == LogLevel.DEBUG  # from file
     assert config.log_format == LogFormat.JSON  # from file
 

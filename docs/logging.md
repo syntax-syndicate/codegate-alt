@@ -64,8 +64,8 @@ logger.warning("This is a warning message")
 
 ```python
 logger.info("Server starting", extra={
-    "host": "localhost",
-    "port": 8000,
+    "host": "0",
+    "port": 8989,
     "environment": "production"
 })
 ```

@@ -2,7 +2,7 @@
 
 # Network settings
 port: 8989           # Port to listen on (1-65535)
-host: "127.0.0.1"      # Host to bind to (use 0.0.0.0 for all interfaces)
+host: "localhost"      # Host to bind to (use localhost for all interfaces)
 
 # Logging configuration
 log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG

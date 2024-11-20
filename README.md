@@ -54,7 +54,7 @@ codegate serve
 Start with custom settings:
 
 ```bash
-codegate serve --port 8989 --host 127.0.0.1 --log-level DEBUG
+codegate serve --port 8989 --host localhost --log-level DEBUG
 ```
 
 ### Configuration File
@@ -69,7 +69,7 @@ Example `config.yaml`:
 
 ```yaml
 port: 8989
-host: "127.0.0.1"
+host: "localhost"
 log_level: "DEBUG"
 ```
 
@@ -79,7 +79,7 @@ Configure using environment variables:
 
 ```bash
 export CODEGATE_APP_PORT=8989
-export CODEGATE_APP_HOST=127.0.0.1
+export CODEGATE_APP_HOST=localhost
 export CODEGATE_APP_LOG_LEVEL=DEBUG
 codegate serve
 ```

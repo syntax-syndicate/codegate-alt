@@ -30,7 +30,7 @@ def cli() -> None:
     type=int,
     default=None,
     callback=validate_port,
-    help="Port to listen on (default: 8000)",
+    help="Port to listen on (default: 8989)",
 )
 @click.option(
     "--host",

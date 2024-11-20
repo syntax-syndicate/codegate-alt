@@ -42,7 +42,7 @@ def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None
             "Starting server",
             extra={
                 "host": "localhost",
-                "port": 8000,
+                "port": 8989,
                 "log_level": "INFO",
                 "log_format": "JSON",
             }
@@ -58,7 +58,7 @@ def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
             [
                 "serve",
                 "--port", "8989",
-                "--host", "127.0.0.1",
+                "--host", "localhost",
                 "--log-level", "DEBUG",
                 "--log-format", "TEXT"
             ]
@@ -69,7 +69,7 @@ def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
         logger_instance.info.assert_any_call(
             "Starting server",
             extra={
-                "host": "127.0.0.1",
+                "host": "localhost",
                 "port": 8989,
                 "log_level": "DEBUG",
                 "log_format": "TEXT",
@@ -106,7 +106,7 @@ def test_serve_with_config_file(cli_runner: CliRunner, mock_logging: Any, temp_c
         logger_instance.info.assert_any_call(
             "Starting server",
             extra={
-                "host": "127.0.0.1",
+                "host": "localhost",
                 "port": 8989,
                 "log_level": "DEBUG",
                 "log_format": "JSON",

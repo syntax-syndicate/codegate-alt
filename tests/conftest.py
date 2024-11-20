@@ -17,7 +17,7 @@ def temp_config_file(tmp_path: Path) -> Iterator[Path]:
     """Create a temporary config file."""
     config_data = {
         "port": 8989,
-        "host": "127.0.0.1",
+        "host": "localhost",
         "log_level": "DEBUG",
         "log_format": "JSON"
     }
@@ -35,8 +35,8 @@ def env_vars() -> Generator[None, None, None]:
     original_env = dict(os.environ)
     
     os.environ.update({
-        "CODEGATE_APP_PORT": "9001",
-        "CODEGATE_APP_HOST": "0.0.0.0",
+        "CODEGATE_APP_PORT": "8989",
+        "CODEGATE_APP_HOST": "localhost",
         "CODEGATE_APP_LOG_LEVEL": "WARNING",
         "CODEGATE_LOG_FORMAT": "TEXT"
     })

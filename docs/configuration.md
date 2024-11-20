@@ -11,7 +11,7 @@ The configuration system in Codegate is managed through the `Config` class in `c
 
 ## Default Configuration Values
 
-- Port: 8000
+- Port: 8989
 - Host: "localhost"
 - Log Level: "INFO"
 - Log Format: "JSON"

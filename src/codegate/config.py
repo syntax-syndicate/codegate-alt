@@ -57,7 +57,7 @@ class ConfigurationError(Exception):
 class Config:
     """Application configuration with priority resolution."""
 
-    port: int = 8000
+    port: int = 8989
     host: str = "localhost"
     log_level: LogLevel = LogLevel.INFO
     log_format: LogFormat = LogFormat.JSON
@@ -120,12 +120,12 @@ class Config:
         try:
             config = cls()
 
-            if "APP_PORT" in os.environ:
-                config.port = int(os.environ["APP_PORT"])
-            if "APP_HOST" in os.environ:
-                config.host = os.environ["APP_HOST"]
-            if "APP_LOG_LEVEL" in os.environ:
-                config.log_level = LogLevel(os.environ["APP_LOG_LEVEL"])
+            if "CODEGATE_APP_PORT" in os.environ:
+                config.port = int(os.environ["CODEGATE_APP_PORT"])
+            if "CODEGATE_APP_HOST" in os.environ:
+                config.host = os.environ["CODEGATE_APP_HOST"]
+            if "CODEGATE_APP_LOG_LEVEL" in os.environ:
+                config.log_level = LogLevel(os.environ["CODEGATE_APP_LOG_LEVEL"])
             if "CODEGATE_LOG_FORMAT" in os.environ:
                 config.log_format = LogFormat(os.environ["CODEGATE_LOG_FORMAT"])
 
@@ -177,11 +177,11 @@ class Config:
 
         # Override with environment variables
         env_config = cls.from_env()
-        if "APP_PORT" in os.environ:
+        if "CODEGATE_APP_PORT" in os.environ:
             config.port = env_config.port
-        if "APP_HOST" in os.environ:
+        if "CODEGATE_APP_HOST" in os.environ:
             config.host = env_config.host
-        if "APP_LOG_LEVEL" in os.environ:
+        if "CODEGATE_APP_LOG_LEVEL" in os.environ:
             config.log_level = env_config.log_level
         if "CODEGATE_LOG_FORMAT" in os.environ:
             config.log_format = env_config.log_format

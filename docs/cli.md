@@ -21,7 +21,7 @@ codegate serve [OPTIONS]
 
 #### Options
 
-- `--port INTEGER`: Port to listen on (default: 8000)
+- `--port INTEGER`: Port to listen on (default: 8989)
   - Must be between 1 and 65535
   - Overrides configuration file and environment variables
   
@@ -61,7 +61,7 @@ codegate serve
 
 Start server on specific port and host:
 ```bash
-codegate serve --port 8989 --host 127.0.0.1
+codegate serve --port 8989 --host localhost
 ```
 
 Start server with custom logging:
