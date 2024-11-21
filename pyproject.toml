@@ -1,0 +1,41 @@
+[project]
+name = "codegate"
+version = "0.1.0"
+description = "Generative AI CodeGen security gateway"
+readme = "README.md"
+dependencies = [
+    "click>=8.1.0",
+    "PyYAML>=6.0.1",
+    "fastapi>=0.115.5",
+    "uvicorn>=0.32.1",
+]
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.7.0",
+    "ruff>=0.0.284",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.ruff]
+select = ["E", "F", "I", "N", "W"]
+line-length = 88
+target-version = "py310"
+fix = true
+
+[project.scripts]
+codegate = "codegate.cli:main"
+
+[tool.pytest.ini_options]
+addopts = "-v --cov=codegate --cov-report=term-missing"
+testpaths = ["tests"]
