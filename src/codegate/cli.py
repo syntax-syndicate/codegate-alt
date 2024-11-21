@@ -7,7 +7,7 @@ from typing import Optional
 
 import click
 
-from .config import Config, ConfigurationError, LogLevel, LogFormat
+from .config import Config, ConfigurationError, LogFormat, LogLevel
 from .logging import setup_logging
 
 
@@ -64,7 +64,7 @@ def serve(
     config: Optional[Path],
 ) -> None:
     """Start the codegate server."""
-   
+
     try:
         # Load configuration with priority resolution
         cfg = Config.load(
@@ -92,7 +92,7 @@ def serve(
                 "log_format": cfg.log_format.value,
             }
         )
-        
+
         # TODO: Jakub Implement actual server logic here
         logger.info("Server started successfully")
 

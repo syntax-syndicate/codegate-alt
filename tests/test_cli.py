@@ -6,9 +6,8 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
-
 from codegate.cli import cli
-from codegate.config import LogLevel, LogFormat
+from codegate.config import LogFormat, LogLevel
 
 
 @pytest.fixture
@@ -35,7 +34,7 @@ def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None
     with patch("logging.getLogger") as mock_logger:
         logger_instance = mock_logger.return_value
         result = cli_runner.invoke(cli, ["serve"])
-        
+
         assert result.exit_code == 0
         mock_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
         logger_instance.info.assert_any_call(
@@ -63,7 +62,7 @@ def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
                 "--log-format", "TEXT"
             ]
         )
-        
+
         assert result.exit_code == 0
         mock_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.TEXT)
         logger_instance.info.assert_any_call(
@@ -95,12 +94,16 @@ def test_serve_invalid_log_level(cli_runner: CliRunner) -> None:
     assert "Invalid value for '--log-level'" in result.output
 
 
-def test_serve_with_config_file(cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path) -> None:
+def test_serve_with_config_file(
+    cli_runner: CliRunner,
+    mock_logging: Any,
+    temp_config_file: Path
+) -> None:
     """Test serve command with config file."""
     with patch("logging.getLogger") as mock_logger:
         logger_instance = mock_logger.return_value
         result = cli_runner.invoke(cli, ["serve", "--config", str(temp_config_file)])
-        
+
         assert result.exit_code == 0
         mock_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.JSON)
         logger_instance.info.assert_any_call(
@@ -140,7 +143,7 @@ def test_serve_priority_resolution(
                 "--log-format", "TEXT"
             ]
         )
-        
+
         assert result.exit_code == 0
         mock_logging.assert_called_once_with(LogLevel.ERROR, LogFormat.TEXT)
         logger_instance.info.assert_any_call(

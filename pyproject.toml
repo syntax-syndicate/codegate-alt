@@ -16,7 +16,10 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "black>=23.7.0",
-    "ruff>=0.0.284",
+    "ruff>=0.7.4",
+    "bandit>=1.7.10",
+    "build>=1.0.0",
+    "wheel>=0.40.0",
 ]
 
 [build-system]
@@ -28,10 +31,12 @@ line-length = 88
 target-version = ["py310"]
 
 [tool.ruff]
-select = ["E", "F", "I", "N", "W"]
 line-length = 88
 target-version = "py310"
 fix = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
 
 [project.scripts]
 codegate = "codegate.cli:main"

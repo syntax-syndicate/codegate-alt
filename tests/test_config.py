@@ -2,10 +2,10 @@
 
 import os
 from pathlib import Path
+
 import pytest
 import yaml
-
-from codegate.config import Config, ConfigurationError, LogLevel, LogFormat
+from codegate.config import Config, ConfigurationError, LogFormat, LogLevel
 
 
 def test_default_config(default_config: Config) -> None:
@@ -30,7 +30,7 @@ def test_config_from_invalid_file(tmp_path: Path) -> None:
     invalid_file = tmp_path / "invalid.yaml"
     with open(invalid_file, "w") as f:
         f.write("invalid: yaml: content")
-    
+
     with pytest.raises(ConfigurationError):
         Config.from_file(invalid_file)
 
@@ -106,13 +106,13 @@ def test_log_format_case_insensitive(tmp_path: Path) -> None:
     config_file = tmp_path / "config.yaml"
     with open(config_file, "w") as f:
         yaml.dump({"log_format": "json"}, f)
-    
+
     config = Config.from_file(config_file)
     assert config.log_format == LogFormat.JSON
 
     with open(config_file, "w") as f:
         yaml.dump({"log_format": "TEXT"}, f)
-    
+
     config = Config.from_file(config_file)
     assert config.log_format == LogFormat.TEXT
 

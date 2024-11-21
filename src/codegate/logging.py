@@ -90,7 +90,11 @@ class TextFormatter(logging.Formatter):
             datefmt="%Y-%m-%dT%H:%M:%S.%03dZ"
         )
 
-    def formatTime(self, record: logging.LogRecord, datefmt: Optional[str] = None) -> str:
+    def formatTime(  # noqa: N802
+        self,
+        record: logging.LogRecord,
+        datefmt: Optional[str] = None
+    ) -> str:
         """Format the time with millisecond precision.
 
         Args:

@@ -1,9 +1,10 @@
-import logging
 import json
-import pytest
+import logging
 from io import StringIO
-from codegate.logging import JSONFormatter, TextFormatter, setup_logging
+
 from codegate.config import LogFormat, LogLevel
+from codegate.logging import JSONFormatter, TextFormatter, setup_logging
+
 
 def test_json_formatter():
     log_record = logging.LogRecord(
