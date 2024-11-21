@@ -30,9 +30,9 @@ config = Config.from_file("config.yaml")
 
 Environment variables are automatically loaded with these mappings:
 
-- `APP_PORT`: Server port
-- `APP_HOST`: Server host
-- `APP_LOG_LEVEL`: Logging level
+- `CODEGATE_APP_PORT`: Server port
+- `CODEGATE_APP_HOST`: Server host
+- `CODEGATE_APP_LOG_LEVEL`: Logging level
 - `CODEGATE_LOG_FORMAT`: Log format
 
 ```python
