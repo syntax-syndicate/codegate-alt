@@ -1,10 +1,11 @@
 """Configuration management for codegate."""
 
+import os
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Optional, Union
-import os
+
 import yaml
 
 
@@ -66,7 +67,7 @@ class Config:
         """Validate configuration after initialization."""
         if not isinstance(self.port, int) or not (1 <= self.port <= 65535):
             raise ConfigurationError("Port must be between 1 and 65535")
-        
+
         if not isinstance(self.log_level, LogLevel):
             try:
                 self.log_level = LogLevel(self.log_level)

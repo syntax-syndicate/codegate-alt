@@ -1,5 +1,8 @@
 # Codegate
 
+[![CI](https://github.com/stacklok/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/stacklok/codegate/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/stacklok/codegate/branch/main/graph/badge.svg)](https://codecov.io/gh/stacklok/codegate)
+
 A configurable Generative AI gateway, protecting developers from the dangers of AI.
 
 ## Features
