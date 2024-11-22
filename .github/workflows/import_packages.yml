@@ -25,7 +25,4 @@ jobs:
       with:
         name: database_volume
         path: weaviate_data
-        retention-days: 5        
-        
-    
-    
+        retention-days: 5
