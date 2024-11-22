@@ -14,7 +14,7 @@ def test_json_formatter():
         lineno=10,
         msg="Test message",
         args=(),
-        exc_info=None
+        exc_info=None,
     )
     formatter = JSONFormatter()
     formatted_log = formatter.format(log_record)
@@ -26,6 +26,7 @@ def test_json_formatter():
     assert "timestamp" in log_entry
     assert "extra" in log_entry
 
+
 def test_text_formatter():
     log_record = logging.LogRecord(
         name="test",
@@ -34,7 +35,7 @@ def test_text_formatter():
         lineno=10,
         msg="Test message",
         args=(),
-        exc_info=None
+        exc_info=None,
     )
     formatter = TextFormatter()
     formatted_log = formatter.format(log_record)
@@ -42,6 +43,7 @@ def test_text_formatter():
     assert "INFO" in formatted_log
     assert "test" in formatted_log
     assert "Test message" in formatted_log
+
 
 def test_setup_logging_json_format():
     setup_logging(log_level=LogLevel.DEBUG, log_format=LogFormat.JSON)
@@ -57,6 +59,7 @@ def test_setup_logging_json_format():
 
     assert log_entry["level"] == "DEBUG"
     assert log_entry["message"] == "Debug message"
+
 
 def test_setup_logging_text_format():
     setup_logging(log_level=LogLevel.DEBUG, log_format=LogFormat.TEXT)
