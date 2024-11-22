@@ -60,7 +60,8 @@ def add_data(client):
 def run_import():
     client = weaviate.WeaviateClient(
         embedded_options=EmbeddedOptions(
-            persistence_data_path="./weaviate_data"
+            persistence_data_path="./weaviate_data",
+            grpc_port=50052
         ),
     )
     with client:
