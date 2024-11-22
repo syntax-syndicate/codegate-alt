@@ -38,10 +38,28 @@ class JSONFormatter(logging.Formatter):
         extra_attrs = {}
         for key, value in record.__dict__.items():
             if key not in {
-                "args", "asctime", "created", "exc_info", "exc_text", "filename",
-                "funcName", "levelname", "levelno", "lineno", "module", "msecs",
-                "msg", "name", "pathname", "process", "processName", "relativeCreated",
-                "stack_info", "thread", "threadName", "extra"
+                "args",
+                "asctime",
+                "created",
+                "exc_info",
+                "exc_text",
+                "filename",
+                "funcName",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "msg",
+                "name",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "stack_info",
+                "thread",
+                "threadName",
+                "extra",
             }:
                 extra_attrs[key] = value
 
@@ -87,13 +105,11 @@ class TextFormatter(logging.Formatter):
         """Initialize the text formatter."""
         super().__init__(
             fmt="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-            datefmt="%Y-%m-%dT%H:%M:%S.%03dZ"
+            datefmt="%Y-%m-%dT%H:%M:%S.%03dZ",
         )
 
     def formatTime(  # noqa: N802
-        self,
-        record: logging.LogRecord,
-        datefmt: Optional[str] = None
+        self, record: logging.LogRecord, datefmt: Optional[str] = None
     ) -> str:
         """Format the time with millisecond precision.
 
@@ -109,8 +125,7 @@ class TextFormatter(logging.Formatter):
 
 
 def setup_logging(
-    log_level: Optional[LogLevel] = None,
-    log_format: Optional[LogFormat] = None
+    log_level: Optional[LogLevel] = None, log_format: Optional[LogFormat] = None
 ) -> None:
     """Configure the logging system.
 
@@ -160,6 +175,6 @@ def setup_logging(
         extra={
             "log_level": log_level.value,
             "log_format": log_format.value,
-            "handlers": ["stdout", "stderr"]
-        }
+            "handlers": ["stdout", "stderr"],
+        },
     )

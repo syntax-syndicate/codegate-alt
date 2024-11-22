@@ -18,7 +18,7 @@ class LogLevel(str, Enum):
     DEBUG = "DEBUG"
 
     @classmethod
-    def _missing_(cls, value: str) -> Optional['LogLevel']:
+    def _missing_(cls, value: str) -> Optional["LogLevel"]:
         """Handle case-insensitive lookup of enum values."""
         try:
             # Convert to uppercase and look up directly
@@ -29,6 +29,7 @@ class LogLevel(str, Enum):
                 f"Valid levels are: {', '.join(level.value for level in cls)}"
             )
 
+
 class LogFormat(str, Enum):
     """Valid log formats."""
 
@@ -36,7 +37,7 @@ class LogFormat(str, Enum):
     TEXT = "TEXT"
 
     @classmethod
-    def _missing_(cls, value: str) -> Optional['LogFormat']:
+    def _missing_(cls, value: str) -> Optional["LogFormat"]:
         """Handle case-insensitive lookup of enum values."""
         try:
             # Convert to uppercase and look up directly
@@ -50,9 +51,11 @@ class LogFormat(str, Enum):
 
 class ConfigurationError(Exception):
     """Raised when there's an error in configuration."""
+
     def __init__(self, message: str) -> None:
         super().__init__(message)
         # You can add additional logging or handling here if needed
+
 
 @dataclass
 class Config:
@@ -174,6 +177,7 @@ class Config:
             except ConfigurationError as e:
                 # Log warning but continue with defaults
                 import logging
+
                 logging.warning(f"Failed to load config file: {e}")
 
         # Override with environment variables

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+
 from codegate.config import Config, ConfigurationError, LogFormat, LogLevel
 
 
@@ -58,7 +59,7 @@ def test_config_priority_resolution(temp_config_file: Path, env_vars: None) -> N
         cli_port=8080,
         cli_host="example.com",
         cli_log_level="WARNING",
-        cli_log_format="TEXT"
+        cli_log_format="TEXT",
     )
     assert config.port == 8080
     assert config.host == "example.com"
@@ -122,10 +123,7 @@ def config_file_with_format(tmp_path: Path) -> Path:
     """Create a config file with log format."""
     config_file = tmp_path / "config.yaml"
     with open(config_file, "w") as f:
-        yaml.dump({
-            "log_format": "TEXT",
-            "log_level": "DEBUG"
-        }, f)
+        yaml.dump({"log_format": "TEXT", "log_level": "DEBUG"}, f)
     return config_file
 
 

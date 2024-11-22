@@ -24,6 +24,7 @@ def cli() -> None:
     """Codegate - A configurable service gateway."""
     pass
 
+
 @cli.command()
 @click.option(
     "--port",
@@ -90,7 +91,7 @@ def serve(
                 "port": cfg.port,
                 "log_level": cfg.log_level.value,
                 "log_format": cfg.log_format.value,
-            }
+            },
         )
 
         # TODO: Jakub Implement actual server logic here
@@ -102,6 +103,7 @@ def serve(
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+
 
 def main() -> None:
     """Main entry point for the CLI."""
