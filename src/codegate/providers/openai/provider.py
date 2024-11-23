@@ -19,6 +19,7 @@ class OpenAIProvider(BaseProvider):
         OpenAI API. Extracts the API key from the "Authorization" header and
         passes it to the completion handler.
         """
+
         @self.router.post("/chat/completions")
         async def create_completion(
             request: Request,

@@ -13,6 +13,7 @@ class LiteLLmShim(BaseCompletionHandler):
     our own completion handler interface without exposing the underlying
     LiteLLM API.
     """
+
     def __init__(self, adapter: BaseAdapter):
         self._adapter = adapter
 

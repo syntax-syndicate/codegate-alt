@@ -13,6 +13,7 @@ class OpenAIAdapter(BaseAdapter):
     through the input and output as-is - LiteLLM's API expects OpenAI's API
     format.
     """
+
     def __init__(self, stream_generator: StreamGenerator = sse_stream_generator):
         super().__init__(stream_generator)
 

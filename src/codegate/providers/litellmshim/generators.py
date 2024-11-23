@@ -5,6 +5,7 @@ from typing import Any, AsyncIterator
 # responses, we have a single stream generator for each format that is then plugged
 # into the adapter.
 
+
 async def sse_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterator[str]:
     """OpenAI-style SSE format"""
     try:

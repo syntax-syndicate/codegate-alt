@@ -17,6 +17,7 @@ class AnthropicAdapter(BaseAdapter):
     format and the underlying model. The AnthropicAdapter class contains the actual
     implementation of the interface methods, we just forward the calls to it.
     """
+
     def __init__(self, stream_generator: StreamGenerator = anthropic_stream_generator):
         self.litellm_anthropic_adapter = LitellmAnthropicAdapter()
         super().__init__(stream_generator)

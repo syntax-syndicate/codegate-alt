@@ -19,6 +19,7 @@ class AnthropicProvider(BaseProvider):
         API. Extracts the API key from the "x-api-key" header and passes it to the
         completion handler.
         """
+
         @self.router.post("/messages")
         async def create_message(
             request: Request,

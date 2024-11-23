@@ -9,22 +9,22 @@ clean:
 	find . -type f -name '*.pyc' -delete
 
 install:
-	pip install -e ".[dev]"
+	poetry install --with dev
 
 format:
-	black .
-	isort .
+	poetry run black .
+	poetry run ruff check --fix .
 
 lint:
-	ruff check .
+	poetry run ruff check .
 
 test:
-	pytest --cov=codegate --cov-report=term-missing
+	poetry run pytest
 
 security:
-	bandit -r src/
+	poetry run bandit -r src/
 
 build: clean test
-	python -m build
+	poetry build
 
 all: clean install format lint test security build
