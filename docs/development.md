@@ -13,7 +13,7 @@ Codegate is a configurable Generative AI gateway designed to protect developers 
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - [Poetry](https://python-poetry.org/docs/#installation) for dependency management
 - [Docker](https://docs.docker.com/get-docker/) (for containerized deployment)
 - or

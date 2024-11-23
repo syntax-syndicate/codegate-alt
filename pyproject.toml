@@ -7,7 +7,7 @@ authors = []
 packages = [{include = "codegate", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10"
+python = ">=3.11"
 click = ">=8.1.0"
 PyYAML = ">=6.0.1"
 fastapi = ">=0.115.5"
