@@ -32,7 +32,8 @@ def test_cli_version(cli_runner: CliRunner) -> None:
 
 def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None:
     """Test serve command with default options."""
-    with patch("logging.getLogger") as mock_logger:
+    with patch("logging.getLogger") as mock_logger, \
+         patch("uvicorn.run") as mock_run:
         logger_instance = mock_logger.return_value
         result = cli_runner.invoke(cli, ["serve"])
 
@@ -47,11 +48,13 @@ def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None
                 "log_format": "JSON",
             },
         )
+        mock_run.assert_called_once()
 
 
 def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
     """Test serve command with custom options."""
-    with patch("logging.getLogger") as mock_logger:
+    with patch("logging.getLogger") as mock_logger, \
+         patch("uvicorn.run") as mock_run:
         logger_instance = mock_logger.return_value
         result = cli_runner.invoke(
             cli,
@@ -79,6 +82,7 @@ def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
                 "log_format": "TEXT",
             },
         )
+        mock_run.assert_called_once()
 
 
 def test_serve_invalid_port(cli_runner: CliRunner) -> None:
@@ -103,7 +107,8 @@ def test_serve_with_config_file(
     cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path
 ) -> None:
     """Test serve command with config file."""
-    with patch("logging.getLogger") as mock_logger:
+    with patch("logging.getLogger") as mock_logger, \
+         patch("uvicorn.run") as mock_run:
         logger_instance = mock_logger.return_value
         result = cli_runner.invoke(cli, ["serve", "--config", str(temp_config_file)])
 
@@ -118,6 +123,7 @@ def test_serve_with_config_file(
                 "log_format": "JSON",
             },
         )
+        mock_run.assert_called_once()
 
 
 def test_serve_with_nonexistent_config_file(cli_runner: CliRunner) -> None:
@@ -131,7 +137,8 @@ def test_serve_priority_resolution(
     cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path, env_vars: Any
 ) -> None:
     """Test serve command respects configuration priority."""
-    with patch("logging.getLogger") as mock_logger:
+    with patch("logging.getLogger") as mock_logger, \
+         patch("uvicorn.run") as mock_run:
         logger_instance = mock_logger.return_value
         result = cli_runner.invoke(
             cli,
@@ -161,6 +168,7 @@ def test_serve_priority_resolution(
                 "log_format": "TEXT",
             },
         )
+        mock_run.assert_called_once()
 
 
 def test_main_function() -> None:
