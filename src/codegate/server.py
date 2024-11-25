@@ -4,6 +4,7 @@ from . import __description__, __version__
 from .providers.anthropic.provider import AnthropicProvider
 from .providers.openai.provider import OpenAIProvider
 from .providers.registry import ProviderRegistry
+from .providers.llamacpp.provider import LlamaCppProvider
 
 
 def init_app() -> FastAPI:
@@ -19,6 +20,7 @@ def init_app() -> FastAPI:
     # Register all known providers
     registry.add_provider("openai", OpenAIProvider())
     registry.add_provider("anthropic", AnthropicProvider())
+    registry.add_provider("llamacpp", LlamaCppProvider())
 
     # Create and add system routes
     system_router = APIRouter(tags=["System"])  # Tags group endpoints in the docs

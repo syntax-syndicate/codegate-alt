@@ -62,6 +62,10 @@ class Config:
     log_format: LogFormat = LogFormat.JSON
     prompts: PromptConfig = field(default_factory=PromptConfig)
 
+    chat_model_path: str = "./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
+    chat_model_n_ctx: int = 32768
+    chat_model_n_gpu_layers: int = -1
+
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
         if not isinstance(self.port, int) or not (1 <= self.port <= 65535):
@@ -132,6 +136,13 @@ class Config:
                 host=config_data.get("host", cls.host),
                 log_level=config_data.get("log_level", cls.log_level.value),
                 log_format=config_data.get("log_format", cls.log_format.value),
+                chat_model_path=config_data.get("chat_model_path", cls.chat_model_path),
+                chat_model_n_ctx=config_data.get(
+                    "chat_model_n_ctx", cls.chat_model_n_ctx
+                ),
+                chat_model_n_gpu_layers=config_data.get(
+                    "chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers
+                ),
                 prompts=prompts_config,
             )
         except yaml.YAMLError as e:

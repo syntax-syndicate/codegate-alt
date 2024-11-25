@@ -48,20 +48,14 @@ def generate_vector_string(package):
 
     # add extra status
     if package["status"] == "archived":
-        vector_str += (
-            f". However, this package is found to be archived and no longer "
-            f"maintained. For additional information refer to {package_url}"
-        )
+        vector_str += f". However, this package is found to be archived and no longer \
+maintained. For additional information refer to {package_url}"
     elif package["status"] == "deprecated":
-        vector_str += (
-            f". However, this package is found to be deprecated and no longer "
-            f"recommended for use. For additional information refer to {package_url}"
-        )
+        vector_str += f". However, this package is found to be deprecated and no \
+longer recommended for use. For additional information refer to {package_url}"
     elif package["status"] == "malicious":
-        vector_str += (
-            f". However, this package is found to be malicious. "
-            f"For additional information refer to {package_url}"
-        )
+        vector_str += f". However, this package is found to be malicious. For \
+additional information refer to {package_url}"
     return vector_str
 
 
