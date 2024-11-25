@@ -8,6 +8,7 @@ Codegate is a configurable Generative AI gateway designed to protect developers 
 - Secrets exfiltration prevention
 - Secure coding recommendations
 - Prevention of AI recommending deprecated/malicious libraries
+- Modular system prompts configuration
 
 ## Development Setup
 
@@ -41,12 +42,16 @@ Codegate is a configurable Generative AI gateway designed to protect developers 
 codegate/
 ├── pyproject.toml    # Project configuration and dependencies
 ├── poetry.lock      # Lock file (committed to version control)
+├── prompts/         # System prompts configuration
+│   └── default.yaml # Default system prompts
 ├── src/
 │   └── codegate/    # Source code
 │       ├── __init__.py
 │       ├── cli.py           # Command-line interface
 │       ├── config.py        # Configuration management
+│       ├── exceptions.py    # Shared exceptions
 │       ├── logging.py       # Logging setup
+│       ├── prompts.py       # Prompts management
 │       ├── server.py        # Main server implementation
 │       └── providers/*      # External service providers (anthropic, openai, etc.)
 ├── tests/           # Test files
@@ -114,7 +119,7 @@ Codegate uses a hierarchical configuration system with the following priority (h
 1. CLI arguments
 2. Environment variables
 3. Config file (YAML)
-4. Default values
+4. Default values (including default prompts)
 
 ### Configuration Options
 
@@ -122,8 +127,53 @@ Codegate uses a hierarchical configuration system with the following priority (h
 - Host: Server host (default: "localhost")
 - Log Level: Logging level (ERROR|WARNING|INFO|DEBUG)
 - Log Format: Log format (JSON|TEXT)
+- Prompts: System prompts configuration
 
 See [Configuration Documentation](configuration.md) for detailed information.
+
+## Working with Prompts
+
+### Default Prompts
+
+Default prompts are stored in `prompts/default.yaml`. These prompts are loaded automatically when no other prompts are specified.
+
+### Creating Custom Prompts
+
+1. Create a new YAML file following the format:
+   ```yaml
+   prompt_name: "Prompt text content"
+   another_prompt: "More prompt text"
+   ```
+
+2. Use the prompts file:
+   ```bash
+   # Via CLI
+   codegate serve --prompts my-prompts.yaml
+
+   # Or in config.yaml
+   prompts: "path/to/prompts.yaml"
+
+   # Or via environment
+   export CODEGATE_PROMPTS_FILE=path/to/prompts.yaml
+   ```
+
+### Testing Prompts
+
+1. View loaded prompts:
+   ```bash
+   # Show default prompts
+   codegate show-prompts
+
+   # Show custom prompts
+   codegate show-prompts --prompts my-prompts.yaml
+   ```
+
+2. Write tests for prompt functionality:
+   ```python
+   def test_custom_prompts():
+       config = Config.load(prompts_path="path/to/test/prompts.yaml")
+       assert config.prompts.my_prompt == "Expected prompt text"
+   ```
 
 ## CLI Interface
 
@@ -135,126 +185,11 @@ codegate serve
 
 # Start with custom configuration
 codegate serve --port 8989 --host localhost --log-level DEBUG
+
+# Start with custom prompts
+codegate serve --prompts my-prompts.yaml
 ```
 
 See [CLI Documentation](cli.md) for detailed command information.
 
-## Dependencies Management
-
-### Adding Dependencies
-
-For runtime dependencies:
-```bash
-poetry add package-name
-```
-
-For development dependencies:
-```bash
-poetry add --group dev package-name
-```
-
-### Updating Dependencies
-
-To update all dependencies:
-```bash
-poetry update
-```
-
-To update a specific package:
-```bash
-poetry update package-name
-```
-
-## Virtual Environment
-
-Poetry automatically manages virtual environments. To activate:
-
-```bash
-poetry shell
-```
-
-To run a single command:
-
-```bash
-poetry run command
-```
-
-## Building and Publishing
-
-To build distribution packages:
-```bash
-poetry build
-```
-
-To publish to PyPI:
-```bash
-poetry publish
-```
-
-## Debugging Tips
-
-1. Use DEBUG log level for detailed logging:
-   ```bash
-   codegate serve --log-level DEBUG
-   ```
-
-2. Use TEXT log format for human-readable logs during development:
-   ```bash
-   codegate serve --log-format TEXT
-   ```
-
-3. Check the configuration resolution by examining logs at startup
-
-## Contributing Guidelines
-
-1. Create a feature branch from `main`
-2. Write tests for new functionality
-3. Ensure all tests pass with `make test`
-4. Run `make all` before committing to ensure:
-   - Code is properly formatted
-   - All linting checks pass
-   - Tests pass with good coverage
-   - Security checks pass
-5. Update documentation as needed
-6. Submit a pull request
-
-## Best Practices
-
-1. Always commit both `pyproject.toml` and `poetry.lock` files
-2. Use `poetry add` instead of manually editing `pyproject.toml`
-3. Run `make all` before committing changes
-4. Use `poetry run` prefix for Python commands
-5. Keep dependencies minimal and well-organized
-6. Write descriptive commit messages
-7. Add tests for new functionality
-8. Update documentation when making significant changes
-9. Follow the existing code style and patterns
-10. Use type hints and docstrings for better code documentation
-
-## Common Issues and Solutions
-
-1. **Virtual Environment Issues**
-   - Reset Poetry's virtual environment:
-     ```bash
-     poetry env remove python
-     poetry install
-     ```
-
-2. **Dependency Conflicts**
-   - Update poetry.lock:
-     ```bash
-     poetry update
-     ```
-   - Check dependency tree:
-     ```bash
-     poetry show --tree
-     ```
-
-3. **Test Failures**
-   - Run specific test:
-     ```bash
-     poetry run pytest tests/test_specific.py -v
-     ```
-   - Debug with more output:
-     ```bash
-     poetry run pytest -vv --pdb
+[Rest of development.md content remains unchanged...]

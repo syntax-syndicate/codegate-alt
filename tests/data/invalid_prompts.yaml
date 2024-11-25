@@ -1,0 +1,5 @@
+# Invalid prompts file with non-string values
+test_prompt: "This is valid"
+invalid_prompt: 123  # Not a string
+another_invalid: 
+  nested: "This is not allowed"
