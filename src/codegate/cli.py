@@ -110,7 +110,6 @@ def serve(
         )
 
         logger = setup_logging(cfg.log_level, cfg.log_format)
-        print(f'Logger: {logger}')
         logger.info(
             "Starting server",
             extra={
