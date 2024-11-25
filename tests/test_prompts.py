@@ -1,13 +1,13 @@
 """Tests for the prompts module."""
 
-import os
 from pathlib import Path
+
 import pytest
 import yaml
 
 from codegate.config import Config
-from codegate.prompts import PromptConfig
 from codegate.exceptions import ConfigurationError
+from codegate.prompts import PromptConfig
 
 
 @pytest.fixture
@@ -147,14 +147,16 @@ def test_environment_variable_override(temp_env_prompts_file, monkeypatch):
     assert config.prompts.another_env == "Another environment prompt"
 
 
-def test_cli_override_takes_precedence(temp_prompts_file, temp_env_prompts_file, monkeypatch):
+def test_cli_override_takes_precedence(
+    temp_prompts_file, temp_env_prompts_file, monkeypatch
+):
     """Test that CLI prompts override config and environment."""
     # Set environment variable
     monkeypatch.setenv("CODEGATE_PROMPTS_FILE", str(temp_env_prompts_file))
-    
+
     # Load with CLI override
     config = Config.load(prompts_path=temp_prompts_file)
-    
+
     # Should use prompts from CLI-specified file
     assert len(config.prompts.prompts) == 2
     assert config.prompts.test_prompt == "This is a test prompt"
@@ -171,7 +173,7 @@ def test_empty_prompts_file(tmp_path):
     """Test handling of empty prompts file."""
     empty_file = tmp_path / "empty.yaml"
     empty_file.write_text("")
-    
+
     with pytest.raises(ConfigurationError):
         PromptConfig.from_file(empty_file)
 
@@ -180,19 +182,20 @@ def test_non_dict_prompts_file(tmp_path):
     """Test handling of non-dictionary prompts file."""
     invalid_file = tmp_path / "invalid.yaml"
     invalid_file.write_text("- not a dictionary")
-    
+
     with pytest.raises(ConfigurationError):
         PromptConfig.from_file(invalid_file)
 
 
 def test_missing_default_prompts(monkeypatch):
     """Test graceful handling of missing default prompts file."""
+
     # Temporarily modify the path to point to a nonexistent location
     def mock_load_default_prompts():
         return PromptConfig()
-    
+
     monkeypatch.setattr(Config, "_load_default_prompts", mock_load_default_prompts)
-    
+
     config = Config.load()
     assert isinstance(config.prompts, PromptConfig)
     assert len(config.prompts.prompts) == 0
