@@ -13,17 +13,16 @@ json_files = [
 
 
 def setup_schema(client):
-    if client.collections.exists("Package"):
-        client.collections.delete("Package")
-    client.collections.create(
-        "Package",
-        properties=[
-            Property(name="name", data_type=DataType.TEXT),
-            Property(name="type", data_type=DataType.TEXT),
-            Property(name="status", data_type=DataType.TEXT),
-            Property(name="description", data_type=DataType.TEXT),
-        ]
-    )
+    if not client.collections.exists("Package"):
+        client.collections.create(
+            "Package",
+            properties=[
+                Property(name="name", data_type=DataType.TEXT),
+                Property(name="type", data_type=DataType.TEXT),
+                Property(name="status", data_type=DataType.TEXT),
+                Property(name="description", data_type=DataType.TEXT),
+            ]
+        )
 
 
 def generate_vector_string(package):
@@ -59,6 +58,17 @@ def generate_vector_string(package):
 def add_data(client):
     collection = client.collections.get("Package")
 
+    # read all the data from db, we will only add if there is no data, or is different
+    existing_packages = list(collection.iterator())
+    packages_dict = {}
+    for package in existing_packages:
+        key = package.properties['name']+"/"+package.properties['type']
+        value = {
+            'status': package.properties['status'],
+            'description': package.properties['description'],
+        }
+        packages_dict[key] = value
+
     for json_file in json_files:
         with open(json_file, 'r') as f:
             print("Adding data from", json_file)
@@ -76,7 +86,15 @@ def add_data(client):
                     else:
                         package['status'] = 'unknown'
 
+                    # check for the existing package and only add if different
+                    key = package['name']+"/"+package['type']
+                    if key in packages_dict:
+                        if packages_dict[key]['status'] == package['status'] and packages_dict[key]['description'] == package['description']:
+                            print("Package already exists", key)
+                            continue
+
                     # prepare the object for embedding
+                    print("Generating data for", key)
                     vector_str = generate_vector_string(package)
                     vector = generate_embeddings(vector_str)
 
