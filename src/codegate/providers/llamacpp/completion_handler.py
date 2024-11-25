@@ -29,7 +29,8 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
             completion_request['max_tokens'] = completion_request['n_predict']
             del completion_request['n_predict']
 
-        response = await self.inference_engine.chat('./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf', **completion_request)
+        response = await self.inference_engine.chat(
+            './models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf', **completion_request)
 
         if isinstance(response, ModelResponse):
             return self._adapter.translate_completion_output_params(response)
