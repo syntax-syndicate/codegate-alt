@@ -19,7 +19,7 @@ another_prompt: "Another test prompt"
 
 
 def test_show_prompts_command(temp_prompts_file):
-    """Test the show-prompts command."""
+    """Test the show-prompts command with custom prompts file."""
     runner = CliRunner()
     result = runner.invoke(cli, ["show-prompts", "--prompts", str(temp_prompts_file)])
 
@@ -29,6 +29,22 @@ def test_show_prompts_command(temp_prompts_file):
     assert "This is a test prompt" in result.output
     assert "another_prompt:" in result.output
     assert "Another test prompt" in result.output
+
+
+def test_show_default_prompts():
+    """Test the show-prompts command without --prompts flag shows default prompts."""
+    runner = CliRunner()
+    result = runner.invoke(cli, ["show-prompts"])
+
+    assert result.exit_code == 0
+    assert "Loaded prompts:" in result.output
+    assert "default_chat:" in result.output
+    assert "default_snippet:" in result.output
+    assert "codegate_chat:" in result.output
+    assert "codegate_snippet:" in result.output
+    assert "security_audit:" in result.output
+    assert "red_team:" in result.output
+    assert "blue_team:" in result.output
 
 
 def test_show_prompts_nonexistent_file():
@@ -50,15 +66,6 @@ def test_show_prompts_invalid_yaml(tmp_path):
 
     assert result.exit_code == 1
     assert "error" in result.output.lower()
-
-
-def test_show_prompts_missing_argument():
-    """Test show-prompts without required --prompts argument."""
-    runner = CliRunner()
-    result = runner.invoke(cli, ["show-prompts"])
-
-    assert result.exit_code == 2  # Click's error exit code
-    assert "Missing option '--prompts'" in result.output
 
 
 def test_serve_with_prompts(temp_prompts_file):

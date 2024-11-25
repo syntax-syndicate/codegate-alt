@@ -30,11 +30,11 @@ def cli() -> None:
 @click.option(
     "--prompts",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    required=True,
-    help="Path to YAML prompts file",
+    required=False,
+    help="Path to YAML prompts file (optional, shows default prompts if not provided)",
 )
-def show_prompts(prompts: Path) -> None:
-    """Display loaded prompts from the specified file."""
+def show_prompts(prompts: Optional[Path]) -> None:
+    """Display prompts from the specified file or default if no file specified."""
     try:
         cfg = Config.load(prompts_path=prompts)
         click.echo("Loaded prompts:")
