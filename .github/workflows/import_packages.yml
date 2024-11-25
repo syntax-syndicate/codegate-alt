@@ -19,6 +19,27 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install "."
+
+    - name: Install GitHub CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gh
+
+    - name: Fetch latest successful workflow run ID
+      id: get-run-id
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        workflow_id=".github/workflows/import_packages.yml"
+        run_id=$(gh api --paginate repos/${{ github.repository }}/actions/runs --jq ".workflow_runs[] | select(.name == \"$workflow_id\" and .conclusion == \"success\") | .id" | head -n 1)
+        echo "::set-output name=run_id::$run_id"
+
+    - name: Download the latest artifact
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        gh run download ${{ steps.get-run-id.outputs.run_id }}    
+
     - name: Run sync
       run: |
         export PYTHONPATH=$PYTHONPATH:./
