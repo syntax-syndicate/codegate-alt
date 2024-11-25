@@ -124,9 +124,6 @@ def serve(
             },
         )
 
-        cfg = Config.load(prompts_path=prompts)
-        print(f"Loaded prompts: {cfg.prompts.prompts}")
-
         app = init_app()
 
         import uvicorn
