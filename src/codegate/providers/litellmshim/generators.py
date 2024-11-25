@@ -37,3 +37,20 @@ async def anthropic_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterato
                 yield f"event: {event_type}\ndata:{str(e)}\n\n"
     except Exception as e:
         yield f"data: {str(e)}\n\n"
+
+
+async def llamacpp_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterator[str]:
+    """OpenAI-style SSE format"""
+    try:
+        for chunk in stream:
+            if hasattr(chunk, "model_dump_json"):
+                chunk = chunk.model_dump_json(exclude_none=True, exclude_unset=True)
+            try:
+                chunk['content'] = chunk['choices'][0]['text']
+                yield f"data:{json.dumps(chunk)}\n\n"
+            except Exception as e:
+                yield f"data:{str(e)}\n\n"
+    except Exception as e:
+        yield f"data: {str(e)}\n\n"
+    finally:
+        yield "data: [DONE]\n\n"
