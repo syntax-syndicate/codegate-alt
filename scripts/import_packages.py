@@ -1,14 +1,15 @@
 import json
-from utils.embedding_util import generate_embeddings
-import weaviate
-from weaviate.embedded import EmbeddedOptions
-from weaviate.classes.config import Property, DataType
 
+import weaviate
+from weaviate.classes.config import DataType, Property
+from weaviate.embedded import EmbeddedOptions
+
+from utils.embedding_util import generate_embeddings
 
 json_files = [
-    'data/archived.jsonl',
-    'data/deprecated.jsonl',
-    'data/malicious.jsonl',
+    "data/archived.jsonl",
+    "data/deprecated.jsonl",
+    "data/malicious.jsonl",
 ]
 
 
@@ -21,7 +22,7 @@ def setup_schema(client):
                 Property(name="type", data_type=DataType.TEXT),
                 Property(name="status", data_type=DataType.TEXT),
                 Property(name="description", data_type=DataType.TEXT),
-            ]
+            ],
         )
 
 
@@ -47,11 +48,20 @@ def generate_vector_string(package):
 
     # add extra status
     if package["status"] == "archived":
-        vector_str += f". However, this package is found to be archived and no longer maintained. For additional information refer to {package_url}"
+        vector_str += (
+            f". However, this package is found to be archived and no longer "
+            f"maintained. For additional information refer to {package_url}"
+        )
     elif package["status"] == "deprecated":
-        vector_str += f". However, this package is found to be deprecated and no longer recommended for use. For additional information refer to {package_url}"
+        vector_str += (
+            f". However, this package is found to be deprecated and no longer "
+            f"recommended for use. For additional information refer to {package_url}"
+        )
     elif package["status"] == "malicious":
-        vector_str += f". However, this package is found to be malicious. For additional information refer to {package_url}"
+        vector_str += (
+            f". However, this package is found to be malicious. "
+            f"For additional information refer to {package_url}"
+        )
     return vector_str
 
 
@@ -62,34 +72,38 @@ def add_data(client):
     existing_packages = list(collection.iterator())
     packages_dict = {}
     for package in existing_packages:
-        key = package.properties['name']+"/"+package.properties['type']
+        key = package.properties["name"] + "/" + package.properties["type"]
         value = {
-            'status': package.properties['status'],
-            'description': package.properties['description'],
+            "status": package.properties["status"],
+            "description": package.properties["description"],
         }
         packages_dict[key] = value
 
     for json_file in json_files:
-        with open(json_file, 'r') as f:
+        with open(json_file, "r") as f:
             print("Adding data from", json_file)
             with collection.batch.dynamic() as batch:
                 for line in f:
                     package = json.loads(line)
 
                     # now add the status column
-                    if 'archived' in json_file:
-                        package['status'] = 'archived'
-                    elif 'deprecated' in json_file:
-                        package['status'] = 'deprecated'
-                    elif 'malicious' in json_file:
-                        package['status'] = 'malicious'
+                    if "archived" in json_file:
+                        package["status"] = "archived"
+                    elif "deprecated" in json_file:
+                        package["status"] = "deprecated"
+                    elif "malicious" in json_file:
+                        package["status"] = "malicious"
                     else:
-                        package['status'] = 'unknown'
+                        package["status"] = "unknown"
 
                     # check for the existing package and only add if different
-                    key = package['name']+"/"+package['type']
+                    key = package["name"] + "/" + package["type"]
                     if key in packages_dict:
-                        if packages_dict[key]['status'] == package['status'] and packages_dict[key]['description'] == package['description']:
+                        if (
+                            packages_dict[key]["status"] == package["status"]
+                            and packages_dict[key]["description"]
+                            == package["description"]
+                        ):
                             print("Package already exists", key)
                             continue
 
@@ -104,17 +118,16 @@ def add_data(client):
 def run_import():
     client = weaviate.WeaviateClient(
         embedded_options=EmbeddedOptions(
-            persistence_data_path="./weaviate_data",
-            grpc_port=50052
+            persistence_data_path="./weaviate_data", grpc_port=50052
         ),
     )
     with client:
         client.connect()
-        print('is_ready:', client.is_ready())
+        print("is_ready:", client.is_ready())
 
         setup_schema(client)
         add_data(client)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_import()

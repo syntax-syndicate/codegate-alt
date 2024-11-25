@@ -14,7 +14,7 @@ async def test_sse_stream_generator():
     # Mock stream data
     mock_chunks = [
         ModelResponse(id="1", choices=[{"text": "Hello"}]),
-        ModelResponse(id="2", choices=[{"text": "World"}])
+        ModelResponse(id="2", choices=[{"text": "World"}]),
     ]
 
     async def mock_stream():
@@ -33,13 +33,14 @@ async def test_sse_stream_generator():
     assert "World" in messages[1]
     assert messages[-1] == "data: [DONE]\n\n"
 
+
 @pytest.mark.asyncio
 async def test_anthropic_stream_generator():
     # Mock Anthropic-style chunks
     mock_chunks = [
         {"type": "message_start", "message": {"id": "1"}},
         {"type": "content_block_start", "content_block": {"text": "Hello"}},
-        {"type": "content_block_stop", "content_block": {"text": "World"}}
+        {"type": "content_block_stop", "content_block": {"text": "World"}},
     ]
 
     async def mock_stream():
@@ -57,6 +58,7 @@ async def test_anthropic_stream_generator():
         assert msg.startswith(f"event: {chunk['type']}\ndata:")
     assert "Hello" in messages[1]  # content_block_start message
     assert "World" in messages[2]  # content_block_stop message
+
 
 @pytest.mark.asyncio
 async def test_generators_error_handling():

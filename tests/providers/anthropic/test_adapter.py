@@ -19,6 +19,7 @@ from codegate.providers.anthropic.adapter import AnthropicAdapter
 def adapter():
     return AnthropicAdapter()
 
+
 def test_translate_completion_input_params(adapter):
     # Test input data
     completion_request = {
@@ -26,30 +27,26 @@ def test_translate_completion_input_params(adapter):
         "max_tokens": 1024,
         "stream": True,
         "messages": [
-         {
-           "role": "user",
-           "system": "You are an expert code reviewer",
-           "content": [
-             {
-               "type": "text",
-               "text": "Review this code"
-             }
-           ]
-         }
-       ]
+            {
+                "role": "user",
+                "system": "You are an expert code reviewer",
+                "content": [{"type": "text", "text": "Review this code"}],
+            }
+        ],
     }
     expected = {
-        'max_tokens': 1024,
-        'messages': [
-            {'content': [{'text': 'Review this code', 'type': 'text'}], 'role': 'user'}
+        "max_tokens": 1024,
+        "messages": [
+            {"content": [{"text": "Review this code", "type": "text"}], "role": "user"}
         ],
-        'model': 'claude-3-haiku-20240307',
-        'stream': True
+        "model": "claude-3-haiku-20240307",
+        "stream": True,
     }
 
     # Get translation
     result = adapter.translate_completion_input_params(completion_request)
     assert result == expected
+
 
 @pytest.mark.asyncio
 async def test_translate_completion_output_params_streaming(adapter):
@@ -62,25 +59,30 @@ async def test_translate_completion_output_params_streaming(adapter):
                     StreamingChoices(
                         finish_reason=None,
                         index=0,
-                        delta=Delta(content="Hello", role="assistant")),
+                        delta=Delta(content="Hello", role="assistant"),
+                    ),
                 ],
                 model="claude-3-haiku-20240307",
             ),
             ModelResponse(
                 id="test_id_2",
                 choices=[
-                    StreamingChoices(finish_reason=None,
-                                     index=0,
-                                     delta=Delta(content="world", role="assistant")),
+                    StreamingChoices(
+                        finish_reason=None,
+                        index=0,
+                        delta=Delta(content="world", role="assistant"),
+                    ),
                 ],
                 model="claude-3-haiku-20240307",
             ),
             ModelResponse(
                 id="test_id_2",
                 choices=[
-                    StreamingChoices(finish_reason=None,
-                                     index=0,
-                                     delta=Delta(content="!", role="assistant")),
+                    StreamingChoices(
+                        finish_reason=None,
+                        index=0,
+                        delta=Delta(content="!", role="assistant"),
+                    ),
                 ],
                 model="claude-3-haiku-20240307",
             ),
@@ -88,7 +90,7 @@ async def test_translate_completion_output_params_streaming(adapter):
         for msg in messages:
             yield msg
 
-    expected: List[Union[MessageStartBlock,ContentBlockStart,ContentBlockDelta]] = [
+    expected: List[Union[MessageStartBlock, ContentBlockStart, ContentBlockDelta]] = [
         MessageStartBlock(
             type="message_start",
             message=MessageChunk(
@@ -142,7 +144,9 @@ async def test_translate_completion_output_params_streaming(adapter):
 def test_stream_generator_initialization(adapter):
     # Verify the default stream generator is set
     from codegate.providers.litellmshim import anthropic_stream_generator
+
     assert adapter.stream_generator == anthropic_stream_generator
+
 
 def test_custom_stream_generator():
     # Test that we can inject a custom stream generator
