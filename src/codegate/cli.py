@@ -28,6 +28,31 @@ def cli() -> None:
 
 @cli.command()
 @click.option(
+    "--prompts",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Path to YAML prompts file",
+)
+def show_prompts(prompts: Path) -> None:
+    """Display loaded prompts from the specified file."""
+    try:
+        cfg = Config.load(prompts_path=prompts)
+        click.echo("Loaded prompts:")
+        click.echo("-" * 40)
+        for name, content in cfg.prompts.prompts.items():
+            click.echo(f"\n{name}:")
+            click.echo(f"{content}")
+            click.echo("-" * 40)
+    except ConfigurationError as e:
+        click.echo(f"Configuration error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.option(
     "--port",
     type=int,
     default=None,
@@ -58,18 +83,27 @@ def cli() -> None:
     default=None,
     help="Path to YAML config file",
 )
+@click.option(
+    "--prompts",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Path to YAML prompts file",
+)
 def serve(
     port: Optional[int],
     host: Optional[str],
     log_level: Optional[str],
     log_format: Optional[str],
     config: Optional[Path],
+    prompts: Optional[Path],
 ) -> None:
     """Start the codegate server."""
+    logger = None
     try:
         # Load configuration with priority resolution
         cfg = Config.load(
             config_path=config,
+            prompts_path=prompts,
             cli_port=port,
             cli_host=host,
             cli_log_level=log_level,
@@ -86,8 +120,12 @@ def serve(
                 "port": cfg.port,
                 "log_level": cfg.log_level.value,
                 "log_format": cfg.log_format.value,
+                "prompts_loaded": len(cfg.prompts.prompts),
             },
         )
+
+        cfg = Config.load(prompts_path=prompts)
+        print(f"Loaded prompts: {cfg.prompts.prompts}")
 
         app = init_app()
 
@@ -102,12 +140,14 @@ def serve(
         )
 
     except KeyboardInterrupt:
-        logger.info("Shutting down server")
+        if logger:
+            logger.info("Shutting down server")
     except ConfigurationError as e:
         click.echo(f"Configuration error: {e}", err=True)
         sys.exit(1)
     except Exception as e:
-        logger.exception("Unexpected error occurred")
+        if logger:
+            logger.exception("Unexpected error occurred")
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 

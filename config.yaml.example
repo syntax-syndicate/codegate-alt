@@ -1,17 +1,19 @@
-# Codegate Example Configuration
+# Example configuration file
+# Copy this file to config.yaml and modify as needed
 
-# Network settings
-port: 8989           # Port to listen on (1-65535)
-host: "localhost"      # Host to bind to (use localhost for all interfaces)
+# Server configuration
+port: 8989
+host: "localhost"
 
 # Logging configuration
-log_level: "INFO"    # One of: ERROR, WARNING, INFO, DEBUG
-log_format: "JSON"   # One of: JSON, TEXT
+log_level: "INFO"  # ERROR, WARNING, INFO, DEBUG
+log_format: "JSON" # JSON, TEXT
 
-# Note: This configuration can be overridden by:
-# 1. CLI arguments (--port, --host, --log-level, --log-format)
-# 2. Environment variables:
-#    - CODEGATE_APP_PORT
-#    - CODEGATE_APP_HOST
-#    - CODEGATE_APP_LOG_LEVEL
-#    - CODEGATE_LOG_FORMAT
+# Prompts configuration
+# Option 1: Define prompts directly in the config file
+prompts:
+  my_system_prompt: "Custom system prompt defined in config"
+  another_prompt: "Another custom prompt"
+
+# Option 2: Reference a separate prompts file
+# prompts: "prompts.yaml"  # Path to prompts file (relative to config file or absolute)
