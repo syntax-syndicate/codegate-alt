@@ -27,21 +27,26 @@ class MockAdapter(BaseAdapter):
         return response
 
     def translate_completion_output_params_streaming(
-            self, completion_stream: Any,
+        self,
+        completion_stream: Any,
     ) -> Any:
         async def modified_stream():
             async for chunk in completion_stream:
                 chunk.mock_adapter_processed = True
                 yield chunk
+
         return modified_stream()
+
 
 @pytest.fixture
 def mock_adapter():
     return MockAdapter()
 
+
 @pytest.fixture
 def litellm_shim(mock_adapter):
     return LiteLLmShim(mock_adapter)
+
 
 @pytest.mark.asyncio
 async def test_complete_non_streaming(litellm_shim, mock_adapter):
@@ -55,7 +60,7 @@ async def test_complete_non_streaming(litellm_shim, mock_adapter):
     # Test data
     data = {
         "messages": [{"role": "user", "content": "Hello"}],
-        "model": "gpt-3.5-turbo"
+        "model": "gpt-3.5-turbo",
     }
     api_key = "test-key"
 
@@ -70,6 +75,7 @@ async def test_complete_non_streaming(litellm_shim, mock_adapter):
     assert called_args["messages"] == data["messages"]
     # Verify adapter processed the input
     assert called_args["mock_adapter_processed"] is True
+
 
 @pytest.mark.asyncio
 async def test_complete_streaming():
@@ -86,7 +92,7 @@ async def test_complete_streaming():
     data = {
         "messages": [{"role": "user", "content": "Hello"}],
         "model": "gpt-3.5-turbo",
-        "stream": True
+        "stream": True,
     }
     api_key = "test-key"
 
@@ -114,6 +120,7 @@ async def test_complete_streaming():
     assert called_args["stream"] is True
     assert called_args["api_key"] == api_key
 
+
 @pytest.mark.asyncio
 async def test_create_streaming_response(litellm_shim):
     # Create a simple async generator that we know works
@@ -133,6 +140,7 @@ async def test_create_streaming_response(litellm_shim):
     assert response.headers["Connection"] == "keep-alive"
     assert response.headers["Transfer-Encoding"] == "chunked"
 
+
 @pytest.mark.asyncio
 async def test_complete_invalid_params():
     mock_completion = AsyncMock()
@@ -148,8 +156,8 @@ async def test_complete_invalid_params():
 
     # Execute and verify specific exception is raised
     with pytest.raises(
-            ValueError,
-            match="Required fields 'messages' and 'model' must be present",
+        ValueError,
+        match="Required fields 'messages' and 'model' must be present",
     ):
         await litellm_shim.complete(data, api_key)
 

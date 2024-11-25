@@ -1,9 +1,10 @@
 import json
-from utils.embedding_util import generate_embeddings
-import weaviate
-from weaviate.embedded import EmbeddedOptions
-from weaviate.classes.config import Property, DataType
 
+import weaviate
+from weaviate.classes.config import DataType, Property
+from weaviate.embedded import EmbeddedOptions
+
+from utils.embedding_util import generate_embeddings
 
 json_files = [
     "data/archived.jsonl",
