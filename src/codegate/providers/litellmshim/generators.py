@@ -44,8 +44,6 @@ async def llamacpp_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterator
     try:
         for chunk in stream:
             if hasattr(chunk, "model_dump_json"):
-                if not hasattr(chunk.choices[0], 'content'):
-                    chunk.choices[0].content = 'foo'
                 chunk = chunk.model_dump_json(exclude_none=True, exclude_unset=True)
             try:
                 chunk['content'] = chunk['choices'][0]['text']

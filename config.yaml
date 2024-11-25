@@ -12,8 +12,18 @@ log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG
 # 2. Environment variables (CODEGATE_APP_PORT, CODEGATE_APP_HOST, CODEGATE_APP_LOG_LEVEL)
 
 
-# Inference configuration
-embedding_model_repo: "leliuga/all-MiniLM-L6-v2-GGUF"
-embedding_model_file: "*Q8_0.gguf"
+# Embedding model configuration
 
+####
+# Inference model configuration
+##
+
+# Model to use for chatting
 chat_model_path: "./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
+
+# Context length of the model
+chat_model_n_ctx: 32768
+
+# Number of layers to offload to GPU. If -1, all layers are offloaded.
+chat_model_n_gpu_layers: -1
+
