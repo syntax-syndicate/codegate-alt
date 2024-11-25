@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 from codegate.config import Config
-
+from codegate.inference import LlamaCppInferenceEngine
 
 @pytest.fixture
 def temp_config_file(tmp_path: Path) -> Iterator[Path]:
@@ -94,3 +94,8 @@ def parse_json_log(log_line: str) -> dict[str, Any]:
         return json.loads(log_line)
     except json.JSONDecodeError as e:
         pytest.fail(f"Invalid JSON log line: {e}")
+
+
+@pytest.fixture
+def inference_engine() -> LlamaCppInferenceEngine:
+    return LlamaCppInferenceEngine()

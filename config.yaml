@@ -10,3 +10,10 @@ log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG
 # Note: This configuration can be overridden by:
 # 1. CLI arguments (--port, --host, --log-level)
 # 2. Environment variables (CODEGATE_APP_PORT, CODEGATE_APP_HOST, CODEGATE_APP_LOG_LEVEL)
+
+
+# Inference configuration
+embedding_model_repo: "leliuga/all-MiniLM-L6-v2-GGUF"
+embedding_model_file: "*Q8_0.gguf"
+
+chat_model_path: "./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
