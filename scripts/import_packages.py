@@ -26,23 +26,45 @@ def setup_schema(client):
     )
 
 
+def generate_vector_string(package):
+    vector_str = f"{package['name']}"
+    # add description
+    package_url = ""
+    if package["type"] == "pypi":
+        vector_str += " is a Python package available on PyPI"
+        package_url = f"https://trustypkg.dev/pypi/{package['name']}"
+    elif package["type"] == "npm":
+        vector_str += " is a JavaScript package available on NPM"
+        package_url = f"https://trustypkg.dev/npm/{package['name']}"
+    elif package["type"] == "go":
+        vector_str += " is a Go package. "
+        package_url = f"https://trustypkg.dev/go/{package['name']}"
+    elif package["type"] == "crates":
+        vector_str += " is a Rust package available on Crates. "
+        package_url = f"https://trustypkg.dev/crates/{package['name']}"
+    elif package["type"] == "java":
+        vector_str += " is a Java package. "
+        package_url = f"https://trustypkg.dev/java/{package['name']}"
+
+    # add extra status
+    if package["status"] == "archived":
+        vector_str += f". However, this package is found to be archived and no longer maintained. For additional information refer to {package_url}"
+    elif package["status"] == "deprecated":
+        vector_str += f". However, this package is found to be deprecated and no longer recommended for use. For additional information refer to {package_url}"
+    elif package["status"] == "malicious":
+        vector_str += f". However, this package is found to be malicious. For additional information refer to {package_url}"
+    return vector_str
+
+
 def add_data(client):
     collection = client.collections.get("Package")
 
     for json_file in json_files:
         with open(json_file, 'r') as f:
             print("Adding data from", json_file)
-            counter = 0
             with collection.batch.dynamic() as batch:
                 for line in f:
                     package = json.loads(line)
-                    counter += 1
-                    if counter > 100:
-                        break
-
-                    # prepare the object for embedding
-                    vector_str = f"{package['name']} {package['description']}"
-                    vector = generate_embeddings(vector_str)
 
                     # now add the status column
                     if 'archived' in json_file:
@@ -53,6 +75,10 @@ def add_data(client):
                         package['status'] = 'malicious'
                     else:
                         package['status'] = 'unknown'
+
+                    # prepare the object for embedding
+                    vector_str = generate_vector_string(package)
+                    vector = generate_embeddings(vector_str)
 
                     batch.add_object(properties=package, vector=vector)
 

@@ -5,7 +5,7 @@ description = "Generative AI CodeGen security gateway"
 readme = "README.md"
 authors = []
 packages = [{include = "codegate", from = "src"}]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [tool.poetry.dependencies]
 python = ">=3.11"
