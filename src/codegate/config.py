@@ -137,8 +137,12 @@ class Config:
                 log_level=config_data.get("log_level", cls.log_level.value),
                 log_format=config_data.get("log_format", cls.log_format.value),
                 chat_model_path=config_data.get("chat_model_path", cls.chat_model_path),
-                chat_model_n_ctx=config_data.get("chat_model_n_ctx", cls.chat_model_n_ctx),
-                chat_model_n_gpu_layers=config_data.get("chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers),
+                chat_model_n_ctx=config_data.get(
+                    "chat_model_n_ctx", cls.chat_model_n_ctx
+                ),
+                chat_model_n_gpu_layers=config_data.get(
+                    "chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers
+                ),
                 prompts=prompts_config,
             )
         except yaml.YAMLError as e:

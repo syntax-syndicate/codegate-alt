@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer, AutoModel
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as f
 from torch import Tensor
 import os
 import warnings
@@ -35,6 +35,6 @@ def generate_embeddings(text):
     embeddings = average_pool(outputs.last_hidden_state, attention_mask)
 
     # (Optionally) normalize embeddings
-    embeddings = F.normalize(embeddings, p=2, dim=1)
+    embeddings = f.normalize(embeddings, p=2, dim=1)
 
     return embeddings.numpy().tolist()[0]
