@@ -2,54 +2,16 @@
 
 import os
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import Optional, Union
 
 import yaml
 
-from .exceptions import ConfigurationError
-from .prompts import PromptConfig
+from codegate.codegate_logging import setup_logging, LogFormat, LogLevel
+from codegate.exceptions import ConfigurationError
+from codegate.prompts import PromptConfig
 
-
-class LogLevel(str, Enum):
-    """Valid log levels."""
-
-    ERROR = "ERROR"
-    WARNING = "WARNING"
-    INFO = "INFO"
-    DEBUG = "DEBUG"
-
-    @classmethod
-    def _missing_(cls, value: str) -> Optional["LogLevel"]:
-        """Handle case-insensitive lookup of enum values."""
-        try:
-            # Convert to uppercase and look up directly
-            return cls[value.upper()]
-        except (KeyError, AttributeError):
-            raise ValueError(
-                f"'{value}' is not a valid LogLevel. "
-                f"Valid levels are: {', '.join(level.value for level in cls)}"
-            )
-
-
-class LogFormat(str, Enum):
-    """Valid log formats."""
-
-    JSON = "JSON"
-    TEXT = "TEXT"
-
-    @classmethod
-    def _missing_(cls, value: str) -> Optional["LogFormat"]:
-        """Handle case-insensitive lookup of enum values."""
-        try:
-            # Convert to uppercase and look up directly
-            return cls[value.upper()]
-        except (KeyError, AttributeError):
-            raise ValueError(
-                f"'{value}' is not a valid LogFormat. "
-                f"Valid formats are: {', '.join(format.value for format in cls)}"
-            )
+logger = setup_logging()
 
 
 @dataclass
@@ -219,9 +181,7 @@ class Config:
                 config = cls.from_file(config_path)
             except ConfigurationError as e:
                 # Log warning but continue with defaults
-                import logging
-
-                logging.warning(f"Failed to load config file: {e}")
+                logger.warning(f"Failed to load config file: {e}")
 
         # Override with environment variables
         env_config = cls.from_env()

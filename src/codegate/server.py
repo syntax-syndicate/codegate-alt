@@ -1,10 +1,10 @@
 from fastapi import APIRouter, FastAPI
 
-from . import __description__, __version__
-from .providers.anthropic.provider import AnthropicProvider
-from .providers.openai.provider import OpenAIProvider
-from .providers.registry import ProviderRegistry
-from .providers.llamacpp.provider import LlamaCppProvider
+from codegate import __description__, __version__
+from codegate.providers.anthropic.provider import AnthropicProvider
+from codegate.providers.llamacpp.provider import LlamaCppProvider
+from codegate.providers.openai.provider import OpenAIProvider
+from codegate.providers.registry import ProviderRegistry
 
 
 def init_app() -> FastAPI:

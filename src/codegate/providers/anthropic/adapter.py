@@ -6,9 +6,8 @@ from litellm.adapters.anthropic_adapter import (
 )
 from litellm.types.llms.anthropic import AnthropicResponse
 
-from ..base import StreamGenerator
-from ..litellmshim import anthropic_stream_generator
-from ..litellmshim.litellmshim import BaseAdapter
+from codegate.providers.base import StreamGenerator
+from codegate.providers.litellmshim import anthropic_stream_generator, BaseAdapter
 
 
 class AnthropicAdapter(BaseAdapter):

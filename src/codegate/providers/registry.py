@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 from fastapi import FastAPI
 
-from .base import BaseProvider
+from codegate.providers.base import BaseProvider
 
 
 class ProviderRegistry:

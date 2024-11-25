@@ -1,10 +1,49 @@
 import datetime
+from enum import Enum
 import json
 import logging
 import sys
 from typing import Any, Optional
 
-from .config import LogFormat, LogLevel
+
+class LogLevel(str, Enum):
+    """Valid log levels."""
+
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    INFO = "INFO"
+    DEBUG = "DEBUG"
+
+    @classmethod
+    def _missing_(cls, value: str) -> Optional["LogLevel"]:
+        """Handle case-insensitive lookup of enum values."""
+        try:
+            # Convert to uppercase and look up directly
+            return cls[value.upper()]
+        except (KeyError, AttributeError):
+            raise ValueError(
+                f"'{value}' is not a valid LogLevel. "
+                f"Valid levels are: {', '.join(level.value for level in cls)}"
+            )
+
+
+class LogFormat(str, Enum):
+    """Valid log formats."""
+
+    JSON = "JSON"
+    TEXT = "TEXT"
+
+    @classmethod
+    def _missing_(cls, value: str) -> Optional["LogFormat"]:
+        """Handle case-insensitive lookup of enum values."""
+        try:
+            # Convert to uppercase and look up directly
+            return cls[value.upper()]
+        except (KeyError, AttributeError):
+            raise ValueError(
+                f"'{value}' is not a valid LogFormat. "
+                f"Valid formats are: {', '.join(format.value for format in cls)}"
+            )
 
 
 class JSONFormatter(logging.Formatter):
@@ -126,7 +165,7 @@ class TextFormatter(logging.Formatter):
 
 def setup_logging(
     log_level: Optional[LogLevel] = None, log_format: Optional[LogFormat] = None
-) -> None:
+) -> logging.Logger:
     """Configure the logging system.
 
     Args:
@@ -178,3 +217,5 @@ def setup_logging(
             "handlers": ["stdout", "stderr"],
         },
     )
+
+    return logger
