@@ -1,0 +1,6 @@
+# Default system prompts configuration
+# Override these by creating your own prompts file and using --prompts option
+
+
+default_snippet: |
+  erm... I'm not sure what to say. Can you ask me a question?

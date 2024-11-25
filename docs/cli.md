@@ -41,6 +41,26 @@ codegate serve [OPTIONS]
   - Must be a valid YAML file
   - Configuration values can be overridden by environment variables and CLI options
 
+- `--prompts FILE`: Path to YAML prompts file
+  - Optional
+  - Must be a valid YAML file
+  - Overrides default prompts and configuration file prompts
+
+### show-prompts
+
+Display the loaded system prompts:
+
+```bash
+codegate show-prompts [OPTIONS]
+```
+
+#### Options
+
+- `--prompts FILE`: Path to YAML prompts file
+  - Optional
+  - Must be a valid YAML file
+  - If not provided, shows default prompts from prompts/default.yaml
+
 ## Error Handling
 
 The CLI provides user-friendly error messages for:
@@ -48,6 +68,7 @@ The CLI provides user-friendly error messages for:
 - Invalid log levels
 - Invalid log formats
 - Configuration file errors
+- Prompts file errors
 - Server startup failures
 
 All errors are output to stderr with appropriate exit codes.
@@ -72,3 +93,18 @@ codegate serve --log-level DEBUG --log-format TEXT
 Start server with configuration file:
 ```bash
 codegate serve --config my-config.yaml
+```
+
+Start server with custom prompts:
+```bash
+codegate serve --prompts my-prompts.yaml
+```
+
+Show default system prompts:
+```bash
+codegate show-prompts
+```
+
+Show prompts from a custom file:
+```bash
+codegate show-prompts --prompts my-prompts.yaml
