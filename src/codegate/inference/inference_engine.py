@@ -16,7 +16,8 @@ class LlamaCppInferenceEngine():
     async def get_model(self, model_path, embedding=False, n_ctx=512):
         if model_path not in self.__models:
             self.__models[model_path] = Llama(
-                model_path=model_path, n_gpu_layers=0, verbose=False, n_ctx=n_ctx, embedding=embedding)
+                model_path=model_path, n_gpu_layers=0, verbose=False, n_ctx=n_ctx,
+                embedding=embedding)
 
         return self.__models[model_path]
 

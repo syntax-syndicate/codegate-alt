@@ -24,8 +24,9 @@ async def test_chat(inference_engine) -> None:
     """Test chat completion."""
     pass
 
-    # chat_request = {"prompt": "<|im_start|>user\\nhello<|im_end|>\\n<|im_start|>assistant\\n",
-    #                 "stream": True, "max_tokens": 4096, "top_k": 50, "temperature": 0}
+    # chat_request =
+    # {"prompt": "<|im_start|>user\\nhello<|im_end|>\\n<|im_start|>assistant\\n",
+    #            "stream": True, "max_tokens": 4096, "top_k": 50, "temperature": 0}
 
     # model_path = "./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
     # response = await inference_engine.chat(model_path, **chat_request)
