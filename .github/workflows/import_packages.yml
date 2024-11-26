@@ -30,8 +30,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
-        workflow_id=".github/workflows/import_packages.yml"
-        run_id=$(gh api --paginate repos/${{ github.repository }}/actions/runs --jq ".workflow_runs[] | select(.workflow_path == \"$workflow_id\" and .conclusion == \"success\") | .id" | head -n 1)
+        workflow_path=".github/workflows/import_packages.yml"
+        run_id=$(gh api --paginate repos/${{ github.repository }}/actions/runs --jq ".workflow_runs[] | select(.path == \"$workflow_path\" and .conclusion == \"success\") | .workflow_id" | head -n 1)
         echo "::set-output name=run_id::$run_id"
         # Check for artifacts and set a flag
         if [[ "$run_id" != "" ]]; then
