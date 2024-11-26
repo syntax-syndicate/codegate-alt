@@ -3,8 +3,8 @@ from typing import Any, AsyncIterator, Dict
 from fastapi.responses import StreamingResponse
 from litellm import ModelResponse, acompletion
 
-from ..base import BaseCompletionHandler
-from .adapter import BaseAdapter
+from codegate.providers.base import BaseCompletionHandler
+from codegate.providers.llamacpp.adapter import BaseAdapter
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
 from codegate.config import Config
 

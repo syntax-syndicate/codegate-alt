@@ -3,8 +3,8 @@ from typing import Any, AsyncIterator, Dict
 from fastapi.responses import StreamingResponse
 from litellm import ModelResponse, acompletion
 
-from ..base import BaseCompletionHandler
-from .adapter import BaseAdapter
+from codegate.providers.base import BaseCompletionHandler
+from codegate.providers.litellmshim.adapter import BaseAdapter
 
 
 class LiteLLmShim(BaseCompletionHandler):

@@ -2,9 +2,8 @@ from typing import Any, AsyncIterator, Dict, Optional
 
 from litellm import ChatCompletionRequest, ModelResponse
 
-from ..base import StreamGenerator
-from ..litellmshim import sse_stream_generator
-from ..litellmshim.litellmshim import BaseAdapter
+from codegate.providers.base import StreamGenerator
+from codegate.providers.litellmshim import sse_stream_generator, BaseAdapter
 
 
 class OpenAIAdapter(BaseAdapter):

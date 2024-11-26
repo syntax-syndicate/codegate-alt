@@ -1,10 +1,18 @@
-"""Codegate - A configurable service gateway."""
+"""Codegate - A Generative AI security gateway."""
 
+from importlib import metadata
 import logging as python_logging
 
-from .config import Config, LogFormat, LogLevel
-from .exceptions import ConfigurationError
-from .logging import setup_logging
+from codegate.config import Config
+from codegate.codegate_logging import setup_logging, LogFormat, LogLevel
+from codegate.exceptions import ConfigurationError
+
+try:
+    __version__ = metadata.version("codegate")
+    __description__ = metadata.metadata("codegate")["Summary"]
+except metadata.PackageNotFoundError:  # pragma: no cover
+    __version__ = "unknown"
+    __description__ = "codegate"
 
 __version__ = "0.1.0"
 __description__ = "A configurable service gateway"

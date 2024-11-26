@@ -8,7 +8,7 @@ import pytest
 from click.testing import CliRunner
 
 from codegate.cli import cli
-from codegate.config import LogFormat, LogLevel
+from codegate.codegate_logging import LogFormat, LogLevel
 
 
 @pytest.fixture
@@ -48,8 +48,9 @@ def test_cli_version(cli_runner: CliRunner) -> None:
 
 def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None:
     """Test serve command with default options."""
-    with patch("logging.getLogger") as mock_logger, patch("uvicorn.run") as mock_run:
-        logger_instance = mock_logger.return_value
+    with patch("uvicorn.run") as mock_run:
+        logger_instance = MagicMock()
+        mock_logging.return_value = logger_instance
         result = cli_runner.invoke(cli, ["serve"])
 
         assert result.exit_code == 0
@@ -69,8 +70,9 @@ def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None
 
 def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
     """Test serve command with custom options."""
-    with patch("logging.getLogger") as mock_logger, patch("uvicorn.run") as mock_run:
-        logger_instance = mock_logger.return_value
+    with patch("uvicorn.run") as mock_run:
+        logger_instance = MagicMock()
+        mock_logging.return_value = logger_instance
         result = cli_runner.invoke(
             cli,
             [
@@ -119,8 +121,9 @@ def test_serve_with_config_file(
     cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path
 ) -> None:
     """Test serve command with config file."""
-    with patch("logging.getLogger") as mock_logger, patch("uvicorn.run") as mock_run:
-        logger_instance = mock_logger.return_value
+    with patch("uvicorn.run") as mock_run:
+        logger_instance = MagicMock()
+        mock_logging.return_value = logger_instance
         result = cli_runner.invoke(cli, ["serve", "--config", str(temp_config_file)])
 
         assert result.exit_code == 0
@@ -149,8 +152,9 @@ def test_serve_priority_resolution(
     cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path, env_vars: Any
 ) -> None:
     """Test serve command respects configuration priority."""
-    with patch("logging.getLogger") as mock_logger, patch("uvicorn.run") as mock_run:
-        logger_instance = mock_logger.return_value
+    with patch("uvicorn.run") as mock_run:
+        logger_instance = MagicMock()
+        mock_logging.return_value = logger_instance
         result = cli_runner.invoke(
             cli,
             [

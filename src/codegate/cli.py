@@ -1,15 +1,14 @@
 """Command-line interface for codegate."""
 
-import logging
 import sys
 from pathlib import Path
 from typing import Optional
 
 import click
 
-from .config import Config, ConfigurationError, LogFormat, LogLevel
-from .logging import setup_logging
-from .server import init_app
+from codegate.config import Config, ConfigurationError
+from codegate.codegate_logging import setup_logging, LogFormat, LogLevel
+from codegate.server import init_app
 
 
 def validate_port(ctx: click.Context, param: click.Parameter, value: int) -> int:
@@ -110,9 +109,7 @@ def serve(
             cli_log_format=log_format,
         )
 
-        setup_logging(cfg.log_level, cfg.log_format)
-        logger = logging.getLogger(__name__)
-
+        logger = setup_logging(cfg.log_level, cfg.log_format)
         logger.info(
             "Starting server",
             extra={

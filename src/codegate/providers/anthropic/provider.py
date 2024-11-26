@@ -2,9 +2,9 @@ import json
 
 from fastapi import Header, HTTPException, Request
 
-from ..base import BaseProvider
-from ..litellmshim.litellmshim import LiteLLmShim
-from .adapter import AnthropicAdapter
+from codegate.providers.base import BaseProvider
+from codegate.providers.litellmshim import LiteLLmShim
+from codegate.providers.anthropic.adapter import AnthropicAdapter
 
 
 class AnthropicProvider(BaseProvider):
