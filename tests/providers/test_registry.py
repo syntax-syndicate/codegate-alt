@@ -20,8 +20,13 @@ class MockCompletionHandler(BaseCompletionHandler):
 
 
 class MockProvider(BaseProvider):
+
+    @property
+    def provider_route_name(self) -> str:
+        return 'mock_provider'
+
     def _setup_routes(self) -> None:
-        @self.router.get("/test")
+        @self.router.get(f"/{self.provider_route_name}/test")
         def test_route():
             return {"message": "test"}
 
@@ -61,5 +66,5 @@ def test_provider_routes_added(app, registry, mock_completion_handler):
     provider = MockProvider(mock_completion_handler)
     registry.add_provider("test", provider)
 
-    routes = [route for route in app.routes if route.path == "/test"]
+    routes = [route for route in app.routes if route.path == "/mock_provider/test"]
     assert len(routes) == 1

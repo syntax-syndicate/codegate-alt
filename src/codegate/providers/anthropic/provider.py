@@ -13,6 +13,10 @@ class AnthropicProvider(BaseProvider):
         completion_handler = LiteLLmShim(adapter)
         super().__init__(completion_handler)
 
+    @property
+    def provider_route_name(self) -> str:
+        return "anthropic"
+
     def _setup_routes(self):
         """
         Sets up the /messages route for the provider as expected by the Anthropic
@@ -20,7 +24,7 @@ class AnthropicProvider(BaseProvider):
         completion handler.
         """
 
-        @self.router.post("/messages")
+        @self.router.post(f"/{self.provider_route_name}/messages")
         async def create_message(
             request: Request,
             x_api_key: str = Header(None),

@@ -13,6 +13,10 @@ class OpenAIProvider(BaseProvider):
         completion_handler = LiteLLmShim(adapter)
         super().__init__(completion_handler)
 
+    @property
+    def provider_route_name(self) -> str:
+        return "openai"
+
     def _setup_routes(self):
         """
         Sets up the /chat/completions route for the provider as expected by the
@@ -20,7 +24,7 @@ class OpenAIProvider(BaseProvider):
         passes it to the completion handler.
         """
 
-        @self.router.post("/chat/completions")
+        @self.router.post(f"/{self.provider_route_name}/chat/completions")
         async def create_completion(
             request: Request,
             authorization: str = Header(..., description="Bearer token"),

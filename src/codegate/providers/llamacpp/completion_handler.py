@@ -1,7 +1,7 @@
 from typing import Any, AsyncIterator, Dict
 
+from litellm import ModelResponse
 from fastapi.responses import StreamingResponse
-from litellm import ModelResponse, acompletion
 
 from codegate.providers.base import BaseCompletionHandler
 from codegate.providers.llamacpp.adapter import BaseAdapter

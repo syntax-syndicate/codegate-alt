@@ -39,6 +39,11 @@ class BaseProvider(ABC):
     def _setup_routes(self) -> None:
         pass
 
+    @property
+    @abstractmethod
+    def provider_route_name(self) -> str:
+        pass
+
     async def complete(self, data: Dict, api_key: str) -> AsyncIterator[Any]:
         return await self._completion_handler.complete(data, api_key)
 
