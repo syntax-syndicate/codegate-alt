@@ -25,21 +25,39 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gh
 
-    - name: Fetch latest successful workflow run ID
+    - name: Fetch latest successful workflow run ID and check for artifacts
       id: get-run-id
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         workflow_id=".github/workflows/import_packages.yml"
-        run_id=$(gh api --paginate repos/${{ github.repository }}/actions/runs --jq ".workflow_runs[] | select(.name == \"$workflow_id\" and .conclusion == \"success\") | .id" | head -n 1)
+        run_id=$(gh api --paginate repos/${{ github.repository }}/actions/runs --jq ".workflow_runs[] | select(.workflow_path == \"$workflow_id\" and .conclusion == \"success\") | .id" | head -n 1)
         echo "::set-output name=run_id::$run_id"
+        # Check for artifacts and set a flag
+        if [[ "$run_id" != "" ]]; then
+          artifacts_count=$(gh api repos/${{ github.repository }}/actions/runs/$run_id/artifacts --jq ".artifacts | length")
+        else
+          artifacts_count=0
+        fi
+        echo "::set-output name=has_artifacts::$([[ $artifacts_count -gt 0 ]] && echo 'true' || echo 'false')"
 
     - name: Download the latest artifact
+      if: steps.get-run-id.outputs.has_artifacts == 'true'
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
-        gh run download ${{ steps.get-run-id.outputs.run_id }}    
+        gh run download ${{ steps.get-run-id.outputs.run_id }}        
 
+    - name: Extract artifact
+      if: steps.get-run-id.outputs.has_artifacts == 'true'
+      run: |
+        # Find the downloaded zip file (assuming only one zip file is downloaded)
+        zip_file=$(ls *.zip)
+        if [[ -n "$zip_file" ]]; then
+          # Unzip the file in the parent directory of the current working directory
+          unzip -o $zip_file -d ../
+        fi
+        
     - name: Run sync
       run: |
         export PYTHONPATH=$PYTHONPATH:./
