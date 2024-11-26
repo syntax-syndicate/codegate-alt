@@ -2,9 +2,9 @@ import json
 
 from fastapi import Header, HTTPException, Request
 
-from ..base import BaseProvider
-from .completion_handler import LlamaCppCompletionHandler
-from .adapter import LlamaCppAdapter
+from codegate.providers.base import BaseProvider
+from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHandler
+from codegate.providers.llamacpp.adapter import LlamaCppAdapter
 
 
 class LlamaCppProvider(BaseProvider):
