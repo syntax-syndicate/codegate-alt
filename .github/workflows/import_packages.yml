@@ -35,7 +35,7 @@ jobs:
         echo "::set-output name=run_id::$run_id"
         # Check for artifacts and set a flag
         if [[ "$run_id" != "" ]]; then
-          artifacts_count=$(gh api repos/${{ github.repository }}/actions/runs/$run_id/artifacts --jq ".artifacts | length")
+          artifacts_count=$(gh api repos/${{ github.repository }}/actions/artifacts --jq '[.artifacts[] | select(.workflow_run.id == "$run_id")] | length > 0'
         else
           artifacts_count=0
         fi
