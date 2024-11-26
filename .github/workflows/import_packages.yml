@@ -32,14 +32,17 @@ jobs:
       run: |
         workflow_path=".github/workflows/import_packages.yml"
         run_id=$(gh api --paginate repos/${{ github.repository }}/actions/runs --jq ".workflow_runs[] | select(.path == \"$workflow_path\" and .conclusion == \"success\") | .workflow_id" | head -n 1)
-        echo "::set-output name=run_id::$run_id"
-        # Check for artifacts and set a flag
+        echo "run_id=$run_id" >> $GITHUB_ENV
         if [[ "$run_id" != "" ]]; then
           artifacts_exist=$(gh api repos/stacklok/codegate/actions/artifacts --jq "[.artifacts[] | select(.workflow_run.id == $run_id)] | length > 0")
+          echo "has_artifacts=$artifacts_exist" >> $GITHUB_ENV
         else
-          artifacts_exist=false
+          echo "has_artifacts=false" >> $GITHUB_ENV
         fi
-        echo "::set-output name=has_artifacts::$artifacts_exist"
+    - name: Use Artifact Environment Variables
+      run: |
+        echo "The run ID is $run_id"
+        echo "Artifacts exist: $has_artifacts"        
 
     - name: Download the latest artifact
       if: steps.get-run-id.outputs.has_artifacts == 'true'
