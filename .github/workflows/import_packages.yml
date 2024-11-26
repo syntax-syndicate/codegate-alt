@@ -35,11 +35,11 @@ jobs:
         echo "::set-output name=run_id::$run_id"
         # Check for artifacts and set a flag
         if [[ "$run_id" != "" ]]; then
-          artifacts_count=$(gh api repos/${{ github.repository }}/actions/artifacts --jq '[.artifacts[] | select(.workflow_run.id == "$run_id")] | length > 0'
+          artifacts_exist=$(gh api repos/stacklok/codegate/actions/artifacts --jq "[.artifacts[] | select(.workflow_run.id == $run_id)] | length > 0")
         else
-          artifacts_count=0
+          artifacts_exist=false
         fi
-        echo "::set-output name=has_artifacts::$([[ $artifacts_count -gt 0 ]] && echo 'true' || echo 'false')"
+        echo "::set-output name=artifacts_exist::$artifacts_exist"
 
     - name: Download the latest artifact
       if: steps.get-run-id.outputs.has_artifacts == 'true'
