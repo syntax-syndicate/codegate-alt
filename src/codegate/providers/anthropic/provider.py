@@ -8,10 +8,10 @@ from codegate.providers.anthropic.adapter import AnthropicAdapter
 
 
 class AnthropicProvider(BaseProvider):
-    def __init__(self):
+    def __init__(self, pipeline_processor=None):
         adapter = AnthropicAdapter()
         completion_handler = LiteLLmShim(adapter)
-        super().__init__(completion_handler)
+        super().__init__(completion_handler, pipeline_processor)
 
     @property
     def provider_route_name(self) -> str:

@@ -13,6 +13,7 @@ import yaml
 from codegate.config import Config
 from codegate.inference import LlamaCppInferenceEngine
 
+
 @pytest.fixture
 def temp_config_file(tmp_path: Path) -> Iterator[Path]:
     """Create a temporary config file."""

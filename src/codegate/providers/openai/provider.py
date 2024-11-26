@@ -8,10 +8,10 @@ from codegate.providers.openai.adapter import OpenAIAdapter
 
 
 class OpenAIProvider(BaseProvider):
-    def __init__(self):
+    def __init__(self, pipeline_processor=None):
         adapter = OpenAIAdapter()
         completion_handler = LiteLLmShim(adapter)
-        super().__init__(completion_handler)
+        super().__init__(completion_handler, pipeline_processor)
 
     @property
     def provider_route_name(self) -> str:

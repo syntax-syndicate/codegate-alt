@@ -62,19 +62,15 @@ async def test_complete_non_streaming(litellm_shim, mock_adapter):
         "messages": [{"role": "user", "content": "Hello"}],
         "model": "gpt-3.5-turbo",
     }
-    api_key = "test-key"
 
     # Execute
-    result = await litellm_shim.complete(data, api_key)
+    result = await litellm_shim.execute_completion(data)
 
     # Verify
     assert result == mock_response
     mock_completion.assert_called_once()
     called_args = mock_completion.call_args[1]
-    assert called_args["api_key"] == api_key
     assert called_args["messages"] == data["messages"]
-    # Verify adapter processed the input
-    assert called_args["mock_adapter_processed"] is True
 
 
 @pytest.mark.asyncio
@@ -97,15 +93,12 @@ async def test_complete_streaming():
     api_key = "test-key"
 
     # Execute
-    result_stream = await litellm_shim.complete(data, api_key)
+    result_stream = await litellm_shim.execute_completion(data)
 
     # Verify stream contents and adapter processing
     chunks = []
     async for chunk in result_stream:
         chunks.append(chunk)
-        # Verify each chunk was processed by the adapter
-        assert hasattr(chunk, "mock_adapter_processed")
-        assert chunk.mock_adapter_processed is True
 
     assert len(chunks) == 2
     assert chunks[0].choices[0]["text"] == "chunk1"
@@ -114,11 +107,9 @@ async def test_complete_streaming():
     # Verify completion function was called with correct parameters
     mock_completion.assert_called_once()
     called_args = mock_completion.call_args[1]
-    assert called_args["mock_adapter_processed"] is True  # Verify input was processed
     assert called_args["messages"] == data["messages"]
     assert called_args["model"] == data["model"]
     assert called_args["stream"] is True
-    assert called_args["api_key"] == api_key
 
 
 @pytest.mark.asyncio
@@ -139,27 +130,3 @@ async def test_create_streaming_response(litellm_shim):
     assert response.headers["Cache-Control"] == "no-cache"
     assert response.headers["Connection"] == "keep-alive"
     assert response.headers["Transfer-Encoding"] == "chunked"
-
-
-@pytest.mark.asyncio
-async def test_complete_invalid_params():
-    mock_completion = AsyncMock()
-    mock_adapter = MockAdapter()
-    litellm_shim = LiteLLmShim(mock_adapter, completion_func=mock_completion)
-
-    # Test data missing required fields
-    data = {
-        "invalid_field": "test"
-        # missing 'messages' and 'model'
-    }
-    api_key = "test-key"
-
-    # Execute and verify specific exception is raised
-    with pytest.raises(
-        ValueError,
-        match="Required fields 'messages' and 'model' must be present",
-    ):
-        await litellm_shim.complete(data, api_key)
-
-    # Verify the completion function was never called
-    mock_completion.assert_not_called()

@@ -1,5 +1,5 @@
 import json
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Iterator
 
 from pydantic import BaseModel
 
@@ -12,6 +12,7 @@ async def sse_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterator[str]
     """OpenAI-style SSE format"""
     try:
         async for chunk in stream:
+            print(chunk)
             if isinstance(chunk, BaseModel):
                 # alternatively we might want to just dump the whole object
                 # this might even allow us to tighten the typing of the stream
@@ -39,7 +40,7 @@ async def anthropic_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterato
         yield f"data: {str(e)}\n\n"
 
 
-async def llamacpp_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterator[str]:
+async def llamacpp_stream_generator(stream: Iterator[Any]) -> AsyncIterator[str]:
     """OpenAI-style SSE format"""
     try:
         for chunk in stream:
