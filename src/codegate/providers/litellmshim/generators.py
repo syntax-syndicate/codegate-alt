@@ -12,6 +12,7 @@ async def sse_stream_generator(stream: AsyncIterator[Any]) -> AsyncIterator[str]
     """OpenAI-style SSE format"""
     try:
         async for chunk in stream:
+            print(chunk)
             if isinstance(chunk, BaseModel):
                 # alternatively we might want to just dump the whole object
                 # this might even allow us to tighten the typing of the stream
