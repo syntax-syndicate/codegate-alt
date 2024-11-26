@@ -39,7 +39,7 @@ jobs:
         else
           artifacts_exist=false
         fi
-        echo "::set-output name=artifacts_exist::$artifacts_exist"
+        echo "::set-output name=has_artifacts::$artifacts_exist"
 
     - name: Download the latest artifact
       if: steps.get-run-id.outputs.has_artifacts == 'true'
