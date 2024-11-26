@@ -20,47 +20,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install "."
 
-    - name: Install GitHub CLI
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gh
+    - name: Download artifact
+      id: download-artifact
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        github_token: ${{ github.token }}
+        workflow: ".github/workflows/import_packages.yml"
+        workflow_conclusion: success
+        name: database_volume
+        name_is_regexp: true
+        skip_unpack: false
+        if_no_artifact_found: ignore
 
-    - name: Fetch latest successful workflow run ID and check for artifacts
-      id: get-run-id
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      run: |
-        workflow_path=".github/workflows/import_packages.yml"
-        run_id=$(gh api --paginate repos/${{ github.repository }}/actions/runs --jq ".workflow_runs[] | select(.path == \"$workflow_path\" and .conclusion == \"success\") | .workflow_id" | head -n 1)
-        echo "run_id=$run_id" >> $GITHUB_ENV
-        if [[ "$run_id" != "" ]]; then
-          artifacts_exist=$(gh api repos/stacklok/codegate/actions/artifacts --jq "[.artifacts[] | select(.workflow_run.id == $run_id)] | length > 0")
-          echo "has_artifacts=$artifacts_exist" >> $GITHUB_ENV
-        else
-          echo "has_artifacts=false" >> $GITHUB_ENV
-        fi
-    - name: Use Artifact Environment Variables
-      run: |
-        echo "The run ID is $run_id"
-        echo "Artifacts exist: $has_artifacts"        
-
-    - name: Download the latest artifact
-      if: steps.get-run-id.outputs.has_artifacts == 'true'
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      run: |
-        gh run download ${{ steps.get-run-id.outputs.run_id }}        
-
-    - name: Extract artifact
-      if: steps.get-run-id.outputs.has_artifacts == 'true'
-      run: |
-        # Find the downloaded zip file (assuming only one zip file is downloaded)
-        zip_file=$(ls *.zip)
-        if [[ -n "$zip_file" ]]; then
-          # Unzip the file in the parent directory of the current working directory
-          unzip -o $zip_file -d ../
-        fi
-        
     - name: Run sync
       run: |
         export PYTHONPATH=$PYTHONPATH:./
