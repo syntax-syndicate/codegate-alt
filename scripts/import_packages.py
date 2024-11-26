@@ -78,7 +78,6 @@ def add_data(client):
             print("Adding data from", json_file)
 
             # temporary, just for testing
-            counter = 0
             with collection.batch.dynamic() as batch:
                 for line in f:
                     package = json.loads(line)
@@ -110,9 +109,6 @@ def add_data(client):
                     vector = generate_embeddings(vector_str)
 
                     batch.add_object(properties=package, vector=vector)
-                    counter += 1
-                    if counter>100:
-                        break
 
 
 def run_import():
