@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, FastAPI
 
 from codegate import __description__, __version__
-from codegate.pipeline.base import PipelineProcessor, PipelineStep
+from codegate.pipeline.base import SequentialPipelineProcessor, PipelineStep
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
@@ -22,7 +22,7 @@ def init_app() -> FastAPI:
         CodegateVersion(),
     ]
 
-    pipeline = PipelineProcessor(steps)
+    pipeline = SequentialPipelineProcessor(steps)
     # Create provider registry
     registry = ProviderRegistry(app)
 

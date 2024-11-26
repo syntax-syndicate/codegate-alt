@@ -7,7 +7,7 @@ from litellm import ModelResponse
 from codegate.providers.completion.base import BaseCompletionHandler
 from codegate.providers.formatting.input_pipeline import PipelineResponseFormatter
 
-from ..pipeline.base import PipelineProcessor
+from ..pipeline.base import SequentialPipelineProcessor
 
 StreamGenerator = Callable[[AsyncIterator[Any]], AsyncIterator[str]]
 
@@ -20,7 +20,7 @@ class BaseProvider(ABC):
     def __init__(
         self,
         completion_handler: BaseCompletionHandler,
-        pipeline_processor: Optional[PipelineProcessor] = None
+        pipeline_processor: Optional[SequentialPipelineProcessor] = None
     ):
         self.router = APIRouter()
         self._completion_handler = completion_handler

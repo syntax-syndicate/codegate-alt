@@ -130,7 +130,7 @@ class PipelineStep(ABC):
         pass
 
 
-class PipelineProcessor:
+class SequentialPipelineProcessor:
     def __init__(self, pipeline_steps: List[PipelineStep]):
         self.pipeline_steps = pipeline_steps
 
