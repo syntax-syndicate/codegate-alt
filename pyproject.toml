@@ -17,7 +17,7 @@ weaviate-client = ">=4.9.3"
 torch = ">=2.5.1"
 transformers = ">=4.46.3"
 
-litellm = "^1.52.15"
+litellm = "^1.52.16"
 llama_cpp_python = ">=0.3.2"
 
 [tool.poetry.group.dev.dependencies]
