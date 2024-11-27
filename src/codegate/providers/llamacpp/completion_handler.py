@@ -20,10 +20,6 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
         if completion_request is None:
             raise Exception("Couldn't translate the request")
 
-        # Replace n_predict option with max_tokens
-        if 'n_predict' in completion_request:
-            completion_request['max_tokens'] = completion_request['n_predict']
-            del completion_request['n_predict']
         return ChatCompletionRequest(**completion_request)
 
     def translate_streaming_response(
@@ -50,12 +46,20 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
             stream: bool = False
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
-        Execute the completion request with LiteLLM's API
+        Execute the completion request with inference engine API
         """
-        response = await self.inference_engine.chat(Config.get_config().chat_model_path,
-                                                    Config.get_config().chat_model_n_ctx,
-                                                    Config.get_config().chat_model_n_gpu_layers,
-                                                    **request)
+        model_path = f"{Config.get_config().model_base_path}/{request['model']}.gguf"
+
+        if 'prompt' in request:
+            response = await self.inference_engine.complete(model_path,
+                                                        Config.get_config().chat_model_n_ctx,
+                                                        Config.get_config().chat_model_n_gpu_layers,
+                                                        **request)
+        else:
+            response = await self.inference_engine.chat(model_path,
+                                                        Config.get_config().chat_model_n_ctx,
+                                                        Config.get_config().chat_model_n_gpu_layers,
+                                                        **request)
         return response
 
     def create_streaming_response(

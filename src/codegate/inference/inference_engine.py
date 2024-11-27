@@ -46,6 +46,15 @@ class LlamaCppInferenceEngine:
 
         return self.__models[model_path]
 
+    async def complete(self, model_path, n_ctx=512, n_gpu_layers=0, **completion_request):
+        """
+        Generates a chat completion using the specified model and request parameters.
+        """
+        model = await self.__get_model(
+            model_path=model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers
+        )
+        return model.create_completion(**completion_request)
+
     async def chat(self, model_path, n_ctx=512, n_gpu_layers=0, **chat_completion_request):
         """
         Generates a chat completion using the specified model and request parameters.
@@ -53,7 +62,7 @@ class LlamaCppInferenceEngine:
         model = await self.__get_model(
             model_path=model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers
         )
-        return model.create_completion(**chat_completion_request)
+        return model.create_chat_completion(**chat_completion_request)
 
     async def embed(self, model_path, content):
         """
