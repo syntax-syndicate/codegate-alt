@@ -1,20 +1,41 @@
 from llama_cpp import Llama
 
+from codegate.codegate_logging import setup_logging
+
 
 class LlamaCppInferenceEngine:
-    _inference_engine = None
+    """
+    A wrapper class for llama.cpp models
+
+    Attributes:
+        __inference_engine: Singleton instance of this class
+    """
+
+    __inference_engine = None
 
     def __new__(cls):
-        if cls._inference_engine is None:
-            cls._inference_engine = super().__new__(cls)
-        return cls._inference_engine
+        if cls.__inference_engine is None:
+            cls.__inference_engine = super().__new__(cls)
+        return cls.__inference_engine
 
     def __init__(self):
         if not hasattr(self, "models"):
             self.__models = {}
+            self.__logger = setup_logging()
 
-    async def get_model(self, model_path, embedding=False, n_ctx=512, n_gpu_layers=0):
+    def __del__(self):
+        self.__close_models()
+
+    async def __get_model(self, model_path, embedding=False, n_ctx=512, n_gpu_layers=0):
+        """
+        Returns Llama model object from __models if present. Otherwise, the model
+        is loaded and added to __models and returned.
+        """
         if model_path not in self.__models:
+            self.__logger.info(
+                f"Loading model from {model_path} with parameters "
+                f"n_gpu_layers={n_gpu_layers} and n_ctx={n_ctx}"
+            )
             self.__models[model_path] = Llama(
                 model_path=model_path,
                 n_gpu_layers=n_gpu_layers,
@@ -25,29 +46,26 @@ class LlamaCppInferenceEngine:
 
         return self.__models[model_path]
 
-    async def generate(
-        self, model_path, prompt, n_ctx=512, n_gpu_layers=0, stream=True
-    ):
-        model = await self.get_model(
-            model_path=model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers
-        )
-
-        for chunk in model.create_completion(prompt=prompt, stream=stream):
-            yield chunk
-
-    async def chat(
-        self, model_path, n_ctx=512, n_gpu_layers=0, **chat_completion_request
-    ):
-        model = await self.get_model(
+    async def chat(self, model_path, n_ctx=512, n_gpu_layers=0, **chat_completion_request):
+        """
+        Generates a chat completion using the specified model and request parameters.
+        """
+        model = await self.__get_model(
             model_path=model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers
         )
         return model.create_completion(**chat_completion_request)
 
     async def embed(self, model_path, content):
-        model = await self.get_model(model_path=model_path, embedding=True)
+        """
+        Generates an embedding for the given content using the specified model.
+        """
+        model = await self.__get_model(model_path=model_path, embedding=True)
         return model.embed(content)
 
-    async def close_models(self):
+    async def __close_models(self):
+        """
+        Closes all open models and samplers
+        """
         for _, model in self.__models:
             if model._sampler:
                 model._sampler.close()

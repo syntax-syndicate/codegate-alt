@@ -18,6 +18,10 @@ logger = setup_logging()
 class Config:
     """Application configuration with priority resolution."""
 
+    # Singleton instance of Config which is set in Config.load().
+    # All consumers can call: Config.get_config() to get the config.
+    __config = None
+
     port: int = 8989
     host: str = "localhost"
     log_level: LogLevel = LogLevel.INFO
@@ -208,4 +212,11 @@ class Config:
         if prompts_path is not None:
             config.prompts = PromptConfig.from_file(prompts_path)
 
+        # Set the __config class attribute
+        Config.__config = config
+
         return config
+
+    @classmethod
+    def get_config(cls):
+        return cls.__config
