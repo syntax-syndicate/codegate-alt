@@ -20,6 +20,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install "."
 
+    - name: Download models
+      run: |
+        git lfs install
+        git lfs pull
+
     - name: Download artifact
       id: download-artifact
       uses: dawidd6/action-download-artifact@v6
