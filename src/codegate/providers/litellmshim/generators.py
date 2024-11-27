@@ -1,5 +1,6 @@
 import json
 from typing import Any, AsyncIterator, Iterator
+import asyncio
 
 from pydantic import BaseModel
 
@@ -46,8 +47,9 @@ async def llamacpp_stream_generator(stream: Iterator[Any]) -> AsyncIterator[str]
             if hasattr(chunk, "model_dump_json"):
                 chunk = chunk.model_dump_json(exclude_none=True, exclude_unset=True)
             try:
-                chunk['content'] = chunk['choices'][0]['text']
+                chunk["content"] = chunk["choices"][0]["text"]
                 yield f"data:{json.dumps(chunk)}\n\n"
+                await asyncio.sleep(0)
             except Exception as e:
                 yield f"data:{str(e)}\n\n"
     except Exception as e:

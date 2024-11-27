@@ -11,7 +11,6 @@ from codegate.config import Config
 
 class LlamaCppCompletionHandler(BaseCompletionHandler):
     def __init__(self, adapter: BaseAdapter):
-        self._config = Config.from_file('./config.yaml')
         self._adapter = adapter
         self.inference_engine = LlamaCppInferenceEngine()
 
@@ -53,9 +52,9 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
         """
         Execute the completion request with LiteLLM's API
         """
-        response = await self.inference_engine.chat(self._config.chat_model_path,
-                                                    self._config.chat_model_n_ctx,
-                                                    self._config.chat_model_n_gpu_layers,
+        response = await self.inference_engine.chat(Config.get_config().chat_model_path,
+                                                    Config.get_config().chat_model_n_ctx,
+                                                    Config.get_config().chat_model_n_gpu_layers,
                                                     **request)
         return response
 

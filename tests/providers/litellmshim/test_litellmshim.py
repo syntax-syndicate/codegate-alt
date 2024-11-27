@@ -90,7 +90,6 @@ async def test_complete_streaming():
         "model": "gpt-3.5-turbo",
         "stream": True,
     }
-    api_key = "test-key"
 
     # Execute
     result_stream = await litellm_shim.execute_completion(data)
