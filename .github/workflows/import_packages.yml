@@ -31,7 +31,7 @@ jobs:
         git lfs pull
 
     - name: Download artifact
-      if: ${{ github.event.inputs.enable_artifact_download == true }}    
+      if: ${{ github.event.inputs.enable_artifact_download == 'true' }}    
       id: download-artifact
       uses: dawidd6/action-download-artifact@v6
       with:
