@@ -19,11 +19,11 @@ class LlamaCppProvider(BaseProvider):
 
     def _setup_routes(self):
         """
-        Sets up the /chat route for the provider as expected by the
-        Llama API. Extracts the API key from the "Authorization" header and
-        passes it to the completion handler.
+        Sets up the /completions and /chat/completions routes for the
+        provider as expected by the Llama API.
         """
-        @self.router.post(f"/{self.provider_route_name}/completion")
+        @self.router.post(f"/{self.provider_route_name}/completions")
+        @self.router.post(f"/{self.provider_route_name}/chat/completions")
         async def create_completion(
             request: Request,
         ):

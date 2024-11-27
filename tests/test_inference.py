@@ -1,19 +1,38 @@
 import pytest
 
-# @pytest.mark.asyncio
-# async def test_generate(inference_engine) -> None:
-#     """Test code generation."""
 
-#     prompt = '''
-#         import requests
+@pytest.mark.asyncio
+async def test_generate(inference_engine) -> None:
+    """Test code generation."""
 
-#         # Function to call API over http
-#         def call_api(url):
-#     '''
-#     model_path = "./models/qwen2.5-coder-1.5B.q5_k_m.gguf"
+    completion_request = {
+        "model": "qwen2.5-coder-1.5b-instruct-q5_k_m",
+        "max_tokens": 4096,
+        "temperature": 0,
+        "stream": True,
+        "stop": [
+            "<|endoftext|>",
+            "<|fim_prefix|>",
+            "<|fim_middle|>",
+            "<|fim_suffix|>",
+            "<|fim_pad|>",
+            "<|repo_name|>",
+            "<|file_sep|>",
+            "<|im_start|>",
+            "<|im_end|>",
+            "/src/",
+            "#- coding: utf-8",
+            "```",
+        ],
+        "prompt": "<|fim_prefix|>\\n# codegate/test.py\\nimport requests\\n\\ndef call_api(url):\\n"
+        "    <|fim_suffix|>\\n\\n\\n\\nresponse = call_api('http://localhost/test')"
+        "\\nprint(response)<|fim_middle|>",
+    }
+    model_path = f"./models/{completion_request['model']}.gguf"
+    response = await inference_engine.complete(model_path, **completion_request)
 
-#     async for chunk in inference_engine.generate(model_path, prompt):
-#         print(chunk)
+    for chunk in response:
+        assert chunk["choices"][0]["text"] is not None
 
 
 @pytest.mark.asyncio
@@ -21,18 +40,18 @@ async def test_chat(inference_engine) -> None:
     """Test chat completion."""
 
     chat_request = {
-        "prompt": "<|im_start|>user\\nhello<|im_end|>\\n<|im_start|>assistant\\n",
-        "stream": True,
+        "messages": [{"role": "user", "content": "hello"}],
+        "model": "qwen2.5-coder-1.5b-instruct-q5_k_m",
         "max_tokens": 4096,
-        "top_k": 50,
         "temperature": 0,
+        "stream": True,
     }
 
-    model_path = "./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
+    model_path = f"./models/{chat_request['model']}.gguf"
     response = await inference_engine.chat(model_path, **chat_request)
 
     for chunk in response:
-        assert chunk["choices"][0]["text"] is not None
+        assert 'delta' in chunk["choices"][0]
 
 
 @pytest.mark.asyncio
