@@ -40,7 +40,7 @@ build-backend = "poetry.core.masonry.api"
 codegate = "codegate.cli:main"
 
 [tool.black]
-line-length = 88
+line-length = 127
 target-version = ["py310"]
 
 [tool.ruff]
