@@ -5,8 +5,9 @@ on:
     inputs:
       enable_artifact_download:
         description: 'Enable artifact download step'
+        type: boolean
         required: false
-        default: 'false'  # Default value can be 'true' or 'false'
+        default: true
 jobs:
   # This workflow contains a single job called "greet"
   sync_db:
@@ -30,7 +31,7 @@ jobs:
         git lfs pull
 
     - name: Download artifact
-      if: ${{ github.event.inputs.enable_artifact_download == 'true' }}    
+      if: ${{ github.event.inputs.enable_artifact_download == true }}    
       id: download-artifact
       uses: dawidd6/action-download-artifact@v6
       with:
