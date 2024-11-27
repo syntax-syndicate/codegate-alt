@@ -8,10 +8,10 @@ from codegate.providers.llamacpp.adapter import LlamaCppAdapter
 
 
 class LlamaCppProvider(BaseProvider):
-    def __init__(self):
+    def __init__(self, pipeline_processor=None):
         adapter = LlamaCppAdapter()
         completion_handler = LlamaCppCompletionHandler(adapter)
-        super().__init__(completion_handler)
+        super().__init__(completion_handler, pipeline_processor)
 
     @property
     def provider_route_name(self) -> str:

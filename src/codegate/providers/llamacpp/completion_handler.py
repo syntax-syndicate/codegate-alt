@@ -1,7 +1,7 @@
-from typing import Any, AsyncIterator, Dict
+from typing import Any, AsyncIterator, Dict, Union
 
-from litellm import ModelResponse
 from fastapi.responses import StreamingResponse
+from litellm import ChatCompletionRequest, ModelResponse
 
 from codegate.providers.base import BaseCompletionHandler
 from codegate.providers.llamacpp.adapter import BaseAdapter
@@ -15,12 +15,7 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
         self._adapter = adapter
         self.inference_engine = LlamaCppInferenceEngine()
 
-    async def complete(self, data: Dict, api_key: str) -> AsyncIterator[Any]:
-        """
-        Translate the input parameters to LiteLLM's format using the adapter and
-        call the LiteLLM API. Then translate the response back to our format using
-        the adapter.
-        """
+    def translate_request(self, data: Dict, api_key: str) -> ChatCompletionRequest:
         completion_request = self._adapter.translate_completion_input_params(
             data)
         if completion_request is None:
@@ -30,15 +25,39 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
         if 'n_predict' in completion_request:
             completion_request['max_tokens'] = completion_request['n_predict']
             del completion_request['n_predict']
+        return ChatCompletionRequest(**completion_request)
 
+    def translate_streaming_response(
+            self,
+            response: AsyncIterator[ModelResponse],
+    ) -> AsyncIterator[ModelResponse]:
+        """
+        Convert pipeline or completion response to provider-specific stream
+        """
+        return self._adapter.translate_completion_output_params_streaming(response)
+
+    def translate_response(
+            self,
+            response: ModelResponse,
+    ) -> ModelResponse:
+        """
+        Convert pipeline or completion response to provider-specific format
+        """
+        return self._adapter.translate_completion_output_params(response)
+
+    async def execute_completion(
+            self,
+            request: ChatCompletionRequest,
+            stream: bool = False
+    ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
+        """
+        Execute the completion request with LiteLLM's API
+        """
         response = await self.inference_engine.chat(self._config.chat_model_path,
                                                     self._config.chat_model_n_ctx,
                                                     self._config.chat_model_n_gpu_layers,
-                                                    **completion_request)
-
-        if isinstance(response, ModelResponse):
-            return self._adapter.translate_completion_output_params(response)
-        return self._adapter.translate_completion_output_params_streaming(response)
+                                                    **request)
+        return response
 
     def create_streaming_response(
         self, stream: AsyncIterator[Any]

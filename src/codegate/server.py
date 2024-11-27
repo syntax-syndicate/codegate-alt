@@ -1,6 +1,10 @@
+from typing import List
+
 from fastapi import APIRouter, FastAPI
 
 from codegate import __description__, __version__
+from codegate.pipeline.base import SequentialPipelineProcessor, PipelineStep
+from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
 from codegate.providers.openai.provider import OpenAIProvider
@@ -14,13 +18,18 @@ def init_app() -> FastAPI:
         version=__version__,
     )
 
+    steps: List[PipelineStep] = [
+        CodegateVersion(),
+    ]
+
+    pipeline = SequentialPipelineProcessor(steps)
     # Create provider registry
     registry = ProviderRegistry(app)
 
     # Register all known providers
-    registry.add_provider("openai", OpenAIProvider())
-    registry.add_provider("anthropic", AnthropicProvider())
-    registry.add_provider("llamacpp", LlamaCppProvider())
+    registry.add_provider("openai", OpenAIProvider(pipeline_processor=pipeline))
+    registry.add_provider("anthropic", AnthropicProvider(pipeline_processor=pipeline))
+    registry.add_provider("llamacpp", LlamaCppProvider(pipeline_processor=pipeline))
 
     # Create and add system routes
     system_router = APIRouter(tags=["System"])  # Tags group endpoints in the docs

@@ -12,6 +12,25 @@ class MockCompletionHandler(BaseCompletionHandler):
     async def complete(self, data: Dict, api_key: str) -> AsyncIterator[Any]:
         yield "test"
 
+    def translate_request(self, data: Dict, api_key: str) -> Any:
+        return data
+
+    def translate_response(self, response: Any) -> Any:
+        return response
+
+    def translate_streaming_response(
+        self,
+        response: AsyncIterator[Any],
+    ) -> AsyncIterator[Any]:
+        return response
+
+    def execute_completion(
+        self,
+        request: Any,
+        stream: bool = False,
+    ) -> Any:
+        pass
+
     def create_streaming_response(
         self,
         stream: AsyncIterator[Any],

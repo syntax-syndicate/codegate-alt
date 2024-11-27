@@ -1,7 +1,7 @@
-from typing import Any, AsyncIterator, Dict
+from typing import Any, AsyncIterator, Dict, Union
 
 from fastapi.responses import StreamingResponse
-from litellm import ModelResponse, acompletion
+from litellm import ChatCompletionRequest, ModelResponse, acompletion
 
 from codegate.providers.base import BaseCompletionHandler
 from codegate.providers.litellmshim.adapter import BaseAdapter
@@ -18,22 +18,46 @@ class LiteLLmShim(BaseCompletionHandler):
         self._adapter = adapter
         self._completion_func = completion_func
 
-    async def complete(self, data: Dict, api_key: str) -> AsyncIterator[Any]:
+    def translate_request(self, data: Dict, api_key: str) -> ChatCompletionRequest:
         """
-        Translate the input parameters to LiteLLM's format using the adapter and
-        call the LiteLLM API. Then translate the response back to our format using
-        the adapter.
+        Uses the configured adapter to translate the request data from the native
+        LLM API format to the OpenAI API format used by LiteLLM internally.
+
+        The OpenAPI format is also what our pipeline expects.
         """
         data["api_key"] = api_key
         completion_request = self._adapter.translate_completion_input_params(data)
         if completion_request is None:
             raise Exception("Couldn't translate the request")
+        return completion_request
 
-        response = await self._completion_func(**completion_request)
-
-        if isinstance(response, ModelResponse):
-            return self._adapter.translate_completion_output_params(response)
+    def translate_streaming_response(
+            self,
+            response: AsyncIterator[ModelResponse],
+    ) -> AsyncIterator[ModelResponse]:
+        """
+        Convert pipeline or completion response to provider-specific stream
+        """
         return self._adapter.translate_completion_output_params_streaming(response)
+
+    def translate_response(
+            self,
+            response: ModelResponse,
+    ) -> ModelResponse:
+        """
+        Convert pipeline or completion response to provider-specific format
+        """
+        return self._adapter.translate_completion_output_params(response)
+
+    async def execute_completion(
+        self,
+        request: ChatCompletionRequest,
+        stream: bool = False
+    ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
+        """
+        Execute the completion request with LiteLLM's API
+        """
+        return await self._completion_func(**request)
 
     def create_streaming_response(
         self, stream: AsyncIterator[Any]
