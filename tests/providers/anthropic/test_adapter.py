@@ -40,7 +40,7 @@ def test_normalize_anthropic_input(input_normalizer):
             {"content": "You are an expert code reviewer", "role": "system"},
             {"content": [{"text": "Review this code", "type": "text"}], "role": "user"},
         ],
-        "model": "claude-3-haiku-20240307",
+        "model": "anthropic/claude-3-haiku-20240307",
         "stream": True,
     }
 

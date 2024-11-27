@@ -1,6 +1,6 @@
 from litellm import ChatCompletionRequest
 
-from codegate.pipeline.base import PipelineContext, PipelineResult, PipelineStep, PipelineResponse
+from codegate.pipeline.base import PipelineContext, PipelineResponse, PipelineResult, PipelineStep
 
 
 class SecretAnalyzer(PipelineStep):

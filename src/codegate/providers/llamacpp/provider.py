@@ -5,6 +5,7 @@ from fastapi import Request
 
 from codegate.pipeline.base import SequentialPipelineProcessor
 from codegate.providers.base import BaseProvider
+from codegate.providers.llamacpp.adapter import LlamaCppAdapter
 from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHandler
 from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLamaCppOutputNormalizer
 

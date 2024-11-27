@@ -49,6 +49,9 @@ class MockCompletionHandler(BaseCompletionHandler):
     ) -> StreamingResponse:
         return StreamingResponse(stream)
 
+    def is_fim_request(self, data: Dict) -> bool:
+        return False
+
 
 class MockInputNormalizer(ModelInputNormalizer):
     def normalize(self, data: Dict) -> Dict:
