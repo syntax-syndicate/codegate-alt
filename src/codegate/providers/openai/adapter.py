@@ -3,7 +3,7 @@ from typing import Any, AsyncIterator, Dict, Optional
 from litellm import ChatCompletionRequest, ModelResponse
 
 from codegate.providers.base import StreamGenerator
-from codegate.providers.litellmshim import sse_stream_generator, BaseAdapter
+from codegate.providers.litellmshim import BaseAdapter, sse_stream_generator
 
 
 class OpenAIAdapter(BaseAdapter):
@@ -16,9 +16,7 @@ class OpenAIAdapter(BaseAdapter):
     def __init__(self, stream_generator: StreamGenerator = sse_stream_generator):
         super().__init__(stream_generator)
 
-    def translate_completion_input_params(
-        self, kwargs: Dict
-    ) -> Optional[ChatCompletionRequest]:
+    def translate_completion_input_params(self, kwargs: Dict) -> Optional[ChatCompletionRequest]:
         try:
             return ChatCompletionRequest(**kwargs)
         except Exception as e:

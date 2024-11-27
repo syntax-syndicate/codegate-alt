@@ -32,8 +32,8 @@ class LiteLLmShim(BaseCompletionHandler):
         return completion_request
 
     def translate_streaming_response(
-            self,
-            response: AsyncIterator[ModelResponse],
+        self,
+        response: AsyncIterator[ModelResponse],
     ) -> AsyncIterator[ModelResponse]:
         """
         Convert pipeline or completion response to provider-specific stream
@@ -41,8 +41,8 @@ class LiteLLmShim(BaseCompletionHandler):
         return self._adapter.translate_completion_output_params_streaming(response)
 
     def translate_response(
-            self,
-            response: ModelResponse,
+        self,
+        response: ModelResponse,
     ) -> ModelResponse:
         """
         Convert pipeline or completion response to provider-specific format
@@ -50,18 +50,14 @@ class LiteLLmShim(BaseCompletionHandler):
         return self._adapter.translate_completion_output_params(response)
 
     async def execute_completion(
-        self,
-        request: ChatCompletionRequest,
-        stream: bool = False
+        self, request: ChatCompletionRequest, stream: bool = False
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Execute the completion request with LiteLLM's API
         """
         return await self._completion_func(**request)
 
-    def create_streaming_response(
-        self, stream: AsyncIterator[Any]
-    ) -> StreamingResponse:
+    def create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:
         """
         Create a streaming response from a stream generator. The StreamingResponse
         is the format that FastAPI expects for streaming responses.

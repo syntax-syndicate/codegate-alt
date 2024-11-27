@@ -22,9 +22,7 @@ class BaseAdapter(ABC):
         self.stream_generator = stream_generator
 
     @abstractmethod
-    def translate_completion_input_params(
-        self, kwargs: Dict
-    ) -> Optional[ChatCompletionRequest]:
+    def translate_completion_input_params(self, kwargs: Dict) -> Optional[ChatCompletionRequest]:
         """Convert input parameters to LiteLLM's ChatCompletionRequest format"""
         pass
 
@@ -34,9 +32,7 @@ class BaseAdapter(ABC):
         pass
 
     @abstractmethod
-    def translate_completion_output_params_streaming(
-        self, completion_stream: Any
-    ) -> Any:
+    def translate_completion_output_params_streaming(self, completion_stream: Any) -> Any:
         """
         Convert streaming response from LiteLLM format to a format that
         can be passed to a stream generator and to the client.

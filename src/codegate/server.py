@@ -3,7 +3,9 @@ from typing import List
 from fastapi import APIRouter, FastAPI
 
 from codegate import __description__, __version__
-from codegate.pipeline.base import SequentialPipelineProcessor, PipelineStep
+from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
+from codegate.pipeline.secrets.secrets import CodegateSecrets
+from codegate.pipeline.secrets.signatures import CodegateSignatures
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
@@ -20,11 +22,15 @@ def init_app() -> FastAPI:
 
     steps: List[PipelineStep] = [
         CodegateVersion(),
+        CodegateSecrets(),
     ]
 
     pipeline = SequentialPipelineProcessor(steps)
     # Create provider registry
     registry = ProviderRegistry(app)
+
+    # Initialize SignaturesFinder
+    CodegateSignatures.initialize("signatures.yaml")
 
     # Register all known providers
     registry.add_provider("openai", OpenAIProvider(pipeline_processor=pipeline))

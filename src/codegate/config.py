@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 import yaml
 
-from codegate.codegate_logging import setup_logging, LogFormat, LogLevel
+from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
 from codegate.exceptions import ConfigurationError
 from codegate.prompts import PromptConfig
 
@@ -52,9 +52,7 @@ class Config:
     @staticmethod
     def _load_default_prompts() -> PromptConfig:
         """Load default prompts from prompts/default.yaml."""
-        default_prompts_path = (
-            Path(__file__).parent.parent.parent / "prompts" / "default.yaml"
-        )
+        default_prompts_path = Path(__file__).parent.parent.parent / "prompts" / "default.yaml"
         try:
             return PromptConfig.from_file(default_prompts_path)
         except Exception as e:
@@ -103,9 +101,7 @@ class Config:
                 log_level=config_data.get("log_level", cls.log_level.value),
                 log_format=config_data.get("log_format", cls.log_format.value),
                 model_base_path=config_data.get("chat_model_path", cls.model_base_path),
-                chat_model_n_ctx=config_data.get(
-                    "chat_model_n_ctx", cls.chat_model_n_ctx
-                ),
+                chat_model_n_ctx=config_data.get("chat_model_n_ctx", cls.chat_model_n_ctx),
                 chat_model_n_gpu_layers=config_data.get(
                     "chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers
                 ),

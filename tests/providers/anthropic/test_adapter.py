@@ -36,9 +36,7 @@ def test_translate_completion_input_params(adapter):
     }
     expected = {
         "max_tokens": 1024,
-        "messages": [
-            {"content": [{"text": "Review this code", "type": "text"}], "role": "user"}
-        ],
+        "messages": [{"content": [{"text": "Review this code", "type": "text"}], "role": "user"}],
         "model": "claude-3-haiku-20240307",
         "stream": True,
     }

@@ -20,6 +20,8 @@ transformers = ">=4.46.3"
 litellm = "^1.52.16"
 llama_cpp_python = ">=0.3.2"
 
+pycryptodome = "^3.21.0"
+cryptography = "^44.0.0"
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4.0"
 pytest-cov = ">=4.1.0"

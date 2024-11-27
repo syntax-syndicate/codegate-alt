@@ -11,6 +11,7 @@ from ..pipeline.base import SequentialPipelineProcessor
 
 StreamGenerator = Callable[[AsyncIterator[Any]], AsyncIterator[str]]
 
+
 class BaseProvider(ABC):
     """
     The provider class is responsible for defining the API routes and
@@ -20,13 +21,12 @@ class BaseProvider(ABC):
     def __init__(
         self,
         completion_handler: BaseCompletionHandler,
-        pipeline_processor: Optional[SequentialPipelineProcessor] = None
+        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
     ):
         self.router = APIRouter()
         self._completion_handler = completion_handler
         self._pipeline_processor = pipeline_processor
-        self._pipeline_response_formatter = \
-            PipelineResponseFormatter(completion_handler)
+        self._pipeline_response_formatter = PipelineResponseFormatter(completion_handler)
         self._setup_routes()
 
     @abstractmethod
@@ -39,8 +39,10 @@ class BaseProvider(ABC):
         pass
 
     async def complete(
-            self, data: Dict, api_key: str,
-        ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
+        self,
+        data: Dict,
+        api_key: str,
+    ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Main completion flow with pipeline integration
 
@@ -63,7 +65,8 @@ class BaseProvider(ABC):
 
             if result.response:
                 return self._pipeline_response_formatter.handle_pipeline_response(
-                    result.response, streaming)
+                    result.response, streaming
+                )
 
             completion_request = result.request
 
@@ -71,8 +74,7 @@ class BaseProvider(ABC):
         # This gives us either a single response or a stream of responses
         # based on the streaming flag
         raw_response = await self._completion_handler.execute_completion(
-            completion_request,
-            stream=streaming
+            completion_request, stream=streaming
         )
         if not streaming:
             return self._completion_handler.translate_response(raw_response)

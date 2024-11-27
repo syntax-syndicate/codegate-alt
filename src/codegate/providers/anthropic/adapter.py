@@ -7,7 +7,7 @@ from litellm.adapters.anthropic_adapter import (
 from litellm.types.llms.anthropic import AnthropicResponse
 
 from codegate.providers.base import StreamGenerator
-from codegate.providers.litellmshim import anthropic_stream_generator, BaseAdapter
+from codegate.providers.litellmshim import BaseAdapter, anthropic_stream_generator
 
 
 class AnthropicAdapter(BaseAdapter):
@@ -25,22 +25,16 @@ class AnthropicAdapter(BaseAdapter):
         self,
         completion_request: Dict,
     ) -> Optional[ChatCompletionRequest]:
-        return self.litellm_anthropic_adapter.translate_completion_input_params(
-            completion_request
-        )
+        return self.litellm_anthropic_adapter.translate_completion_input_params(completion_request)
 
     def translate_completion_output_params(
         self, response: ModelResponse
     ) -> Optional[AnthropicResponse]:
-        return self.litellm_anthropic_adapter.translate_completion_output_params(
-            response
-        )
+        return self.litellm_anthropic_adapter.translate_completion_output_params(response)
 
     def translate_completion_output_params_streaming(
         self, completion_stream: Any
     ) -> AdapterCompletionStreamWrapper | None:
-        return (
-            self.litellm_anthropic_adapter.translate_completion_output_params_streaming(
-                completion_stream
-            )
+        return self.litellm_anthropic_adapter.translate_completion_output_params_streaming(
+            completion_stream
         )

@@ -3,7 +3,7 @@ from typing import Any, AsyncIterator, Dict, Optional
 from litellm import ChatCompletionRequest, ModelResponse
 
 from codegate.providers.base import StreamGenerator
-from codegate.providers.litellmshim import llamacpp_stream_generator, BaseAdapter
+from codegate.providers.litellmshim import BaseAdapter, llamacpp_stream_generator
 
 
 class LlamaCppAdapter(BaseAdapter):
@@ -12,12 +12,11 @@ class LlamaCppAdapter(BaseAdapter):
     through the input and output as-is - LiteLLM's API expects OpenAI's API
     format.
     """
+
     def __init__(self, stream_generator: StreamGenerator = llamacpp_stream_generator):
         super().__init__(stream_generator)
 
-    def translate_completion_input_params(
-        self, kwargs: Dict
-    ) -> Optional[ChatCompletionRequest]:
+    def translate_completion_input_params(self, kwargs: Dict) -> Optional[ChatCompletionRequest]:
         try:
             return ChatCompletionRequest(**kwargs)
         except Exception as e:

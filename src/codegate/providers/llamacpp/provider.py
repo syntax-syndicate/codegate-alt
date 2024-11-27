@@ -3,8 +3,8 @@ import json
 from fastapi import Request
 
 from codegate.providers.base import BaseProvider
-from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHandler
 from codegate.providers.llamacpp.adapter import LlamaCppAdapter
+from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHandler
 
 
 class LlamaCppProvider(BaseProvider):
@@ -22,6 +22,7 @@ class LlamaCppProvider(BaseProvider):
         Sets up the /completions and /chat/completions routes for the
         provider as expected by the Llama API.
         """
+
         @self.router.post(f"/{self.provider_route_name}/completions")
         @self.router.post(f"/{self.provider_route_name}/chat/completions")
         async def create_completion(
