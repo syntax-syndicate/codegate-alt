@@ -1,7 +1,9 @@
 import json
+from typing import Optional
 
 from fastapi import Header, HTTPException, Request
 
+from codegate.pipeline.base import SequentialPipelineProcessor
 from codegate.providers.base import BaseProvider
 from codegate.providers.litellmshim import LiteLLmShim, sse_stream_generator
 from codegate.providers.openai.adapter import OpenAIInputNormalizer, OpenAIOutputNormalizer
@@ -30,6 +32,21 @@ class OpenAIProvider(BaseProvider):
 
         @self.router.post(f"/{self.provider_route_name}/chat/completions")
         async def create_completion(
+            request: Request,
+            authorization: str = Header(..., description="Bearer token"),
+        ):
+            if not authorization.startswith("Bearer "):
+                raise HTTPException(status_code=401, detail="Invalid authorization header")
+
+            api_key = authorization.split(" ")[1]
+            body = await request.body()
+            data = json.loads(body)
+
+            stream = await self.complete(data, api_key)
+            return self._completion_handler.create_streaming_response(stream)
+
+        @self.router.post(f"/{self.provider_route_name}/completions")
+        async def create_fim(
             request: Request,
             authorization: str = Header(..., description="Bearer token"),
         ):

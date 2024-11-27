@@ -65,3 +65,11 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
             },
             status_code=200,
         )
+
+    def is_fim_request(self, data: Dict) -> bool:
+        """
+        Determine from the raw incoming data if it's a FIM request.
+        This is needed here since completion_handler is used by provider and provider
+        doesn't know about the adapter.
+        """
+        return self._adapter.is_fim_request(data)
