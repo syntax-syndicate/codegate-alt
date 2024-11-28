@@ -1,17 +1,27 @@
 import json
+from typing import Optional
 
 from fastapi import Header, HTTPException, Request
 
-from codegate.providers.base import BaseProvider
-from codegate.providers.litellmshim import LiteLLmShim
-from codegate.providers.openai.adapter import OpenAIAdapter
+from codegate.providers.base import BaseProvider, SequentialPipelineProcessor
+from codegate.providers.litellmshim import LiteLLmShim, sse_stream_generator
+from codegate.providers.openai.adapter import OpenAIInputNormalizer, OpenAIOutputNormalizer
 
 
 class OpenAIProvider(BaseProvider):
-    def __init__(self, pipeline_processor=None):
-        adapter = OpenAIAdapter()
-        completion_handler = LiteLLmShim(adapter)
-        super().__init__(completion_handler, pipeline_processor)
+    def __init__(
+                self,
+                pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+                fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None
+            ):
+        completion_handler = LiteLLmShim(stream_generator=sse_stream_generator)
+        super().__init__(
+            OpenAIInputNormalizer(),
+            OpenAIOutputNormalizer(),
+            completion_handler,
+            pipeline_processor,
+            fim_pipeline_processor
+        )
 
     @property
     def provider_route_name(self) -> str:
@@ -25,6 +35,7 @@ class OpenAIProvider(BaseProvider):
         """
 
         @self.router.post(f"/{self.provider_route_name}/chat/completions")
+        @self.router.post(f"/{self.provider_route_name}/completions")
         async def create_completion(
             request: Request,
             authorization: str = Header(..., description="Bearer token"),
@@ -36,5 +47,6 @@ class OpenAIProvider(BaseProvider):
             body = await request.body()
             data = json.loads(body)
 
-            stream = await self.complete(data, api_key)
+            is_fim_request = self._is_fim_request(request, data)
+            stream = await self.complete(data, api_key, is_fim_request=is_fim_request)
             return self._completion_handler.create_streaming_response(stream)
