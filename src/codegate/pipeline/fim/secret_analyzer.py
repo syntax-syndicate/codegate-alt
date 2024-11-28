@@ -7,7 +7,7 @@ logger = setup_logging()
 
 
 class SecretAnalyzer(PipelineStep):
-    """Pipeline step that handles version information requests."""
+    """Pipeline step that handles analyzing secrets in FIM pipeline."""
 
     message_blocked = """
         ⚠️ CodeGate Security Warning! Analysis Report ⚠️
