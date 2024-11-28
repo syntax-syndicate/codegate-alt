@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import click
 
@@ -88,6 +88,24 @@ def show_prompts(prompts: Optional[Path]) -> None:
     default=None,
     help="Path to YAML prompts file",
 )
+@click.option(
+    "--vllm-url",
+    type=str,
+    default=None,
+    help="vLLM provider URL (default: http://localhost:8000/v1)",
+)
+@click.option(
+    "--openai-url",
+    type=str,
+    default=None,
+    help="OpenAI provider URL (default: https://api.openai.com/v1)",
+)
+@click.option(
+    "--anthropic-url",
+    type=str,
+    default=None,
+    help="Anthropic provider URL (default: https://api.anthropic.com/v1)",
+)
 def serve(
     port: Optional[int],
     host: Optional[str],
@@ -95,10 +113,22 @@ def serve(
     log_format: Optional[str],
     config: Optional[Path],
     prompts: Optional[Path],
+    vllm_url: Optional[str],
+    openai_url: Optional[str],
+    anthropic_url: Optional[str],
 ) -> None:
     """Start the codegate server."""
     logger = None
     try:
+        # Create provider URLs dict from CLI options
+        cli_provider_urls: Dict[str, str] = {}
+        if vllm_url:
+            cli_provider_urls["vllm"] = vllm_url
+        if openai_url:
+            cli_provider_urls["openai"] = openai_url
+        if anthropic_url:
+            cli_provider_urls["anthropic"] = anthropic_url
+
         # Load configuration with priority resolution
         cfg = Config.load(
             config_path=config,
@@ -107,6 +137,7 @@ def serve(
             cli_host=host,
             cli_log_level=log_level,
             cli_log_format=log_format,
+            cli_provider_urls=cli_provider_urls,
         )
 
         logger = setup_logging(cfg.log_level, cfg.log_format)
@@ -118,6 +149,7 @@ def serve(
                 "log_level": cfg.log_level.value,
                 "log_format": cfg.log_format.value,
                 "prompts_loaded": len(cfg.prompts.prompts),
+                "provider_urls": cfg.provider_urls,
             },
         )
 

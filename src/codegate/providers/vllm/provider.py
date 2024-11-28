@@ -3,12 +3,13 @@ from typing import Optional
 
 from fastapi import Header, HTTPException, Request
 
+from codegate.config import Config
 from codegate.providers.base import BaseProvider, SequentialPipelineProcessor
 from codegate.providers.litellmshim import LiteLLmShim, sse_stream_generator
-from codegate.providers.openai.adapter import OpenAIInputNormalizer, OpenAIOutputNormalizer
+from codegate.providers.vllm.adapter import VLLMInputNormalizer, VLLMOutputNormalizer
 
 
-class OpenAIProvider(BaseProvider):
+class VLLMProvider(BaseProvider):
     def __init__(
         self,
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
@@ -16,8 +17,8 @@ class OpenAIProvider(BaseProvider):
     ):
         completion_handler = LiteLLmShim(stream_generator=sse_stream_generator)
         super().__init__(
-            OpenAIInputNormalizer(),
-            OpenAIOutputNormalizer(),
+            VLLMInputNormalizer(),
+            VLLMOutputNormalizer(),
             completion_handler,
             pipeline_processor,
             fim_pipeline_processor,
@@ -25,7 +26,7 @@ class OpenAIProvider(BaseProvider):
 
     @property
     def provider_route_name(self) -> str:
-        return "openai"
+        return "vllm"
 
     def _setup_routes(self):
         """
@@ -46,6 +47,10 @@ class OpenAIProvider(BaseProvider):
             api_key = authorization.split(" ")[1]
             body = await request.body()
             data = json.loads(body)
+
+            # Add the vLLM base URL to the request
+            config = Config.get_config()
+            data["base_url"] = config.provider_urls.get("vllm")
 
             is_fim_request = self._is_fim_request(request, data)
             stream = await self.complete(data, api_key, is_fim_request=is_fim_request)

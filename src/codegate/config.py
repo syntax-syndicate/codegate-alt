@@ -3,7 +3,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 import yaml
 
@@ -31,6 +31,15 @@ class Config:
     model_base_path: str = "./models"
     chat_model_n_ctx: int = 32768
     chat_model_n_gpu_layers: int = -1
+
+    # Provider URLs with defaults
+    provider_urls: Dict[str, str] = field(
+        default_factory=lambda: {
+            "openai": "https://api.openai.com/v1",
+            "anthropic": "https://api.anthropic.com/v1",
+            "vllm": "http://localhost:8000",  # Base URL without /v1 path
+        }
+    )
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
@@ -95,19 +104,23 @@ class Config:
                         prompts_path = Path(config_path).parent / prompts_path
                     prompts_config = PromptConfig.from_file(prompts_path)
 
+            # Get provider URLs from config
+            provider_urls = cls.provider_urls.copy()
+            if "provider_urls" in config_data:
+                provider_urls.update(config_data.pop("provider_urls"))
+
             return cls(
                 port=config_data.get("port", cls.port),
                 host=config_data.get("host", cls.host),
                 log_level=config_data.get("log_level", cls.log_level.value),
                 log_format=config_data.get("log_format", cls.log_format.value),
                 model_base_path=config_data.get("chat_model_path", cls.model_base_path),
-                chat_model_n_ctx=config_data.get(
-                    "chat_model_n_ctx", cls.chat_model_n_ctx
-                ),
+                chat_model_n_ctx=config_data.get("chat_model_n_ctx", cls.chat_model_n_ctx),
                 chat_model_n_gpu_layers=config_data.get(
                     "chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers
                 ),
                 prompts=prompts_config,
+                provider_urls=provider_urls,
             )
         except yaml.YAMLError as e:
             raise ConfigurationError(f"Failed to parse config file: {e}")
@@ -138,6 +151,12 @@ class Config:
                     os.environ["CODEGATE_PROMPTS_FILE"]
                 )  # noqa: E501
 
+            # Load provider URLs from environment variables
+            for provider in config.provider_urls.keys():
+                env_var = f"CODEGATE_PROVIDER_{provider.upper()}_URL"
+                if env_var in os.environ:
+                    config.provider_urls[provider] = os.environ[env_var]
+
             return config
         except ValueError as e:
             raise ConfigurationError(f"Invalid environment variable value: {e}")
@@ -151,6 +170,7 @@ class Config:
         cli_host: Optional[str] = None,
         cli_log_level: Optional[str] = None,
         cli_log_format: Optional[str] = None,
+        cli_provider_urls: Optional[Dict[str, str]] = None,
     ) -> "Config":
         """Load configuration with priority resolution.
 
@@ -167,6 +187,7 @@ class Config:
             cli_host: Optional CLI host override
             cli_log_level: Optional CLI log level override
             cli_log_format: Optional CLI log format override
+            cli_provider_urls: Optional dict of provider URLs from CLI
 
         Returns:
             Config: Resolved configuration
@@ -198,6 +219,10 @@ class Config:
         if "CODEGATE_PROMPTS_FILE" in os.environ:
             config.prompts = env_config.prompts
 
+        # Override provider URLs from environment
+        for provider, url in env_config.provider_urls.items():
+            config.provider_urls[provider] = url
+
         # Override with CLI arguments
         if cli_port is not None:
             config.port = cli_port
@@ -209,6 +234,8 @@ class Config:
             config.log_format = LogFormat(cli_log_format)
         if prompts_path is not None:
             config.prompts = PromptConfig.from_file(prompts_path)
+        if cli_provider_urls is not None:
+            config.provider_urls.update(cli_provider_urls)
 
         # Set the __config class attribute
         Config.__config = config

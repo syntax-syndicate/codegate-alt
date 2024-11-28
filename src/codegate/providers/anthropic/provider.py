@@ -11,17 +11,17 @@ from codegate.providers.litellmshim import anthropic_stream_generator
 
 class AnthropicProvider(BaseProvider):
     def __init__(
-                self,
-                pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-                fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None
-            ):
+        self,
+        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+        fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+    ):
         completion_handler = AnthropicCompletion(stream_generator=anthropic_stream_generator)
         super().__init__(
             AnthropicInputNormalizer(),
             AnthropicOutputNormalizer(),
             completion_handler,
             pipeline_processor,
-            fim_pipeline_processor
+            fim_pipeline_processor,
         )
 
     @property

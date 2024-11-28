@@ -28,9 +28,7 @@ class SecretAnalyzer(PipelineStep):
         return "fim-secret-analyzer"
 
     async def process(
-            self,
-            request: ChatCompletionRequest,
-            context: PipelineContext
+        self, request: ChatCompletionRequest, context: PipelineContext
     ) -> PipelineResult:
         # We should call here Secrets Blocking module to see if the request messages contain secrets
         # messages_contain_secrets = [analyze_msg_secrets(msg) for msg in request.messages]
@@ -39,7 +37,7 @@ class SecretAnalyzer(PipelineStep):
         # For the moment to test shortcutting just treat all messages as if they contain secrets
         message_with_secrets = False
         if message_with_secrets:
-            logger.info('Blocking message with secrets.')
+            logger.info("Blocking message with secrets.")
             return PipelineResult(
                 response=PipelineResponse(
                     step_name=self.name,
