@@ -1,6 +1,9 @@
 from litellm import ChatCompletionRequest
 
+from codegate.codegate_logging import setup_logging
 from codegate.pipeline.base import PipelineContext, PipelineResponse, PipelineResult, PipelineStep
+
+logger = setup_logging()
 
 
 class SecretAnalyzer(PipelineStep):
@@ -34,8 +37,9 @@ class SecretAnalyzer(PipelineStep):
         # message_with_secrets = any(messages_contain_secretes)
 
         # For the moment to test shortcutting just treat all messages as if they contain secrets
-        message_with_secrets = True
+        message_with_secrets = False
         if message_with_secrets:
+            logger.info('Blocking message with secrets.')
             return PipelineResult(
                 response=PipelineResponse(
                     step_name=self.name,

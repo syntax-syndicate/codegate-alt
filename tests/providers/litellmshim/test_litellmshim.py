@@ -37,9 +37,6 @@ class MockAdapter(BaseAdapter):
 
         return modified_stream()
 
-    def is_fim_request(self, data: Dict) -> bool:
-        return False
-
 
 @pytest.mark.asyncio
 async def test_complete_non_streaming():

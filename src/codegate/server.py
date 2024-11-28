@@ -4,7 +4,6 @@ from fastapi import APIRouter, FastAPI
 
 from codegate import __description__, __version__
 from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
-from codegate.pipeline.version.version import CodegateVersion
 from codegate.pipeline.fim.secret_analyzer import SecretAnalyzer
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
@@ -26,7 +25,6 @@ def init_app() -> FastAPI:
     fim_steps: List[PipelineStep] = [
         SecretAnalyzer(),
     ]
-
     pipeline = SequentialPipelineProcessor(steps)
     fim_pipeline = SequentialPipelineProcessor(fim_steps)
 
