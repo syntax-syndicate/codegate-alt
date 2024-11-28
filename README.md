@@ -1,13 +1,12 @@
-# 🛡️ Codegate
+# Codegate
 
 [![CI](https://github.com/stacklok/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/stacklok/codegate/actions/workflows/ci.yml)
 
-
-Codegate is an intelligent gateway that makes AI coding assistants safer and more reliable. It acts as your security checkpoint, ensuring that AI suggestions align with best practices and don't compromise your code's security or your individual rights to privacy.
+Codegate is a local gateway that makes AI coding assistants safer. Acting as a security checkpoint, Codegate ensures AI-generated recommendations adhere to best practices, while safeguarding your code's integrity, and protecting your individual privacy. With Codegate, you can confidently leverage AI in your development workflow without compromising security or control.
 
 ## ✨ Why Codegate?
 
-In today's world where AI coding assistants are becoming ubiquitous, security can't be an afterthought. Codegate sits between you and AI services, actively protecting your development process by:
+In today's world where AI coding assistants are becoming ubiquitous, security can't be an afterthought. Codegate sits between you and AI, actively protecting your development process by:
 
 - 🔒 Preventing accidental exposure of secrets and sensitive data
 - 🛡️ Ensuring AI suggestions follow secure coding practices
