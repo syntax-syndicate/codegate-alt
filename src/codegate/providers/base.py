@@ -150,7 +150,6 @@ class BaseProvider(ABC):
         model_response = await self._completion_handler.execute_completion(
             provider_request, api_key=api_key, stream=streaming
         )
-        print(f'Model response: {model_response}')
         if not streaming:
             return self._output_normalizer.denormalize(model_response)
         return self._output_normalizer.denormalize_streaming(model_response)
