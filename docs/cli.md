@@ -46,6 +46,21 @@ codegate serve [OPTIONS]
   - Must be a valid YAML file
   - Overrides default prompts and configuration file prompts
 
+- `--vllm-url TEXT`: vLLM provider URL (default: http://localhost:8000)
+  - Optional
+  - Base URL for vLLM provider (/v1 path is added automatically)
+  - Overrides configuration file and environment variables
+
+- `--openai-url TEXT`: OpenAI provider URL (default: https://api.openai.com/v1)
+  - Optional
+  - Base URL for OpenAI provider
+  - Overrides configuration file and environment variables
+
+- `--anthropic-url TEXT`: Anthropic provider URL (default: https://api.anthropic.com/v1)
+  - Optional
+  - Base URL for Anthropic provider
+  - Overrides configuration file and environment variables
+
 ### show-prompts
 
 Display the loaded system prompts:
@@ -98,6 +113,11 @@ codegate serve --config my-config.yaml
 Start server with custom prompts:
 ```bash
 codegate serve --prompts my-prompts.yaml
+```
+
+Start server with custom vLLM endpoint:
+```bash
+codegate serve --vllm-url https://vllm.example.com
 ```
 
 Show default system prompts:

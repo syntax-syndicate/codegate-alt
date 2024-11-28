@@ -1,4 +1,6 @@
 .PHONY: clean install format lint test security build all
+CONTAINER_BUILD?=docker buildx build
+VER?=0.1.0
 
 clean:
 	rm -rf build/
@@ -26,5 +28,9 @@ security:
 
 build: clean test
 	poetry build
+
+image-build:
+	$(CONTAINER_BUILD) -f Dockerfile -t codegate . -t ghcr.io/stacklok/codegate:$(VER) --load
+
 
 all: clean install format lint test security build

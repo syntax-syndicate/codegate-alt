@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from codegate.cli import cli
 from codegate.codegate_logging import LogFormat, LogLevel
+from codegate.config import DEFAULT_PROVIDER_URLS
 
 
 @pytest.fixture
@@ -63,6 +64,7 @@ def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None
                 "log_level": "INFO",
                 "log_format": "JSON",
                 "prompts_loaded": 7,  # Default prompts are loaded
+                "provider_urls": DEFAULT_PROVIDER_URLS,
             },
         )
         mock_run.assert_called_once()
@@ -98,6 +100,7 @@ def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
                 "log_level": "DEBUG",
                 "log_format": "TEXT",
                 "prompts_loaded": 7,  # Default prompts are loaded
+                "provider_urls": DEFAULT_PROVIDER_URLS,
             },
         )
         mock_run.assert_called_once()
@@ -136,6 +139,7 @@ def test_serve_with_config_file(
                 "log_level": "DEBUG",
                 "log_format": "JSON",
                 "prompts_loaded": 7,  # Default prompts are loaded
+                "provider_urls": DEFAULT_PROVIDER_URLS,
             },
         )
         mock_run.assert_called_once()
@@ -182,6 +186,7 @@ def test_serve_priority_resolution(
                 "log_level": "ERROR",
                 "log_format": "TEXT",
                 "prompts_loaded": 7,  # Default prompts are loaded
+                "provider_urls": DEFAULT_PROVIDER_URLS,
             },
         )
         mock_run.assert_called_once()

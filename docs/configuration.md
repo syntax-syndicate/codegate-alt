@@ -16,6 +16,10 @@ The configuration system in Codegate is managed through the `Config` class in `c
 - Log Level: "INFO"
 - Log Format: "JSON"
 - Prompts: Default prompts from prompts/default.yaml
+- Provider URLs:
+  - vLLM: "http://localhost:8000"
+  - OpenAI: "https://api.openai.com/v1"
+  - Anthropic: "https://api.anthropic.com/v1"
 
 ## Configuration Methods
 
@@ -27,6 +31,18 @@ Load configuration from a YAML file:
 config = Config.from_file("config.yaml")
 ```
 
+Example config.yaml:
+```yaml
+port: 8989
+host: localhost
+log_level: INFO
+log_format: JSON
+provider_urls:
+  vllm: "https://vllm.example.com"
+  openai: "https://api.openai.com/v1"
+  anthropic: "https://api.anthropic.com/v1"
+```
+
 ### From Environment Variables
 
 Environment variables are automatically loaded with these mappings:
@@ -36,12 +52,41 @@ Environment variables are automatically loaded with these mappings:
 - `CODEGATE_APP_LOG_LEVEL`: Logging level
 - `CODEGATE_LOG_FORMAT`: Log format
 - `CODEGATE_PROMPTS_FILE`: Path to prompts YAML file
+- `CODEGATE_PROVIDER_VLLM_URL`: vLLM provider URL
+- `CODEGATE_PROVIDER_OPENAI_URL`: OpenAI provider URL
+- `CODEGATE_PROVIDER_ANTHROPIC_URL`: Anthropic provider URL
 
 ```python
 config = Config.from_env()
 ```
 
 ## Configuration Options
+
+### Provider URLs
+
+Provider URLs can be configured in several ways:
+
+1. In Configuration File:
+   ```yaml
+   provider_urls:
+     vllm: "https://vllm.example.com"  # /v1 path is added automatically
+     openai: "https://api.openai.com/v1"
+     anthropic: "https://api.anthropic.com/v1"
+   ```
+
+2. Via Environment Variables:
+   ```bash
+   export CODEGATE_PROVIDER_VLLM_URL=https://vllm.example.com
+   export CODEGATE_PROVIDER_OPENAI_URL=https://api.openai.com/v1
+   export CODEGATE_PROVIDER_ANTHROPIC_URL=https://api.anthropic.com/v1
+   ```
+
+3. Via CLI Flags:
+   ```bash
+   codegate serve --vllm-url https://vllm.example.com
+   ```
+
+Note: For the vLLM provider, the /v1 path is automatically appended to the base URL if not present.
 
 ### Log Levels
 
