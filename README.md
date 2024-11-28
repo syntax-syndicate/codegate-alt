@@ -3,7 +3,7 @@
 [![CI](https://github.com/stacklok/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/stacklok/codegate/actions/workflows/ci.yml)
 
 
-Codegate is an intelligent gateway that makes AI coding assistants safer and more reliable. It acts as your security checkpoint, ensuring that AI suggestions align with best practices and don't compromise your code's security or your indivdual rights to privacy.
+Codegate is an intelligent gateway that makes AI coding assistants safer and more reliable. It acts as your security checkpoint, ensuring that AI suggestions align with best practices and don't compromise your code's security or your individual rights to privacy.
 
 ## ✨ Why Codegate?
 
