@@ -1,20 +1,27 @@
 import json
+from typing import Optional
 
 from fastapi import Header, HTTPException, Request
 
 from codegate.providers.anthropic.adapter import AnthropicInputNormalizer, AnthropicOutputNormalizer
-from codegate.providers.base import BaseProvider
-from codegate.providers.litellmshim import LiteLLmShim, anthropic_stream_generator
+from codegate.providers.anthropic.completion_handler import AnthropicCompletion
+from codegate.providers.base import BaseProvider, SequentialPipelineProcessor
+from codegate.providers.litellmshim import anthropic_stream_generator
 
 
 class AnthropicProvider(BaseProvider):
-    def __init__(self, pipeline_processor=None):
-        completion_handler = LiteLLmShim(stream_generator=anthropic_stream_generator)
+    def __init__(
+                self,
+                pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+                fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None
+            ):
+        completion_handler = AnthropicCompletion(stream_generator=anthropic_stream_generator)
         super().__init__(
             AnthropicInputNormalizer(),
             AnthropicOutputNormalizer(),
             completion_handler,
             pipeline_processor,
+            fim_pipeline_processor
         )
 
     @property
@@ -39,5 +46,6 @@ class AnthropicProvider(BaseProvider):
             body = await request.body()
             data = json.loads(body)
 
-            stream = await self.complete(data, x_api_key)
+            is_fim_request = self._is_fim_request(request, data)
+            stream = await self.complete(data, x_api_key, is_fim_request)
             return self._completion_handler.create_streaming_response(stream)
