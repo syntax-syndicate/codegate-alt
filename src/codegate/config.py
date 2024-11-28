@@ -13,6 +13,13 @@ from codegate.prompts import PromptConfig
 
 logger = setup_logging()
 
+# Default provider URLs
+DEFAULT_PROVIDER_URLS = {
+    "openai": "https://api.openai.com/v1",
+    "anthropic": "https://api.anthropic.com/v1",
+    "vllm": "http://localhost:8000",  # Base URL without /v1 path
+}
+
 
 @dataclass
 class Config:
@@ -33,13 +40,7 @@ class Config:
     chat_model_n_gpu_layers: int = -1
 
     # Provider URLs with defaults
-    provider_urls: Dict[str, str] = field(
-        default_factory=lambda: {
-            "openai": "https://api.openai.com/v1",
-            "anthropic": "https://api.anthropic.com/v1",
-            "vllm": "http://localhost:8000",  # Base URL without /v1 path
-        }
-    )
+    provider_urls: Dict[str, str] = field(default_factory=lambda: DEFAULT_PROVIDER_URLS.copy())
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
@@ -105,7 +106,7 @@ class Config:
                     prompts_config = PromptConfig.from_file(prompts_path)
 
             # Get provider URLs from config
-            provider_urls = cls.provider_urls.copy()
+            provider_urls = DEFAULT_PROVIDER_URLS.copy()
             if "provider_urls" in config_data:
                 provider_urls.update(config_data.pop("provider_urls"))
 
@@ -152,7 +153,7 @@ class Config:
                 )  # noqa: E501
 
             # Load provider URLs from environment variables
-            for provider in config.provider_urls.keys():
+            for provider in DEFAULT_PROVIDER_URLS.keys():
                 env_var = f"CODEGATE_PROVIDER_{provider.upper()}_URL"
                 if env_var in os.environ:
                     config.provider_urls[provider] = os.environ[env_var]
