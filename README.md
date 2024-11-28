@@ -1,84 +1,100 @@
-# Codegate
+# 🛡️ Codegate
 
 [![CI](https://github.com/stacklok/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/stacklok/codegate/actions/workflows/ci.yml)
 
-A configurable Generative AI gateway, protecting developers from the dangers of AI.
 
-## Features
+Codegate is an intelligent gateway that makes AI coding assistants safer and more reliable. It acts as your security checkpoint, ensuring that AI suggestions align with best practices and don't compromise your code's security or your individual rights to privacy.
 
-- Secrets exflitration prevention
-- Secure Coding recommendations
-- Preventing AI from recommending deprecated and / or malicious libraries
+## ✨ Why Codegate?
 
+In today's world where AI coding assistants are becoming ubiquitous, security can't be an afterthought. Codegate sits between you and AI services, actively protecting your development process by:
 
-### Installation
+- 🔒 Preventing accidental exposure of secrets and sensitive data
+- 🛡️ Ensuring AI suggestions follow secure coding practices
+- ⚠️ Blocking recommendations of known malicious or deprecated libraries
+- 🔍 Providing real-time security analysis of AI suggestions
 
-#### Requirements
+## 🌟 Features
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-- [jq](https://stedolan.github.io/jq/download/)
-- [vscode](https://code.visualstudio.com/download)
+### Supported AI Providers
+Codegate works seamlessly with leading AI providers:
+- 🤖 Anthropic (Claude)
+- 🧠 OpenAI
+- ⚡ vLLM
+- 💻 Local LLMs (run AI completely offline!)
+- 🔮 Many more on the way!
 
-#### Steps
+### Run AI Your Way
+- 🌐 Cloud Providers: Use leading AI services like OpenAI and Anthropic
+- 🏠 Local LLMs: Keep everything offline with local model support
+- 🔄 Hybrid Mode: Mix and match cloud and local providers as needed
 
-Download the installation script docker-compose.yml
+### AI Coding Assistants
+We're starting with Continue VSCode extension support, with many more AI coding assistants coming soon!
 
-Run the installation script
+### Privacy First
+Unlike E.T., your code never phones home! 🛸 Codegate is designed with privacy at its core:
+- 🏠 Everything stays on your machine
+- 🚫 No external data collection
+- 🔐 No calling home or telemetry
+- 💪 Complete control over your data
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+Make sure you have these tools installed:
+
+- 🐳 [Docker](https://docs.docker.com/get-docker/)
+- 🔧 [Docker Compose](https://docs.docker.com/compose/install/)
+- 🛠️ [jq](https://stedolan.github.io/jq/download/)
+- 💻 [VSCode](https://code.visualstudio.com/download)
+
+### One-Command Setup
 
 ```bash
 chmod +x install.sh && ./install.sh
 ```
 
-The script will download the Continue VSCode extension, create
-a configuration file. The script will also create a docker-compose.yml file and start the services.
+This script will:
+1. Install the Continue VSCode extension
+2. Set up your configuration
+3. Create and start necessary Docker services
 
-### Usage
+## 🎯 Usage
 
-Tap the Continue button in the VSCode editor to start the service
-to bring up a chat window. The chat window will be displayed in the
-VSCode editor.
+### VSCode Integration with Continue 
 
-![Continue Chat](./static/image.png)
+Simply tap the Continue button in your VSCode editor to start chatting with your AI assistant - now protected by Codegate!
 
-## Usage
+![Continue Chat Interface](./static/image.png)
 
-### Basic Usage (Manual)
+### Manual Configuration
 
-Start the server with default settings:
-
+#### Basic Server Start
 ```bash
 codegate serve
 ```
 
-### Custom Configuration
-
-Start with custom settings:
-
+#### Custom Settings
 ```bash
 codegate serve --port 8989 --host localhost --log-level DEBUG
 ```
 
-### Configuration File
-
-Use a YAML configuration file:
-
-```bash
-codegate serve --config my_config.yaml
-```
-
-Example `config.yaml`:
-
+#### Using Config File
+Create a `config.yaml`:
 ```yaml
 port: 8989
 host: "localhost"
 log_level: "DEBUG"
 ```
 
-### Environment Variables
+Then run:
+```bash
+codegate serve --config config.yaml
+```
 
-Configure using environment variables:
-
+#### Environment Variables
 ```bash
 export CODEGATE_APP_PORT=8989
 export CODEGATE_APP_HOST=localhost
@@ -86,41 +102,47 @@ export CODEGATE_APP_LOG_LEVEL=DEBUG
 codegate serve
 ```
 
-## Development
+## 🛠️ Development
 
-### Setup
-
+### Local Setup
 ```bash
-# Clone the repository
+# Get the code
 git clone https://github.com/stacklok/codegate.git
 cd codegate
 
-# Create and activate a virtual environment
+# Set up virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install development dependencies
+# Install dev dependencies
 pip install -e ".[dev]"
 ```
 
 ### Testing
-
 ```bash
 pytest
 ```
 
+## 🐳 Docker Deployment
 
-### Running from image
-
-A docker image can be built just with `make image-build`. That will start a codegate server ready to use.
-Then it can be started with:
-
+### Build the Image
 ```bash
-docker run -p 8989:8989 codegate:latest
+make image-build
 ```
 
-Additionally if you want to start with a pre-created database, a volume can be mounted:
-
+### Run the Container
 ```bash
+# Basic usage
+docker run -p 8989:8989 codegate:latest
+
+# With persistent data
 docker run -p 8989:8989 -v /path/to/volume:/app/weaviate_data codegate:latest
 ```
+
+## 🤝 Contributing
+
+We welcome contributions! Whether it's bug reports, feature requests, or code contributions, please feel free to contribute to making Codegate better.
+
+## 📜 License
+
+This project is licensed under the terms specified in the [LICENSE](LICENSE) file.
