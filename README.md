@@ -108,3 +108,19 @@ pip install -e ".[dev]"
 ```bash
 pytest
 ```
+
+
+### Running from image
+
+A docker image can be built just with `make image-build`. That will start a codegate server ready to use.
+Then it can be started with:
+
+```bash
+docker run -p 8989:8989 codegate:latest
+```
+
+Additionally if you want to start with a pre-created database, a volume can be mounted:
+
+```bash
+docker run -p 8989:8989 -v /path/to/volume:/app/weaviate_data codegate:latest
+```
