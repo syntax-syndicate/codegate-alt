@@ -50,17 +50,15 @@ class BaseProvider(ABC):
         pass
 
     async def _run_input_pipeline(
-        self,
-        normalized_request: ChatCompletionRequest,
-        is_fim_request: bool
+        self, normalized_request: ChatCompletionRequest, is_fim_request: bool
     ) -> PipelineResult:
         # Decide which pipeline processor to use
         if is_fim_request:
             pipeline_processor = self._fim_pipelin_processor
-            logger.info('FIM pipeline selected for execution.')
+            logger.info("FIM pipeline selected for execution.")
         else:
             pipeline_processor = self._pipeline_processor
-            logger.info('Chat completion pipeline selected for execution.')
+            logger.info("Chat completion pipeline selected for execution.")
         if pipeline_processor is None:
             return PipelineResult(request=normalized_request)
 
@@ -92,21 +90,21 @@ class BaseProvider(ABC):
         Determine from the raw incoming data if it's a FIM request.
         Used by: OpenAI and Anthropic
         """
-        messages = data.get('messages', [])
+        messages = data.get("messages", [])
         if not messages:
             return False
 
-        first_message_content = messages[0].get('content')
+        first_message_content = messages[0].get("content")
         if first_message_content is None:
             return False
 
-        fim_stop_sequences = ['</COMPLETION>', '<COMPLETION>', '</QUERY>', '<QUERY>']
+        fim_stop_sequences = ["</COMPLETION>", "<COMPLETION>", "</QUERY>", "<QUERY>"]
         if isinstance(first_message_content, str):
             msg_prompt = first_message_content
         elif isinstance(first_message_content, list):
-            msg_prompt = first_message_content[0].get('text', '')
+            msg_prompt = first_message_content[0].get("text", "")
         else:
-            logger.warning(f'Could not determine if message was FIM from data: {data}')
+            logger.warning(f"Could not determine if message was FIM from data: {data}")
             return False
         return all([stop_sequence in msg_prompt for stop_sequence in fim_stop_sequences])
 
@@ -121,7 +119,7 @@ class BaseProvider(ABC):
         return self._is_fim_request_body(data)
 
     async def complete(
-            self, data: Dict, api_key: Optional[str], is_fim_request: bool
+        self, data: Dict, api_key: Optional[str], is_fim_request: bool
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Main completion flow with pipeline integration

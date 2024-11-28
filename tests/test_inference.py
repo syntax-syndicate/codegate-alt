@@ -51,7 +51,7 @@ async def test_chat(inference_engine) -> None:
     response = await inference_engine.chat(model_path, **chat_request)
 
     for chunk in response:
-        assert 'delta' in chunk["choices"][0]
+        assert "delta" in chunk["choices"][0]
 
 
 @pytest.mark.asyncio

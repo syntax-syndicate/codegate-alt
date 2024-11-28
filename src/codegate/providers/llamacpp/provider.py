@@ -10,17 +10,17 @@ from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLam
 
 class LlamaCppProvider(BaseProvider):
     def __init__(
-                self,
-                pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-                fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None
-            ):
+        self,
+        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+        fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+    ):
         completion_handler = LlamaCppCompletionHandler()
         super().__init__(
             LLamaCppInputNormalizer(),
             LLamaCppOutputNormalizer(),
             completion_handler,
             pipeline_processor,
-            fim_pipeline_processor
+            fim_pipeline_processor,
         )
 
     @property
@@ -32,6 +32,7 @@ class LlamaCppProvider(BaseProvider):
         Sets up the /completions and /chat/completions routes for the
         provider as expected by the Llama API.
         """
+
         @self.router.post(f"/{self.provider_route_name}/completions")
         @self.router.post(f"/{self.provider_route_name}/chat/completions")
         async def create_completion(

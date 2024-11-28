@@ -9,6 +9,7 @@ from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
 from codegate.providers.openai.provider import OpenAIProvider
 from codegate.providers.registry import ProviderRegistry
+from codegate.providers.vllm.provider import VLLMProvider
 
 
 def init_app() -> FastAPI:
@@ -22,8 +23,7 @@ def init_app() -> FastAPI:
         CodegateVersion(),
     ]
     # Leaving the pipeline empty for now
-    fim_steps: List[PipelineStep] = [
-    ]
+    fim_steps: List[PipelineStep] = []
     pipeline = SequentialPipelineProcessor(steps)
     fim_pipeline = SequentialPipelineProcessor(fim_steps)
 
@@ -31,18 +31,20 @@ def init_app() -> FastAPI:
     registry = ProviderRegistry(app)
 
     # Register all known providers
-    registry.add_provider("openai", OpenAIProvider(
-                                                    pipeline_processor=pipeline,
-                                                    fim_pipeline_processor=fim_pipeline
-                                                ))
-    registry.add_provider("anthropic", AnthropicProvider(
-                                                        pipeline_processor=pipeline,
-                                                        fim_pipeline_processor=fim_pipeline
-                                                    ))
-    registry.add_provider("llamacpp", LlamaCppProvider(
-                                                        pipeline_processor=pipeline,
-                                                        fim_pipeline_processor=fim_pipeline
-                                                    ))
+    registry.add_provider(
+        "openai", OpenAIProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline)
+    )
+    registry.add_provider(
+        "anthropic",
+        AnthropicProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline),
+    )
+    registry.add_provider(
+        "llamacpp",
+        LlamaCppProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline),
+    )
+    registry.add_provider(
+        "vllm", VLLMProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline)
+    )
 
     # Create and add system routes
     system_router = APIRouter(tags=["System"])  # Tags group endpoints in the docs

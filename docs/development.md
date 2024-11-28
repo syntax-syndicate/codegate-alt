@@ -9,6 +9,7 @@ Codegate is a configurable Generative AI gateway designed to protect developers 
 - Secure coding recommendations
 - Prevention of AI recommending deprecated/malicious libraries
 - Modular system prompts configuration
+- Multiple AI provider support with configurable endpoints
 
 ## Development Setup
 
@@ -53,7 +54,11 @@ codegate/
 │       ├── logging.py       # Logging setup
 │       ├── prompts.py       # Prompts management
 │       ├── server.py        # Main server implementation
-│       └── providers/*      # External service providers (anthropic, openai, etc.)
+│       └── providers/       # External service providers
+│           ├── anthropic/   # Anthropic provider implementation
+│           ├── openai/      # OpenAI provider implementation
+│           ├── vllm/        # vLLM provider implementation
+│           └── base.py      # Base provider interface
 ├── tests/           # Test files
 └── docs/            # Documentation
 ```
@@ -128,8 +133,86 @@ Codegate uses a hierarchical configuration system with the following priority (h
 - Log Level: Logging level (ERROR|WARNING|INFO|DEBUG)
 - Log Format: Log format (JSON|TEXT)
 - Prompts: System prompts configuration
+- Provider URLs: AI provider endpoint configuration
 
 See [Configuration Documentation](configuration.md) for detailed information.
+
+## Working with Providers
+
+Codegate supports multiple AI providers through a modular provider system.
+
+### Available Providers
+
+1. **vLLM Provider**
+   - Default URL: http://localhost:8000
+   - Supports OpenAI-compatible API
+   - Automatically adds /v1 path to base URL
+   - Model names are prefixed with "hosted_vllm/"
+
+2. **OpenAI Provider**
+   - Default URL: https://api.openai.com/v1
+   - Standard OpenAI API implementation
+
+3. **Anthropic Provider**
+   - Default URL: https://api.anthropic.com/v1
+   - Anthropic Claude API implementation
+
+### Configuring Providers
+
+Provider URLs can be configured through:
+
+1. Config file (config.yaml):
+   ```yaml
+   provider_urls:
+     vllm: "https://vllm.example.com"
+     openai: "https://api.openai.com/v1"
+     anthropic: "https://api.anthropic.com/v1"
+   ```
+
+2. Environment variables:
+   ```bash
+   export CODEGATE_PROVIDER_VLLM_URL=https://vllm.example.com
+   export CODEGATE_PROVIDER_OPENAI_URL=https://api.openai.com/v1
+   export CODEGATE_PROVIDER_ANTHROPIC_URL=https://api.anthropic.com/v1
+   ```
+
+3. CLI flags:
+   ```bash
+   codegate serve --vllm-url https://vllm.example.com
+   ```
+
+### Implementing New Providers
+
+To add a new provider:
+
+1. Create a new directory in `src/codegate/providers/`
+2. Implement required components:
+   - `provider.py`: Main provider class extending BaseProvider
+   - `adapter.py`: Input/output normalizers
+   - `__init__.py`: Export provider class
+
+Example structure:
+```python
+from codegate.providers.base import BaseProvider
+
+class NewProvider(BaseProvider):
+    def __init__(self, ...):
+        super().__init__(
+            InputNormalizer(),
+            OutputNormalizer(),
+            completion_handler,
+            pipeline_processor,
+            fim_pipeline_processor
+        )
+
+    @property
+    def provider_route_name(self) -> str:
+        return "provider_name"
+
+    def _setup_routes(self):
+        # Implement route setup
+        pass
+```
 
 ## Working with Prompts
 
@@ -188,8 +271,9 @@ codegate serve --port 8989 --host localhost --log-level DEBUG
 
 # Start with custom prompts
 codegate serve --prompts my-prompts.yaml
+
+# Start with custom provider URL
+codegate serve --vllm-url https://vllm.example.com
 ```
 
 See [CLI Documentation](cli.md) for detailed command information.
-
-[Rest of development.md content remains unchanged...]

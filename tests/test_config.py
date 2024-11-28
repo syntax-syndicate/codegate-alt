@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from codegate.config import Config, ConfigurationError, LogFormat, LogLevel
+from codegate.config import DEFAULT_PROVIDER_URLS, Config, ConfigurationError, LogFormat, LogLevel
 
 
 def test_default_config(default_config: Config) -> None:
@@ -15,6 +15,7 @@ def test_default_config(default_config: Config) -> None:
     assert default_config.host == "localhost"
     assert default_config.log_level == LogLevel.INFO
     assert default_config.log_format == LogFormat.JSON
+    assert default_config.provider_urls == DEFAULT_PROVIDER_URLS
 
 
 def test_config_from_file(temp_config_file: Path) -> None:
@@ -24,6 +25,7 @@ def test_config_from_file(temp_config_file: Path) -> None:
     assert config.host == "localhost"
     assert config.log_level == LogLevel.DEBUG
     assert config.log_format == LogFormat.JSON
+    assert config.provider_urls == DEFAULT_PROVIDER_URLS
 
 
 def test_config_from_invalid_file(tmp_path: Path) -> None:
@@ -49,6 +51,7 @@ def test_config_from_env(env_vars: None) -> None:
     assert config.host == "localhost"
     assert config.log_level == LogLevel.WARNING
     assert config.log_format == LogFormat.TEXT
+    assert config.provider_urls == DEFAULT_PROVIDER_URLS
 
 
 def test_config_priority_resolution(temp_config_file: Path, env_vars: None) -> None:
@@ -60,11 +63,13 @@ def test_config_priority_resolution(temp_config_file: Path, env_vars: None) -> N
         cli_host="example.com",
         cli_log_level="WARNING",
         cli_log_format="TEXT",
+        cli_provider_urls={"vllm": "https://custom.vllm.server"},
     )
     assert config.port == 8080
     assert config.host == "example.com"
     assert config.log_level == LogLevel.WARNING
     assert config.log_format == LogFormat.TEXT
+    assert config.provider_urls["vllm"] == "https://custom.vllm.server"
 
     # Env vars should override config file
     config = Config.load(config_path=temp_config_file)
@@ -72,6 +77,7 @@ def test_config_priority_resolution(temp_config_file: Path, env_vars: None) -> N
     assert config.host == "localhost"  # from env
     assert config.log_level == LogLevel.WARNING  # from env
     assert config.log_format == LogFormat.TEXT  # from env
+    assert config.provider_urls == DEFAULT_PROVIDER_URLS  # no env override
 
     # Config file should override defaults
     os.environ.clear()  # Remove env vars
@@ -80,6 +86,34 @@ def test_config_priority_resolution(temp_config_file: Path, env_vars: None) -> N
     assert config.host == "localhost"  # from file
     assert config.log_level == LogLevel.DEBUG  # from file
     assert config.log_format == LogFormat.JSON  # from file
+    assert config.provider_urls == DEFAULT_PROVIDER_URLS  # default values
+
+
+def test_provider_urls_from_config(tmp_path: Path) -> None:
+    """Test loading provider URLs from config file."""
+    config_file = tmp_path / "config.yaml"
+    custom_urls = {
+        "vllm": "https://custom.vllm.server",
+        "openai": "https://custom.openai.server",
+    }
+    with open(config_file, "w") as f:
+        yaml.dump({"provider_urls": custom_urls}, f)
+
+    config = Config.from_file(config_file)
+    assert config.provider_urls["vllm"] == custom_urls["vllm"]
+    assert config.provider_urls["openai"] == custom_urls["openai"]
+    assert config.provider_urls["anthropic"] == DEFAULT_PROVIDER_URLS["anthropic"]
+
+
+def test_provider_urls_from_env() -> None:
+    """Test loading provider URLs from environment variables."""
+    os.environ["CODEGATE_PROVIDER_VLLM_URL"] = "https://custom.vllm.server"
+    try:
+        config = Config.from_env()
+        assert config.provider_urls["vllm"] == "https://custom.vllm.server"
+        assert config.provider_urls["openai"] == DEFAULT_PROVIDER_URLS["openai"]
+    finally:
+        del os.environ["CODEGATE_PROVIDER_VLLM_URL"]
 
 
 def test_invalid_log_level() -> None:
