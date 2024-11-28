@@ -136,7 +136,6 @@ class BaseProvider(ABC):
         """
         normalized_request = self._input_normalizer.normalize(data)
         streaming = data.get("stream", False)
-
         input_pipeline_result = await self._run_input_pipeline(normalized_request, is_fim_request)
         if input_pipeline_result.response:
             return self._pipeline_response_formatter.handle_pipeline_response(
@@ -151,7 +150,7 @@ class BaseProvider(ABC):
         model_response = await self._completion_handler.execute_completion(
             provider_request, api_key=api_key, stream=streaming
         )
-
+        print(f'Model response: {model_response}')
         if not streaming:
             return self._output_normalizer.denormalize(model_response)
         return self._output_normalizer.denormalize_streaming(model_response)
