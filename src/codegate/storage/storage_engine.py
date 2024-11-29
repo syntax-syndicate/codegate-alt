@@ -39,22 +39,15 @@ class StorageEngine:
         self.schema_config = schema_config
 
         # setup schema for weaviate
-        print("before get client")
         weaviate_client = self.get_client(self.data_path)
-        print("after get client")
         if weaviate_client is not None:
             try:
-                print("before connect")
                 weaviate_client.connect()
-                print("before setup schema")
-                self.setup_schema(weaviate_client)
-                print("after setup schema")
+                #self.setup_schema(weaviate_client)
             except Exception as e:
                 self.__logger.error(f"Failed to connect or setup schema: {str(e)}")                
             finally:
-                print("before close")
                 weaviate_client.close()
-                print("after close")
         else:
             self.__logger.error("Could not find client, skipping schema setup.")
 
