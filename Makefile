@@ -21,7 +21,7 @@ lint:
 	poetry run ruff check .
 
 test:
-	poetry run pytest
+	poetry run pytest -s
 
 security:
 	poetry run bandit -r src/
