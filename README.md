@@ -31,11 +31,6 @@ Codegate works seamlessly with leading AI providers:
 - 💻 Local LLMs (run AI completely offline!)
 - 🔮 Many more on the way!
 
-### Run AI Your Way
-- 🌐 Cloud Providers: Use leading AI services like OpenAI and Anthropic
-- 🏠 Local LLMs: Keep everything offline with local model support
-- 🔄 Hybrid Mode: Mix and match cloud and local providers as needed
-
 ### AI Coding Assistants
 We're starting with Continue VSCode extension support, with many more AI coding assistants coming soon!
 
