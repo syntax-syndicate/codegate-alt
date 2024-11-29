@@ -1,10 +1,11 @@
-import time
-from codegate.codegate_logging import setup_logging
-from codegate.inference.inference_engine import LlamaCppInferenceEngine
+import structlog
+import weaviate
 from weaviate.classes.config import DataType
 from weaviate.classes.query import MetadataQuery
-import weaviate
 
+from codegate.inference.inference_engine import LlamaCppInferenceEngine
+
+logger = structlog.get_logger("codegate")
 
 schema_config = [
     {
@@ -14,7 +15,7 @@ schema_config = [
             {"name": "type", "data_type": DataType.TEXT},
             {"name": "status", "data_type": DataType.TEXT},
             {"name": "description", "data_type": DataType.TEXT},
-        ]
+        ],
     },
 ]
 
@@ -23,17 +24,14 @@ class StorageEngine:
     def get_client(self, data_path):
         try:
             client = weaviate.WeaviateClient(
-                embedded_options=weaviate.EmbeddedOptions(
-                    persistence_data_path=data_path
-                ),
+                embedded_options=weaviate.EmbeddedOptions(persistence_data_path=data_path),
             )
             return client
         except Exception as e:
-            self.__logger.error(f"Error during client creation: {str(e)}")
+            logger.error(f"Error during client creation: {str(e)}")
             return None
 
-    def __init__(self, data_path='./weaviate_data'):
-        self.__logger = setup_logging()
+    def __init__(self, data_path="./weaviate_data"):
         self.data_path = data_path
         self.inference_engine = LlamaCppInferenceEngine()
         self.model_path = "./models/all-minilm-L6-v2-q5_k_m.gguf"
@@ -46,22 +44,22 @@ class StorageEngine:
                 weaviate_client.connect()
                 self.setup_schema(weaviate_client)
             except Exception as e:
-                self.__logger.error(f"Failed to connect or setup schema: {str(e)}")
+                logger.error(f"Failed to connect or setup schema: {str(e)}")
             finally:
                 try:
                     weaviate_client.close()
                 except Exception as e:
-                    self.__logger.info(f"Failed to close client: {str(e)}")
+                    logger.info(f"Failed to close client: {str(e)}")
         else:
-            self.__logger.error("Could not find client, skipping schema setup.")
+            logger.error("Could not find client, skipping schema setup.")
 
     def setup_schema(self, client):
         for class_config in self.schema_config:
-            if not client.collections.exists(class_config['name']):
-                client.collections.create(class_config['name'],
-                                          properties=class_config['properties'])
-                self.__logger.info(
-                    f"Weaviate schema for class {class_config['name']} setup complete.")
+            if not client.collections.exists(class_config["name"]):
+                client.collections.create(
+                    class_config["name"], properties=class_config["properties"]
+                )
+                logger.info(f"Weaviate schema for class {class_config['name']} setup complete.")
 
     async def search(self, query: str, limit=5, distance=0.3) -> list[object]:
         """
@@ -80,15 +78,18 @@ class StorageEngine:
         # Perform the vector search
         weaviate_client = self.get_client(self.data_path)
         if weaviate_client is None:
-            self.__logger.error("Could not find client, not returning results.")
+            logger.error("Could not find client, not returning results.")
             return []
 
         try:
             weaviate_client.connect()
             collection = weaviate_client.collections.get("Package")
             response = collection.query.near_vector(
-                query_vector[0], limit=limit, distance=distance,
-                return_metadata=MetadataQuery(distance=True))
+                query_vector[0],
+                limit=limit,
+                distance=distance,
+                return_metadata=MetadataQuery(distance=True),
+            )
 
             weaviate_client.close()
             if not response:
@@ -96,10 +97,10 @@ class StorageEngine:
             return response.objects
 
         except Exception as e:
-            self.__logger.error(f"Error during search: {str(e)}")
+            logger.error(f"Error during search: {str(e)}")
             return []
         finally:
             try:
                 weaviate_client.close()
             except Exception as e:
-                self.__logger.info(f"Failed to close client: {str(e)}")
+                logger.info(f"Failed to close client: {str(e)}")

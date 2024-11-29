@@ -1,6 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from codegate.storage.storage_engine import StorageEngine  # Adjust the import based on your actual path
+
+from codegate.storage.storage_engine import (
+    StorageEngine,
+)  # Adjust the import based on your actual path
 
 
 @pytest.fixture
@@ -9,11 +13,11 @@ def mock_weaviate_client():
     response = MagicMock()
     response.objects = [
         {
-            'properties': {
-                'name': 'test',
-                'type': 'library',
-                'status': 'active',
-                'description': 'test description'
+            "properties": {
+                "name": "test",
+                "type": "library",
+                "status": "active",
+                "description": "test description",
             }
         }
     ]
@@ -31,18 +35,22 @@ def mock_inference_engine():
 @pytest.mark.asyncio
 async def test_search(mock_weaviate_client, mock_inference_engine):
     # Patch the WeaviateClient and LlamaCppInferenceEngine inside the test function
-    with patch('weaviate.WeaviateClient', return_value=mock_weaviate_client), \
-         patch('codegate.inference.inference_engine.LlamaCppInferenceEngine',
-               return_value=mock_inference_engine):
+    with (
+        patch("weaviate.WeaviateClient", return_value=mock_weaviate_client),
+        patch(
+            "codegate.inference.inference_engine.LlamaCppInferenceEngine",
+            return_value=mock_inference_engine,
+        ),
+    ):
 
         # Initialize StorageEngine
-        storage_engine = StorageEngine(data_path='./weaviate_data')
+        storage_engine = StorageEngine(data_path="./weaviate_data")
 
         # Invoke the search method
         results = await storage_engine.search("test query", 5, 0.3)
 
         # Assertions to validate the expected behavior
         assert len(results) == 1  # Assert that one result is returned
-        assert results[0]['properties']['name'] == 'test'
+        assert results[0]["properties"]["name"] == "test"
         mock_weaviate_client.connect.assert_called()
         mock_weaviate_client.close.assert_called()

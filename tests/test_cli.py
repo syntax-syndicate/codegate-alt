@@ -63,8 +63,6 @@ def test_serve_default_options(
         logger_instance = MagicMock()
         mock_logging.return_value = logger_instance
         result = cli_runner.invoke(cli, ["serve"])
-        print("result is")
-        print(result.output)
 
         assert result.exit_code == 0
         mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)

@@ -1,13 +1,13 @@
 import asyncio
 import json
 
-from src.codegate.utils.utils import generate_vector_string
 import weaviate
 from weaviate.classes.config import DataType, Property
 from weaviate.embedded import EmbeddedOptions
 from weaviate.util import generate_uuid5
 
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
+from src.codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
