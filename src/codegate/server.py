@@ -6,6 +6,7 @@ from codegate import __description__, __version__
 from codegate.config import Config
 from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
 from codegate.pipeline.codegate_system_prompt.codegate import CodegateSystemPrompt
+from codegate.pipeline.codegate_context_retriever.codegate import CodegateContextRetriever
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
@@ -24,6 +25,7 @@ def init_app() -> FastAPI:
     steps: List[PipelineStep] = [
         CodegateVersion(),
         CodegateSystemPrompt(Config.get_config().prompts.codegate_chat),
+        CodegateContextRetriever(Config.get_config().prompts.codegate_chat),
         # CodegateSecrets(),
     ]
     # Leaving the pipeline empty for now

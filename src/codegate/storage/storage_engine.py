@@ -1,6 +1,6 @@
 from codegate.codegate_logging import setup_logging
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
-from weaviate.classes.config import DataType, Property
+from weaviate.classes.config import DataType
 from weaviate.classes.query import MetadataQuery
 import weaviate
 
@@ -45,7 +45,7 @@ class StorageEngine:
                 self.client.collections.create(class_config['name'], properties=class_config['properties'])
                 self.__logger.info(f"Weaviate schema for class {class_config['name']} setup complete.")
 
-    async def search(self, query, limit=5, distance=0.1):
+    async def search(self, query: str, limit=5, distance=0.3) -> list[object]:
         """
         Search the 'Package' collection based on a query string.
 
@@ -62,7 +62,7 @@ class StorageEngine:
         # Perform the vector search
         try:
             collection = self.client.collections.get("Package")
-            response = collection.query.near_vector(query_vector, limit=limit, distance=distance, return_metadata=MetadataQuery(distance=True))
+            response = collection.query.near_vector(query_vector[0], limit=limit, distance=distance, return_metadata=MetadataQuery(distance=True))
             if not response:
                 return []
             return response.objects

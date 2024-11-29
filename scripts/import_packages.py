@@ -1,6 +1,7 @@
 import asyncio
 import json
 
+from src.codegate.utils.utils import generate_vector_string
 import weaviate
 from weaviate.classes.config import DataType, Property
 from weaviate.embedded import EmbeddedOptions
@@ -37,33 +38,8 @@ class PackageImporter:
                 ],
             )
 
-    def generate_vector_string(self, package):
-        vector_str = f"{package['name']}"
-        package_url = ""
-        type_map = {
-            "pypi": "Python package available on PyPI",
-            "npm": "JavaScript package available on NPM",
-            "go": "Go package",
-            "crates": "Rust package available on Crates",
-            "java": "Java package",
-        }
-        status_messages = {
-            "archived": "However, this package is found to be archived and no longer maintained.",
-            "deprecated": "However, this package is found to be deprecated and no longer "
-            "recommended for use.",
-            "malicious": "However, this package is found to be malicious.",
-        }
-        vector_str += f" is a {type_map.get(package['type'], 'unknown type')} "
-        package_url = f"https://trustypkg.dev/{package['type']}/{package['name']}"
-
-        # Add extra status
-        status_suffix = status_messages.get(package["status"], "")
-        if status_suffix:
-            vector_str += f"{status_suffix} For additional information refer to {package_url}"
-        return vector_str
-
     async def process_package(self, batch, package):
-        vector_str = self.generate_vector_string(package)
+        vector_str = generate_vector_string(package)
         vector = await self.inference_engine.embed(self.model_path, [vector_str])
         # This is where the synchronous call is made
         batch.add_object(properties=package, vector=vector[0])
