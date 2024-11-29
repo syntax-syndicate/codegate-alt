@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/stacklok/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/stacklok/codegate/actions/workflows/ci.yml)
 
-Codegate is a local gateway that makes AI coding assistants safer. Codegate ensures AI-generated recommendations adhere to best practices, while safeguarding your code's integrity, and protecting your individual privacy. With Codegate, you can confidently leverage AI in your development workflow without compromising security or productivity. Codegate is designed to work seamlessly with coding assistants, allowing you to leverage the benefits of AI code generation. Codegate is developed by [Stacklok](https://stacklok.com), a group of security experts with many years of experience building developer friendly open source security software tools and platforms. 
+Codegate is a local gateway that makes AI coding assistants safer. Codegate ensures AI-generated recommendations adhere to best practices, while safeguarding your code's integrity, and protecting your individual privacy. With Codegate, you can confidently leverage AI in your development workflow without compromising security or productivity. Codegate is designed to work seamlessly with coding assistants, allowing you to safely enjoy all the benefits of AI code generation.
+
+Codegate is developed by [Stacklok](https://stacklok.com), a group of security experts with many years of experience building developer friendly open source security software tools and platforms. 
 
 ## Experimental 🚧
 
