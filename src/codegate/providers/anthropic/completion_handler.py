@@ -15,6 +15,7 @@ class AnthropicCompletion(LiteLLmShim):
         request: ChatCompletionRequest,
         api_key: Optional[str],
         stream: bool = False,
+        is_fim_request: bool = False,
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Ensures the model name is prefixed with 'anthropic/' to explicitly route to Anthropic's API.
@@ -30,4 +31,4 @@ class AnthropicCompletion(LiteLLmShim):
         model_in_request = request["model"]
         if not model_in_request.startswith("anthropic/"):
             request["model"] = f"anthropic/{model_in_request}"
-        return await super().execute_completion(request, api_key, stream)
+        return await super().execute_completion(request, api_key, stream, is_fim_request)

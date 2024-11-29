@@ -161,7 +161,7 @@ class BaseProvider(ABC):
         # This gives us either a single response or a stream of responses
         # based on the streaming flag
         model_response = await self._completion_handler.execute_completion(
-            provider_request, api_key=api_key, stream=streaming
+            provider_request, api_key=api_key, stream=streaming, is_fim_request=is_fim_request
         )
         if not streaming:
             normalized_response = self._output_normalizer.normalize(model_response)

@@ -17,6 +17,7 @@ class BaseCompletionHandler(ABC):
         request: ChatCompletionRequest,
         api_key: Optional[str],
         stream: bool = False,  # TODO: remove this param?
+        is_fim_request: bool = False,
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """Execute the completion request"""
         pass
