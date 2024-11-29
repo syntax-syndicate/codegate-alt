@@ -24,7 +24,8 @@ def mock_logger():
 @pytest.fixture
 def mock_inference_engine():
     inference_engine = AsyncMock()
-    inference_engine.embed = AsyncMock(return_value=[0.1, 0.2, 0.3])  # Adjust based on expected vector dimensions
+    inference_engine.embed = AsyncMock(
+        return_value=[0.1, 0.2, 0.3])  # Adjust based on expected vector dimensions
     return inference_engine
 
 
@@ -47,7 +48,8 @@ def test_connect(storage_engine, mock_client):
 async def test_search(storage_engine, mock_client):
     query = "test query"
     results = await storage_engine.search(query)
-    storage_engine.inference_engine.embed.assert_called_once_with("./models/all-minilm-L6-v2-q5_k_m.gguf", [query])
+    storage_engine.inference_engine.embed.assert_called_once_with(
+        "./models/all-minilm-L6-v2-q5_k_m.gguf", [query])
     assert results is not None  # Further asserts can be based on your application logic
 
 

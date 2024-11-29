@@ -36,7 +36,8 @@ class CodegateContextRetriever(PipelineStep):
         return objects
 
     def generate_context_str(self, objects: list[object]) -> str:
-        context_str = "Please use the information about related packages to influence your answer:\n"
+        context_str = "Please use the information about related packages "
+        "to influence your answer:\n"
         for obj in objects:
             # generate dictionary from object
             package_obj = {
@@ -66,7 +67,8 @@ class CodegateContextRetriever(PipelineStep):
             last_user_message_str, last_user_idx = last_user_message
             if "codegate" in last_user_message_str.lower():
                 # strip codegate from prompt and trim it
-                last_user_message_str = last_user_message_str.lower().replace("codegate", "").strip()
+                last_user_message_str = last_user_message_str.lower().replace(
+                    "codegate", "").strip()
                 searched_objects = await self.get_objects_from_search(last_user_message_str)
                 context_str = self.generate_context_str(searched_objects)
                 # Add a system prompt to the completion request

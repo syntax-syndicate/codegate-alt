@@ -42,8 +42,10 @@ class StorageEngine:
     def setup_schema(self):
         for class_config in self.schema_config:
             if not self.client.collections.exists(class_config['name']):
-                self.client.collections.create(class_config['name'], properties=class_config['properties'])
-                self.__logger.info(f"Weaviate schema for class {class_config['name']} setup complete.")
+                self.client.collections.create(class_config['name'],
+                                               properties=class_config['properties'])
+                self.__logger.info(
+                    f"Weaviate schema for class {class_config['name']} setup complete.")
 
     async def search(self, query: str, limit=5, distance=0.3) -> list[object]:
         """
@@ -62,7 +64,9 @@ class StorageEngine:
         # Perform the vector search
         try:
             collection = self.client.collections.get("Package")
-            response = collection.query.near_vector(query_vector[0], limit=limit, distance=distance, return_metadata=MetadataQuery(distance=True))
+            response = collection.query.near_vector(
+                query_vector[0], limit=limit, distance=distance,
+                return_metadata=MetadataQuery(distance=True))
             if not response:
                 return []
             return response.objects
