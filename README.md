@@ -4,7 +4,7 @@
 
 Codegate is a local gateway that makes AI coding assistants safer. Acting as a security checkpoint, Codegate ensures AI-generated recommendations adhere to best practices, while safeguarding your code's integrity, and protecting your individual privacy. With Codegate, you can confidently leverage AI in your development workflow without compromising security or control.
 
-## 🚧 Experimental Project 🚧
+## Experimental 🚧
 
 Codegate is **experimental** and **undergoing fast iterations of development**. 
 
