@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Optional, Union
+from typing import Any, AsyncIterator, Callable, Optional, Union
 
 from fastapi.responses import StreamingResponse
 from litellm import ChatCompletionRequest, ModelResponse, acompletion
@@ -13,20 +13,33 @@ class LiteLLmShim(BaseCompletionHandler):
     LiteLLM API.
     """
 
-    def __init__(self, stream_generator: StreamGenerator, completion_func=acompletion):
+    def __init__(
+        self,
+        stream_generator: StreamGenerator,
+        completion_func: Callable = acompletion,
+        fim_completion_func: Optional[Callable] = None,
+    ):
         self._stream_generator = stream_generator
         self._completion_func = completion_func
+        # Use the same function for FIM completion if one is not specified
+        if fim_completion_func is None:
+            self._fim_completion_func = completion_func
+        else:
+            self._fim_completion_func = fim_completion_func
 
     async def execute_completion(
         self,
         request: ChatCompletionRequest,
         api_key: Optional[str],
         stream: bool = False,
+        is_fim_request: bool = False,
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Execute the completion request with LiteLLM's API
         """
         request["api_key"] = api_key
+        if is_fim_request:
+            return await self._fim_completion_func(**request)
         return await self._completion_func(**request)
 
     def create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:

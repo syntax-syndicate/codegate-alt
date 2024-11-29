@@ -47,14 +47,18 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
         self.inference_engine = LlamaCppInferenceEngine()
 
     async def execute_completion(
-        self, request: ChatCompletionRequest, api_key: Optional[str], stream: bool = False
+        self,
+        request: ChatCompletionRequest,
+        api_key: Optional[str],
+        stream: bool = False,
+        is_fim_request: bool = False,
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Execute the completion request with inference engine API
         """
         model_path = f"{Config.get_config().model_base_path}/{request['model']}.gguf"
 
-        if "prompt" in request:
+        if is_fim_request:
             response = await self.inference_engine.complete(
                 model_path,
                 Config.get_config().chat_model_n_ctx,

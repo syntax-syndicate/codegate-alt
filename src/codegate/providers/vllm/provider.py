@@ -2,6 +2,7 @@ import json
 from typing import Optional
 
 from fastapi import Header, HTTPException, Request
+from litellm import atext_completion
 
 from codegate.config import Config
 from codegate.providers.base import BaseProvider, SequentialPipelineProcessor
@@ -15,7 +16,9 @@ class VLLMProvider(BaseProvider):
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
         fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
     ):
-        completion_handler = LiteLLmShim(stream_generator=sse_stream_generator)
+        completion_handler = LiteLLmShim(
+            stream_generator=sse_stream_generator, fim_completion_func=atext_completion
+        )
         super().__init__(
             VLLMInputNormalizer(),
             VLLMOutputNormalizer(),
