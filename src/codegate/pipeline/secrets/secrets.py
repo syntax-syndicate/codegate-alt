@@ -1,8 +1,8 @@
 import re
 
+import structlog
 from litellm import ChatCompletionRequest
 
-from codegate.codegate_logging import setup_logging
 from codegate.pipeline.base import (
     PipelineContext,
     PipelineResult,
@@ -10,6 +10,8 @@ from codegate.pipeline.base import (
 )
 from codegate.pipeline.secrets.gatecrypto import CodeGateCrypto
 from codegate.pipeline.secrets.signatures import CodegateSignatures
+
+logger = structlog.get_logger("codegate")
 
 
 class CodegateSecrets(PipelineStep):
@@ -21,7 +23,6 @@ class CodegateSecrets(PipelineStep):
         self.crypto = CodeGateCrypto()
         self._session_store = {}
         self._encrypted_to_session = {}  # Reverse lookup index
-        self.__logger = setup_logging()
 
     @property
     def name(self) -> str:
@@ -87,7 +88,7 @@ class CodegateSecrets(PipelineStep):
         if not matches:
             return text
 
-        self.__logger.debug(f"Found {len(matches)} secrets in the user message")
+        logger.debug(f"Found {len(matches)} secrets in the user message")
 
         # Convert line positions to absolute positions and extend boundaries
         absolute_matches = []
@@ -133,7 +134,7 @@ class CodegateSecrets(PipelineStep):
             self._encrypted_to_session[encrypted_value] = session_id
 
             # Print the session store
-            self.__logger.info(f"Session store: {self._session_store}")
+            logger.info(f"Session store: {self._session_store}")
 
             # Create the replacement string
             replacement = f"REDACTED<${encrypted_value}>"
@@ -155,12 +156,12 @@ class CodegateSecrets(PipelineStep):
         protected_string = "".join(protected_text)
 
         # Log the findings
-        self.__logger.info("\nFound secrets:")
+        logger.info("\nFound secrets:")
         for secret in found_secrets:
-            self.__logger.info(f"\nService: {secret['service']}")
-            self.__logger.info(f"Type: {secret['type']}")
-            self.__logger.info(f"Original: {secret['original']}")
-            self.__logger.info(f"Encrypted: REDACTED<${secret['encrypted']}>")
+            logger.info(f"\nService: {secret['service']}")
+            logger.info(f"Type: {secret['type']}")
+            logger.info(f"Original: {secret['original']}")
+            logger.info(f"Encrypted: REDACTED<${secret['encrypted']}>")
 
         (f"\nProtected text:\n{protected_string}")
         return protected_string
@@ -181,7 +182,7 @@ class CodegateSecrets(PipelineStep):
             if session_id:
                 return self._session_store[session_id]["original"]
         except Exception as e:
-            self.__logger.error(f"Error looking up original value: {e}")
+            logger.error(f"Error looking up original value: {e}")
         return encrypted_value
 
     def get_by_session_id(self, session_id: str) -> dict | None:
@@ -197,7 +198,7 @@ class CodegateSecrets(PipelineStep):
         try:
             return self._session_store.get(session_id)
         except Exception as e:
-            self.__logger.error(f"Error looking up by session ID: {e}")
+            logger.error(f"Error looking up by session ID: {e}")
             return None
 
     def _cleanup_session_store(self):
@@ -215,9 +216,9 @@ class CodegateSecrets(PipelineStep):
             self._session_store.clear()
             self._encrypted_to_session.clear()
 
-            self.__logger.info("Session stores securely wiped")
+            logger.info("Session stores securely wiped")
         except Exception as e:
-            self.__logger.error(f"Error during secure cleanup: {e}")
+            logger.error(f"Error during secure cleanup: {e}")
 
     def _unredact_text(self, protected_text: str) -> str:
         """
@@ -253,7 +254,7 @@ class CodegateSecrets(PipelineStep):
 
         # Join all parts together
         unprotected_text = "".join(result)
-        self.__logger.info(f"\nUnprotected text:\n{unprotected_text}")
+        logger.info(f"\nUnprotected text:\n{unprotected_text}")
         return unprotected_text
 
     async def process(
@@ -293,7 +294,7 @@ class CodegateSecrets(PipelineStep):
 
             return PipelineResult(request=request)
         except Exception as e:
-            self.__logger.error(f"CodegateSecrets operation failed: {e}")
+            logger.error(f"CodegateSecrets operation failed: {e}")
 
         finally:
             # Clean up sensitive data

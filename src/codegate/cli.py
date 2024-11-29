@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import click
+import structlog
 
 from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
 from codegate.config import Config, ConfigurationError
@@ -140,7 +141,8 @@ def serve(
             cli_provider_urls=cli_provider_urls,
         )
 
-        logger = setup_logging(cfg.log_level, cfg.log_format)
+        setup_logging(cfg.log_level, cfg.log_format)
+        logger = structlog.get_logger("codegate")
         logger.info(
             "Starting server",
             extra={

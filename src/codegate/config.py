@@ -5,13 +5,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional, Union
 
+import structlog
 import yaml
 
-from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
+from codegate.codegate_logging import LogFormat, LogLevel
 from codegate.exceptions import ConfigurationError
 from codegate.prompts import PromptConfig
 
-logger = setup_logging()
+logger = structlog.get_logger("codegate")
 
 # Default provider URLs
 DEFAULT_PROVIDER_URLS = {
