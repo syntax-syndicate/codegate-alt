@@ -1,9 +1,9 @@
+import structlog
 from litellm import ChatCompletionRequest
 
-from codegate.codegate_logging import setup_logging
 from codegate.pipeline.base import PipelineContext, PipelineResponse, PipelineResult, PipelineStep
 
-logger = setup_logging()
+logger = structlog.get_logger("codegate")
 
 
 class SecretAnalyzer(PipelineStep):

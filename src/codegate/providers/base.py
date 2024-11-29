@@ -1,17 +1,18 @@
 from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator, Callable, Dict, Optional, Union
 
+import structlog
 from fastapi import APIRouter, Request
 from litellm import ModelResponse
 from litellm.types.llms.openai import ChatCompletionRequest
 
-from codegate.codegate_logging import setup_logging
 from codegate.pipeline.base import PipelineResult, SequentialPipelineProcessor
 from codegate.providers.completion.base import BaseCompletionHandler
 from codegate.providers.formatting.input_pipeline import PipelineResponseFormatter
 from codegate.providers.normalizer.base import ModelInputNormalizer, ModelOutputNormalizer
 
-logger = setup_logging()
+logger = structlog.get_logger("codegate")
+
 StreamGenerator = Callable[[AsyncIterator[Any]], AsyncIterator[str]]
 
 

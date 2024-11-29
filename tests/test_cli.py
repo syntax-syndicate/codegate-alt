@@ -20,6 +20,14 @@ def cli_runner() -> CliRunner:
 
 @pytest.fixture
 def mock_logging(monkeypatch: Any) -> MagicMock:
+    """Mock the logging function."""
+    mock = MagicMock()
+    monkeypatch.setattr("codegate.cli.structlog.get_logger", mock)
+    return mock
+
+
+@pytest.fixture
+def mock_setup_logging(monkeypatch: Any) -> MagicMock:
     """Mock the setup_logging function."""
     mock = MagicMock()
     monkeypatch.setattr("codegate.cli.setup_logging", mock)
@@ -47,7 +55,9 @@ def test_cli_version(cli_runner: CliRunner) -> None:
     assert result.exit_code == 0
 
 
-def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None:
+def test_serve_default_options(
+    cli_runner: CliRunner, mock_logging: Any, mock_setup_logging: Any
+) -> None:
     """Test serve command with default options."""
     with patch("uvicorn.run") as mock_run:
         logger_instance = MagicMock()
@@ -55,7 +65,8 @@ def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None
         result = cli_runner.invoke(cli, ["serve"])
 
         assert result.exit_code == 0
-        mock_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
+        mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
+        mock_logging.assert_called_with("codegate")
         logger_instance.info.assert_any_call(
             "Starting server",
             extra={
@@ -70,7 +81,9 @@ def test_serve_default_options(cli_runner: CliRunner, mock_logging: Any) -> None
         mock_run.assert_called_once()
 
 
-def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
+def test_serve_custom_options(
+    cli_runner: CliRunner, mock_logging: Any, mock_setup_logging: Any
+) -> None:
     """Test serve command with custom options."""
     with patch("uvicorn.run") as mock_run:
         logger_instance = MagicMock()
@@ -91,7 +104,8 @@ def test_serve_custom_options(cli_runner: CliRunner, mock_logging: Any) -> None:
         )
 
         assert result.exit_code == 0
-        mock_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.TEXT)
+        mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.TEXT)
+        mock_logging.assert_called_with("codegate")
         logger_instance.info.assert_any_call(
             "Starting server",
             extra={
@@ -121,7 +135,7 @@ def test_serve_invalid_log_level(cli_runner: CliRunner) -> None:
 
 
 def test_serve_with_config_file(
-    cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path
+    cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path, mock_setup_logging: Any
 ) -> None:
     """Test serve command with config file."""
     with patch("uvicorn.run") as mock_run:
@@ -130,7 +144,8 @@ def test_serve_with_config_file(
         result = cli_runner.invoke(cli, ["serve", "--config", str(temp_config_file)])
 
         assert result.exit_code == 0
-        mock_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.JSON)
+        mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.JSON)
+        mock_logging.assert_called_with("codegate")
         logger_instance.info.assert_any_call(
             "Starting server",
             extra={
@@ -153,7 +168,11 @@ def test_serve_with_nonexistent_config_file(cli_runner: CliRunner) -> None:
 
 
 def test_serve_priority_resolution(
-    cli_runner: CliRunner, mock_logging: Any, temp_config_file: Path, env_vars: Any
+    cli_runner: CliRunner,
+    mock_logging: Any,
+    temp_config_file: Path,
+    env_vars: Any,
+    mock_setup_logging: Any,
 ) -> None:
     """Test serve command respects configuration priority."""
     with patch("uvicorn.run") as mock_run:
@@ -177,7 +196,8 @@ def test_serve_priority_resolution(
         )
 
         assert result.exit_code == 0
-        mock_logging.assert_called_once_with(LogLevel.ERROR, LogFormat.TEXT)
+        mock_setup_logging.assert_called_once_with(LogLevel.ERROR, LogFormat.TEXT)
+        mock_logging.assert_called_with("codegate")
         logger_instance.info.assert_any_call(
             "Starting server",
             extra={

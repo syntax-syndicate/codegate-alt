@@ -1,6 +1,7 @@
+import structlog
 from llama_cpp import Llama
 
-from codegate.codegate_logging import setup_logging
+logger = structlog.get_logger("codegate")
 
 
 class LlamaCppInferenceEngine:
@@ -21,7 +22,6 @@ class LlamaCppInferenceEngine:
     def __init__(self):
         if not hasattr(self, "models"):
             self.__models = {}
-            self.__logger = setup_logging()
 
     def __del__(self):
         self.__close_models()
@@ -32,7 +32,7 @@ class LlamaCppInferenceEngine:
         is loaded and added to __models and returned.
         """
         if model_path not in self.__models:
-            self.__logger.info(
+            logger.info(
                 f"Loading model from {model_path} with parameters "
                 f"n_gpu_layers={n_gpu_layers} and n_ctx={n_ctx}"
             )
