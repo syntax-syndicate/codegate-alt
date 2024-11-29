@@ -19,31 +19,41 @@ schema_config = [
 
 
 class StorageEngine:
+    def get_client(self, data_path):
+        try:
+            client = weaviate.WeaviateClient(
+                embedded_options=weaviate.EmbeddedOptions(
+                    persistence_data_path=data_path
+                ),
+            )
+            return client
+        except Exception as e:
+            self.__logger.error(f"Error during client creation: {str(e)}")
+            return None
+
     def __init__(self, data_path='./weaviate_data'):
-        self.client = weaviate.WeaviateClient(
-            embedded_options=weaviate.EmbeddedOptions(
-                persistence_data_path=data_path
-            ),
-        )
         self.__logger = setup_logging()
+        self.data_path = data_path
         self.inference_engine = LlamaCppInferenceEngine()
         self.model_path = "./models/all-minilm-L6-v2-q5_k_m.gguf"
         self.schema_config = schema_config
-        self.connect()
-        self.setup_schema()
 
-    def connect(self):
-        self.client.connect()
-        if self.client.is_ready():
-            self.__logger.info("Weaviate connection established and client is ready.")
+        # setup schema for weaviate
+        weaviate_client = self.get_client(self.data_path)
+        if weaviate_client is not None:
+            try:
+                weaviate_client.connect()
+                self.setup_schema(weaviate_client)
+            finally:
+                weaviate_client.close()
         else:
-            raise Exception("Weaviate client is not ready.")
+            self.__logger.error("Could not find client, skipping schema setup.")
 
-    def setup_schema(self):
+    def setup_schema(self, client):
         for class_config in self.schema_config:
-            if not self.client.collections.exists(class_config['name']):
-                self.client.collections.create(class_config['name'],
-                                               properties=class_config['properties'])
+            if not client.collections.exists(class_config['name']):
+                client.collections.create(class_config['name'],
+                                          properties=class_config['properties'])
                 self.__logger.info(
                     f"Weaviate schema for class {class_config['name']} setup complete.")
 
@@ -62,11 +72,19 @@ class StorageEngine:
         query_vector = await self.inference_engine.embed(self.model_path, [query])
 
         # Perform the vector search
+        weaviate_client = self.get_client(self.data_path)
+        if weaviate_client is None:
+            self.__logger.error("Could not find client, not returning results.")
+            return []
+
         try:
-            collection = self.client.collections.get("Package")
+            weaviate_client.connect()
+            collection = weaviate_client.collections.get("Package")
             response = collection.query.near_vector(
                 query_vector[0], limit=limit, distance=distance,
                 return_metadata=MetadataQuery(distance=True))
+
+            weaviate_client.close()
             if not response:
                 return []
             return response.objects
@@ -74,7 +92,5 @@ class StorageEngine:
         except Exception as e:
             self.__logger.error(f"Error during search: {str(e)}")
             return []
-
-    def close(self):
-        self.client.close()
-        self.__logger.info("Connection closed.")
+        finally:
+            weaviate_client.close()
