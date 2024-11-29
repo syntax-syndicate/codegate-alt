@@ -51,7 +51,7 @@ codegate/
 │       ├── cli.py           # Command-line interface
 │       ├── config.py        # Configuration management
 │       ├── exceptions.py    # Shared exceptions
-│       ├── logging.py       # Logging setup
+│       ├── codegate_logging.py       # Logging setup
 │       ├── prompts.py       # Prompts management
 │       ├── server.py        # Main server implementation
 │       └── providers/       # External service providers

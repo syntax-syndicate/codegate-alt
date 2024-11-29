@@ -72,6 +72,11 @@ def setup_logging(
     shared_processors = [
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="%Y-%m-%dT%H:%M:%S.%03dZ", utc=True),
+        structlog.processors.CallsiteParameterAdder(
+            [
+                structlog.processors.CallsiteParameter.MODULE,
+            ]
+        ),
     ]
     # Not sure why this is needed. I think it is a wrapper for the standard logging module.
     # Should allow to log both with structlog and the standard logging module:

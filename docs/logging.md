@@ -1,6 +1,6 @@
 # Logging System
 
-The logging system in Codegate (`logging.py`) provides a flexible and structured logging solution with support for both JSON and text formats.
+The logging system in Codegate (`codegate_logging.py`) provides a flexible and structured logging solution with support for both JSON and text formats.
 
 ## Log Routing
 
@@ -18,9 +18,9 @@ When using JSON format (default), log entries include:
 ```json
 {
   "timestamp": "YYYY-MM-DDThh:mm:ss.mmmZ",
-  "level": "LOG_LEVEL",
+  "log_level": "LOG_LEVEL",
   "module": "MODULE_NAME",
-  "message": "Log message",
+  "event": "Log message",
   "extra": {
     // Additional fields as you desire
   }
@@ -49,9 +49,9 @@ YYYY-MM-DDThh:mm:ss.mmmZ - LEVEL - NAME - MESSAGE
 ### Basic Logging
 
 ```python
-import logging
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Different log levels
 logger.info("This is an info message")
