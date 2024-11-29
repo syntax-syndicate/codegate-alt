@@ -9,7 +9,7 @@ import structlog
 
 from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
 from codegate.config import Config, ConfigurationError
-from codegate.server import init_app
+from codegate.server import create_app
 
 
 def validate_port(ctx: click.Context, param: click.Parameter, value: int) -> int:
@@ -164,7 +164,7 @@ def serve(
             },
         )
 
-        app = init_app()
+        app = create_app()
 
         import uvicorn
 

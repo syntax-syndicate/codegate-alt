@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from codegate import __description__, __version__
 from codegate.config import Config
@@ -19,11 +20,21 @@ from codegate.providers.registry import ProviderRegistry
 from codegate.providers.vllm.provider import VLLMProvider
 
 
-def init_app() -> FastAPI:
+def create_app() -> FastAPI:
+    """Create the FastAPI application."""
     app = FastAPI(
         title="CodeGate",
         description=__description__,
         version=__version__,
+    )
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allows all origins
+        allow_credentials=True,
+        allow_methods=["*"],  # Allows all methods
+        allow_headers=["*"],  # Allows all headers
     )
 
     steps: List[PipelineStep] = [
@@ -72,5 +83,11 @@ def init_app() -> FastAPI:
 
     # Include the router in the app - this exposes the health check endpoint
     app.include_router(system_router)
+
+    # Init DB from here
+    # @app.on_event("startup")
+    # async def startup_event():
+    #     """Initialize the database on startup."""
+    #     await init_db()
 
     return app
