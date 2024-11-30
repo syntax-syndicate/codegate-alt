@@ -20,6 +20,7 @@ The configuration system in Codegate is managed through the `Config` class in `c
   - vLLM: "http://localhost:8000"
   - OpenAI: "https://api.openai.com/v1"
   - Anthropic: "https://api.anthropic.com/v1"
+  - Ollama: "http://localhost:11434"
 
 ## Configuration Methods
 
@@ -41,6 +42,7 @@ provider_urls:
   vllm: "https://vllm.example.com"
   openai: "https://api.openai.com/v1"
   anthropic: "https://api.anthropic.com/v1"
+  ollama: "http://localhost:11434"
 ```
 
 ### From Environment Variables
@@ -55,6 +57,7 @@ Environment variables are automatically loaded with these mappings:
 - `CODEGATE_PROVIDER_VLLM_URL`: vLLM provider URL
 - `CODEGATE_PROVIDER_OPENAI_URL`: OpenAI provider URL
 - `CODEGATE_PROVIDER_ANTHROPIC_URL`: Anthropic provider URL
+- `CODEGATE_PROVIDER_OLLAMA_URL`: Ollama provider URL
 
 ```python
 config = Config.from_env()
@@ -72,6 +75,7 @@ Provider URLs can be configured in several ways:
      vllm: "https://vllm.example.com"  # /v1 path is added automatically
      openai: "https://api.openai.com/v1"
      anthropic: "https://api.anthropic.com/v1"
+     ollama: "http://localhost:11434"  # /api path is added automatically
    ```
 
 2. Via Environment Variables:
@@ -79,14 +83,17 @@ Provider URLs can be configured in several ways:
    export CODEGATE_PROVIDER_VLLM_URL=https://vllm.example.com
    export CODEGATE_PROVIDER_OPENAI_URL=https://api.openai.com/v1
    export CODEGATE_PROVIDER_ANTHROPIC_URL=https://api.anthropic.com/v1
+   export CODEGATE_PROVIDER_OLLAMA_URL=http://localhost:11434
    ```
 
 3. Via CLI Flags:
    ```bash
-   codegate serve --vllm-url https://vllm.example.com
+   codegate serve --vllm-url https://vllm.example.com --ollama-url http://localhost:11434
    ```
 
-Note: For the vLLM provider, the /v1 path is automatically appended to the base URL if not present.
+Note: 
+- For the vLLM provider, the /v1 path is automatically appended to the base URL if not present.
+- For the Ollama provider, the /api path is automatically appended to the base URL if not present.
 
 ### Log Levels
 

@@ -61,6 +61,11 @@ codegate serve [OPTIONS]
   - Base URL for Anthropic provider
   - Overrides configuration file and environment variables
 
+- `--ollama-url TEXT`: Ollama provider URL (default: http://localhost:11434)
+  - Optional
+  - Base URL for Ollama provider (/api path is added automatically)
+  - Overrides configuration file and environment variables
+
 ### show-prompts
 
 Display the loaded system prompts:
@@ -118,6 +123,11 @@ codegate serve --prompts my-prompts.yaml
 Start server with custom vLLM endpoint:
 ```bash
 codegate serve --vllm-url https://vllm.example.com
+```
+
+Start server with custom Ollama endpoint:
+```bash
+codegate serve --ollama-url http://localhost:11434
 ```
 
 Show default system prompts:

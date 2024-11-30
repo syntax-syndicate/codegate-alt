@@ -10,6 +10,7 @@ from codegate.pipeline.extract_snippets.extract_snippets import CodeSnippetExtra
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
+from codegate.providers.ollama.provider import OllamaProvider
 from codegate.providers.openai.provider import OpenAIProvider
 from codegate.providers.registry import ProviderRegistry
 from codegate.providers.vllm.provider import VLLMProvider
@@ -53,6 +54,9 @@ def init_app() -> FastAPI:
     )
     registry.add_provider(
         "vllm", VLLMProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline)
+    )
+    registry.add_provider(
+        "ollama", OllamaProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline)
     )
 
     # Create and add system routes
