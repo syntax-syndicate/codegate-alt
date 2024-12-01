@@ -20,6 +20,9 @@ format:
 lint:
 	poetry run ruff check .
 
+sqlc:
+    sqlc generate
+
 test:
 	poetry run pytest
 
