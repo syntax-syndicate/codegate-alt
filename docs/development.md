@@ -1,5 +1,3 @@
-# Development Guide
-
 This guide provides comprehensive information for developers working on the Codegate project.
 
 ## Project Overview
@@ -157,6 +155,13 @@ Codegate supports multiple AI providers through a modular provider system.
    - Default URL: https://api.anthropic.com/v1
    - Anthropic Claude API implementation
 
+4. **Ollama Provider**
+   - Default URL: http://localhost:11434
+   - Endpoints:
+     * Native Ollama API: `/ollama/api/chat`
+     * OpenAI-compatible: `/ollama/chat/completions`
+     ```
+
 ### Configuring Providers
 
 Provider URLs can be configured through:
@@ -167,6 +172,7 @@ Provider URLs can be configured through:
      vllm: "https://vllm.example.com"
      openai: "https://api.openai.com/v1"
      anthropic: "https://api.anthropic.com/v1"
+     ollama: "http://localhost:11434"  # /api path added automatically
    ```
 
 2. Environment variables:
@@ -174,11 +180,12 @@ Provider URLs can be configured through:
    export CODEGATE_PROVIDER_VLLM_URL=https://vllm.example.com
    export CODEGATE_PROVIDER_OPENAI_URL=https://api.openai.com/v1
    export CODEGATE_PROVIDER_ANTHROPIC_URL=https://api.anthropic.com/v1
+   export CODEGATE_PROVIDER_OLLAMA_URL=http://localhost:11434
    ```
 
 3. CLI flags:
    ```bash
-   codegate serve --vllm-url https://vllm.example.com
+   codegate serve --vllm-url https://vllm.example.com --ollama-url http://localhost:11434
    ```
 
 ### Implementing New Providers
