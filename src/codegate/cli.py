@@ -107,6 +107,12 @@ def show_prompts(prompts: Optional[Path]) -> None:
     default=None,
     help="Anthropic provider URL (default: https://api.anthropic.com/v1)",
 )
+@click.option(
+    "--ollama-url",
+    type=str,
+    default=None,
+    help="Ollama provider URL (default: http://localhost:11434/api)",
+)
 def serve(
     port: Optional[int],
     host: Optional[str],
@@ -117,6 +123,7 @@ def serve(
     vllm_url: Optional[str],
     openai_url: Optional[str],
     anthropic_url: Optional[str],
+    ollama_url: Optional[str],
 ) -> None:
     """Start the codegate server."""
     logger = None
@@ -129,6 +136,8 @@ def serve(
             cli_provider_urls["openai"] = openai_url
         if anthropic_url:
             cli_provider_urls["anthropic"] = anthropic_url
+        if ollama_url:
+            cli_provider_urls["ollama"] = ollama_url
 
         # Load configuration with priority resolution
         cfg = Config.load(

@@ -95,7 +95,8 @@ class BaseProvider(ABC):
         if request_path.endswith("/chat/completions"):
             return False
 
-        if request_path.endswith("/completions"):
+        # /completions is for OpenAI standard. /api/generate is for ollama.
+        if request_path.endswith("/completions") or request_path.endswith("/api/generate"):
             return True
 
         return False
