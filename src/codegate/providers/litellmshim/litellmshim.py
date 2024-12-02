@@ -1,9 +1,16 @@
 from typing import Any, AsyncIterator, Callable, Optional, Union
 
-from fastapi.responses import StreamingResponse
-from litellm import ChatCompletionRequest, ModelResponse, acompletion
+import structlog
+from fastapi.responses import JSONResponse, StreamingResponse
+from litellm import (
+    ChatCompletionRequest,
+    ModelResponse,
+    acompletion,
+)
 
 from codegate.providers.base import BaseCompletionHandler, StreamGenerator
+
+logger = structlog.get_logger("codegate")
 
 
 class LiteLLmShim(BaseCompletionHandler):
@@ -42,7 +49,7 @@ class LiteLLmShim(BaseCompletionHandler):
             return await self._fim_completion_func(**request)
         return await self._completion_func(**request)
 
-    def create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:
+    def _create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:
         """
         Create a streaming response from a stream generator. The StreamingResponse
         is the format that FastAPI expects for streaming responses.
@@ -56,3 +63,14 @@ class LiteLLmShim(BaseCompletionHandler):
             },
             status_code=200,
         )
+
+    def _create_json_response(self, response: ModelResponse) -> JSONResponse:
+        """
+        Create a JSON FastAPI response from a ModelResponse object.
+        ModelResponse is obtained when the request is not streaming.
+        """
+        # ModelResponse is not a Pydantic object but has a json method we can use to serialize
+        if isinstance(response, ModelResponse):
+            return JSONResponse(status_code=200, content=response.json())
+        # Most of others objects in LiteLLM are Pydantic, we can use the model_dump method
+        return JSONResponse(status_code=200, content=response.model_dump())

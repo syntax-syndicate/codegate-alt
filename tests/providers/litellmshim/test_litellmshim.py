@@ -117,7 +117,7 @@ async def test_create_streaming_response():
     generator = mock_stream_gen()
 
     litellm_shim = LiteLLmShim(stream_generator=sse_stream_generator)
-    response = litellm_shim.create_streaming_response(generator)
+    response = litellm_shim._create_streaming_response(generator)
 
     # Verify response metadata
     assert isinstance(response, StreamingResponse)

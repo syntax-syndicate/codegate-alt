@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Any, AsyncIterator, Iterator, Optional, Union
 
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from litellm import ChatCompletionRequest, ModelResponse
 from llama_cpp.llama_types import (
     CreateChatCompletionStreamResponse,
@@ -75,7 +75,7 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
 
         return convert_to_async_iterator(response) if stream else response
 
-    def create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:
+    def _create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:
         """
         Create a streaming response from a stream generator. The StreamingResponse
         is the format that FastAPI expects for streaming responses.
@@ -89,3 +89,6 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
             },
             status_code=200,
         )
+
+    def _create_json_response(self, response: Any) -> JSONResponse:
+        raise NotImplementedError("JSON Reponse in LlamaCPP not implemented yet.")

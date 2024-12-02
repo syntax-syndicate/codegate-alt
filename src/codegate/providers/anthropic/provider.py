@@ -48,4 +48,4 @@ class AnthropicProvider(BaseProvider):
 
             is_fim_request = self._is_fim_request(request, data)
             stream = await self.complete(data, x_api_key, is_fim_request)
-            return self._completion_handler.create_streaming_response(stream)
+            return self._completion_handler.create_response(stream)
