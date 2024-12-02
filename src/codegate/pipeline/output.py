@@ -146,6 +146,10 @@ class OutputPipelineInstance:
                 )
                 self._context.buffer.clear()
 
+            # Cleanup sensitive data through the input context
+            if self._input_context and self._input_context.sensitive:
+                self._input_context.sensitive.secure_cleanup()
+
 
 class OutputPipelineProcessor:
     """

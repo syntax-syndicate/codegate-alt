@@ -147,6 +147,18 @@ class BaseProvider(ABC):
 
         return self._is_fim_request_body(data)
 
+    async def _cleanup_after_streaming(
+        self, stream: AsyncIterator[ModelResponse], context: PipelineContext
+    ) -> AsyncIterator[ModelResponse]:
+        """Wraps the stream to ensure cleanup after consumption"""
+        try:
+            async for item in stream:
+                yield item
+        finally:
+            # Ensure sensitive data is cleaned up after the stream is consumed
+            if context and context.sensitive:
+                context.sensitive.secure_cleanup()
+
     async def complete(
         self, data: Dict, api_key: Optional[str], is_fim_request: bool
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
@@ -191,7 +203,8 @@ class BaseProvider(ABC):
             input_pipeline_result.context,
             normalized_stream,
         )
-        return self._output_normalizer.denormalize_streaming(pipeline_output_stream)
+        denormalized_stream = self._output_normalizer.denormalize_streaming(pipeline_output_stream)
+        return self._cleanup_after_streaming(denormalized_stream, input_pipeline_result.context)
 
     def get_routes(self) -> APIRouter:
         return self.router

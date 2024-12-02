@@ -32,6 +32,14 @@ class PipelineSensitiveData:
     manager: SecretsManager
     session_id: str
 
+    def secure_cleanup(self):
+        """Securely cleanup sensitive data for this session"""
+        if self.manager is None or self.session_id == "":
+            return
+
+        self.manager.cleanup_session(self.session_id)
+        self.session_id = ""
+
 
 @dataclass
 class PipelineContext:
