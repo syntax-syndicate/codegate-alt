@@ -2,6 +2,7 @@ import structlog
 import weaviate
 from weaviate.classes.config import DataType
 from weaviate.classes.query import MetadataQuery
+from weaviate.embedded import EmbeddedOptions
 
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
 
@@ -24,7 +25,7 @@ class StorageEngine:
     def get_client(self, data_path):
         try:
             client = weaviate.WeaviateClient(
-                embedded_options=weaviate.EmbeddedOptions(persistence_data_path=data_path),
+                embedded_options=EmbeddedOptions(persistence_data_path=data_path),
             )
             return client
         except Exception as e:
