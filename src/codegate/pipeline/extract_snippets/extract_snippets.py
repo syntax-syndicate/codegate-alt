@@ -13,6 +13,7 @@ CODE_BLOCK_PATTERN = re.compile(
 
 logger = structlog.get_logger("codegate")
 
+
 def ecosystem_from_filepath(filepath: str) -> Optional[str]:
     """
     Determine language from filepath.

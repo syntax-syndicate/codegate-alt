@@ -43,11 +43,14 @@ class MockCompletionHandler(BaseCompletionHandler):
     ) -> Any:
         pass
 
-    def create_streaming_response(
+    def _create_streaming_response(
         self,
         stream: AsyncIterator[Any],
     ) -> StreamingResponse:
         return StreamingResponse(stream)
+
+    def _create_json_response(self, response: Any) -> Any:
+        raise NotImplementedError
 
 
 class MockInputNormalizer(ModelInputNormalizer):

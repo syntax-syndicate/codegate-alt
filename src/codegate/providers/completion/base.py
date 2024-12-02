@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import Any, AsyncIterator, Optional, Union
 
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from litellm import ChatCompletionRequest, ModelResponse
 
 
@@ -23,5 +24,17 @@ class BaseCompletionHandler(ABC):
         pass
 
     @abstractmethod
-    def create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:
+    def _create_streaming_response(self, stream: AsyncIterator[Any]) -> StreamingResponse:
         pass
+
+    @abstractmethod
+    def _create_json_response(self, response: Any) -> JSONResponse:
+        pass
+
+    def create_response(self, response: Any) -> Union[JSONResponse, StreamingResponse]:
+        """
+        Create a FastAPI response from the completion response.
+        """
+        if isinstance(response, Iterator):
+            return self._create_streaming_response(response)
+        return self._create_json_response(response)
