@@ -69,11 +69,8 @@ class DbRecorder:
             await self._async_db_engine.dispose()
 
     async def record_request(
-                self,
-                normalized_request: ChatCompletionRequest,
-                is_fim_request: bool,
-                provider_str: str
-            ) -> Optional[Prompt]:
+        self, normalized_request: ChatCompletionRequest, is_fim_request: bool, provider_str: str
+    ) -> Optional[Prompt]:
         # Extract system prompt and user prompt from the messages
         messages = normalized_request.get("messages", [])
         system_prompt = []
@@ -98,7 +95,7 @@ class DbRecorder:
 
         # Create a new prompt record
         prompt_params = Prompt(
-            id=str(uuid.uuid4()),    # Generate a new UUID for the prompt
+            id=str(uuid.uuid4()),  # Generate a new UUID for the prompt
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             provider=provider_str,
             type="fim" if is_fim_request else "chat",
@@ -127,7 +124,7 @@ class DbRecorder:
                 provider=row.provider,
                 system_prompt=row.system_prompt,
                 user_prompt=row.user_prompt,
-                type=row.type
+                type=row.type,
             )
 
 

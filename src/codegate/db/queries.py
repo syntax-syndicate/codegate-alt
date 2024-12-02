@@ -2,14 +2,13 @@
 # versions:
 #   sqlc v1.27.0
 # source: queries.sql
-import pydantic
 from typing import Any, AsyncIterator, Iterator, Optional
 
+import pydantic
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 from codegate.db import models
-
 
 CREATE_ALERT = """-- name: create_alert \\:one
 INSERT INTO alerts (
@@ -21,7 +20,8 @@ INSERT INTO alerts (
     trigger_type,
     trigger_category,
     timestamp
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, prompt_id, output_id, code_snippet,
+trigger_string, trigger_type, trigger_category, timestamp
 """
 
 
@@ -68,7 +68,8 @@ class CreatePromptParams(pydantic.BaseModel):
 
 
 GET_ALERT = """-- name: get_alert \\:one
-SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category, timestamp FROM alerts WHERE id = ?
+SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category,
+timestamp FROM alerts WHERE id = ?
 """
 
 
@@ -78,8 +79,8 @@ SELECT id, prompt_id, timestamp, output FROM outputs WHERE id = ?
 
 
 GET_OUTPUTS_BY_PROMPT_ID = """-- name: get_outputs_by_prompt_id \\:many
-SELECT id, prompt_id, timestamp, output FROM outputs 
-WHERE prompt_id = ? 
+SELECT id, prompt_id, timestamp, output FROM outputs
+WHERE prompt_id = ?
 ORDER BY timestamp DESC
 """
 
@@ -90,7 +91,7 @@ SELECT id, timestamp, provider, system_prompt, user_prompt, type FROM prompts WH
 
 
 GET_PROMPT_WITH_OUTPUTS_AND_ALERTS = """-- name: get_prompt_with_outputs_and_alerts \\:many
-SELECT 
+SELECT
     p.id, p.timestamp, p.provider, p.system_prompt, p.user_prompt, p.type,
     o.id as output_id,
     o.output,
@@ -129,15 +130,16 @@ SELECT id, ip, port, llm_model, system_prompt, other_settings FROM settings ORDE
 
 
 LIST_ALERTS_BY_PROMPT = """-- name: list_alerts_by_prompt \\:many
-SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category, timestamp FROM alerts 
-WHERE prompt_id = ? 
+SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category,
+timestamp FROM alerts
+WHERE prompt_id = ?
 ORDER BY timestamp DESC
 """
 
 
 LIST_PROMPTS = """-- name: list_prompts \\:many
-SELECT id, timestamp, provider, system_prompt, user_prompt, type FROM prompts 
-ORDER BY timestamp DESC 
+SELECT id, timestamp, provider, system_prompt, user_prompt, type FROM prompts
+ORDER BY timestamp DESC
 LIMIT ? OFFSET ?
 """
 
@@ -175,16 +177,19 @@ class Querier:
         self._conn = conn
 
     def create_alert(self, arg: CreateAlertParams) -> Optional[models.Alert]:
-        row = self._conn.execute(sqlalchemy.text(CREATE_ALERT), {
-            "p1": arg.id,
-            "p2": arg.prompt_id,
-            "p3": arg.output_id,
-            "p4": arg.code_snippet,
-            "p5": arg.trigger_string,
-            "p6": arg.trigger_type,
-            "p7": arg.trigger_category,
-            "p8": arg.timestamp,
-        }).first()
+        row = self._conn.execute(
+            sqlalchemy.text(CREATE_ALERT),
+            {
+                "p1": arg.id,
+                "p2": arg.prompt_id,
+                "p3": arg.output_id,
+                "p4": arg.code_snippet,
+                "p5": arg.trigger_string,
+                "p6": arg.trigger_type,
+                "p7": arg.trigger_category,
+                "p8": arg.timestamp,
+            },
+        ).first()
         if row is None:
             return None
         return models.Alert(
@@ -198,13 +203,18 @@ class Querier:
             timestamp=row[7],
         )
 
-    def create_output(self, *, id: Any, prompt_id: Any, timestamp: Any, output: Any) -> Optional[models.Output]:
-        row = self._conn.execute(sqlalchemy.text(CREATE_OUTPUT), {
-            "p1": id,
-            "p2": prompt_id,
-            "p3": timestamp,
-            "p4": output,
-        }).first()
+    def create_output(
+        self, *, id: Any, prompt_id: Any, timestamp: Any, output: Any
+    ) -> Optional[models.Output]:
+        row = self._conn.execute(
+            sqlalchemy.text(CREATE_OUTPUT),
+            {
+                "p1": id,
+                "p2": prompt_id,
+                "p3": timestamp,
+                "p4": output,
+            },
+        ).first()
         if row is None:
             return None
         return models.Output(
@@ -215,14 +225,17 @@ class Querier:
         )
 
     def create_prompt(self, arg: CreatePromptParams) -> Optional[models.Prompt]:
-        row = self._conn.execute(sqlalchemy.text(CREATE_PROMPT), {
-            "p1": arg.id,
-            "p2": arg.timestamp,
-            "p3": arg.provider,
-            "p4": arg.system_prompt,
-            "p5": arg.user_prompt,
-            "p6": arg.type,
-        }).first()
+        row = self._conn.execute(
+            sqlalchemy.text(CREATE_PROMPT),
+            {
+                "p1": arg.id,
+                "p2": arg.timestamp,
+                "p3": arg.provider,
+                "p4": arg.system_prompt,
+                "p5": arg.user_prompt,
+                "p6": arg.type,
+            },
+        ).first()
         if row is None:
             return None
         return models.Prompt(
@@ -283,7 +296,9 @@ class Querier:
             type=row[5],
         )
 
-    def get_prompt_with_outputs_and_alerts(self, *, id: Any) -> Iterator[GetPromptWithOutputsAndAlertsRow]:
+    def get_prompt_with_outputs_and_alerts(
+        self, *, id: Any
+    ) -> Iterator[GetPromptWithOutputsAndAlertsRow]:
         result = self._conn.execute(sqlalchemy.text(GET_PROMPT_WITH_OUTPUTS_AND_ALERTS), {"p1": id})
         for row in result:
             yield GetPromptWithOutputsAndAlertsRow(
@@ -342,14 +357,17 @@ class Querier:
             )
 
     def upsert_settings(self, arg: UpsertSettingsParams) -> Optional[models.Setting]:
-        row = self._conn.execute(sqlalchemy.text(UPSERT_SETTINGS), {
-            "p1": arg.id,
-            "p2": arg.ip,
-            "p3": arg.port,
-            "p4": arg.llm_model,
-            "p5": arg.system_prompt,
-            "p6": arg.other_settings,
-        }).first()
+        row = self._conn.execute(
+            sqlalchemy.text(UPSERT_SETTINGS),
+            {
+                "p1": arg.id,
+                "p2": arg.ip,
+                "p3": arg.port,
+                "p4": arg.llm_model,
+                "p5": arg.system_prompt,
+                "p6": arg.other_settings,
+            },
+        ).first()
         if row is None:
             return None
         return models.Setting(
@@ -367,16 +385,21 @@ class AsyncQuerier:
         self._conn = conn
 
     async def create_alert(self, arg: CreateAlertParams) -> Optional[models.Alert]:
-        row = (await self._conn.execute(sqlalchemy.text(CREATE_ALERT), {
-            "p1": arg.id,
-            "p2": arg.prompt_id,
-            "p3": arg.output_id,
-            "p4": arg.code_snippet,
-            "p5": arg.trigger_string,
-            "p6": arg.trigger_type,
-            "p7": arg.trigger_category,
-            "p8": arg.timestamp,
-        })).first()
+        row = (
+            await self._conn.execute(
+                sqlalchemy.text(CREATE_ALERT),
+                {
+                    "p1": arg.id,
+                    "p2": arg.prompt_id,
+                    "p3": arg.output_id,
+                    "p4": arg.code_snippet,
+                    "p5": arg.trigger_string,
+                    "p6": arg.trigger_type,
+                    "p7": arg.trigger_category,
+                    "p8": arg.timestamp,
+                },
+            )
+        ).first()
         if row is None:
             return None
         return models.Alert(
@@ -390,13 +413,20 @@ class AsyncQuerier:
             timestamp=row[7],
         )
 
-    async def create_output(self, *, id: Any, prompt_id: Any, timestamp: Any, output: Any) -> Optional[models.Output]:
-        row = (await self._conn.execute(sqlalchemy.text(CREATE_OUTPUT), {
-            "p1": id,
-            "p2": prompt_id,
-            "p3": timestamp,
-            "p4": output,
-        })).first()
+    async def create_output(
+        self, *, id: Any, prompt_id: Any, timestamp: Any, output: Any
+    ) -> Optional[models.Output]:
+        row = (
+            await self._conn.execute(
+                sqlalchemy.text(CREATE_OUTPUT),
+                {
+                    "p1": id,
+                    "p2": prompt_id,
+                    "p3": timestamp,
+                    "p4": output,
+                },
+            )
+        ).first()
         if row is None:
             return None
         return models.Output(
@@ -407,14 +437,19 @@ class AsyncQuerier:
         )
 
     async def create_prompt(self, arg: CreatePromptParams) -> Optional[models.Prompt]:
-        row = (await self._conn.execute(sqlalchemy.text(CREATE_PROMPT), {
-            "p1": arg.id,
-            "p2": arg.timestamp,
-            "p3": arg.provider,
-            "p4": arg.system_prompt,
-            "p5": arg.user_prompt,
-            "p6": arg.type,
-        })).first()
+        row = (
+            await self._conn.execute(
+                sqlalchemy.text(CREATE_PROMPT),
+                {
+                    "p1": arg.id,
+                    "p2": arg.timestamp,
+                    "p3": arg.provider,
+                    "p4": arg.system_prompt,
+                    "p5": arg.user_prompt,
+                    "p6": arg.type,
+                },
+            )
+        ).first()
         if row is None:
             return None
         return models.Prompt(
@@ -453,7 +488,9 @@ class AsyncQuerier:
         )
 
     async def get_outputs_by_prompt_id(self, *, prompt_id: Any) -> AsyncIterator[models.Output]:
-        result = await self._conn.stream(sqlalchemy.text(GET_OUTPUTS_BY_PROMPT_ID), {"p1": prompt_id})
+        result = await self._conn.stream(
+            sqlalchemy.text(GET_OUTPUTS_BY_PROMPT_ID), {"p1": prompt_id}
+        )
         async for row in result:
             yield models.Output(
                 id=row[0],
@@ -475,8 +512,12 @@ class AsyncQuerier:
             type=row[5],
         )
 
-    async def get_prompt_with_outputs_and_alerts(self, *, id: Any) -> AsyncIterator[GetPromptWithOutputsAndAlertsRow]:
-        result = await self._conn.stream(sqlalchemy.text(GET_PROMPT_WITH_OUTPUTS_AND_ALERTS), {"p1": id})
+    async def get_prompt_with_outputs_and_alerts(
+        self, *, id: Any
+    ) -> AsyncIterator[GetPromptWithOutputsAndAlertsRow]:
+        result = await self._conn.stream(
+            sqlalchemy.text(GET_PROMPT_WITH_OUTPUTS_AND_ALERTS), {"p1": id}
+        )
         async for row in result:
             yield GetPromptWithOutputsAndAlertsRow(
                 id=row[0],
@@ -534,14 +575,19 @@ class AsyncQuerier:
             )
 
     async def upsert_settings(self, arg: UpsertSettingsParams) -> Optional[models.Setting]:
-        row = (await self._conn.execute(sqlalchemy.text(UPSERT_SETTINGS), {
-            "p1": arg.id,
-            "p2": arg.ip,
-            "p3": arg.port,
-            "p4": arg.llm_model,
-            "p5": arg.system_prompt,
-            "p6": arg.other_settings,
-        })).first()
+        row = (
+            await self._conn.execute(
+                sqlalchemy.text(UPSERT_SETTINGS),
+                {
+                    "p1": arg.id,
+                    "p2": arg.ip,
+                    "p3": arg.port,
+                    "p4": arg.llm_model,
+                    "p5": arg.system_prompt,
+                    "p6": arg.other_settings,
+                },
+            )
+        ).first()
         if row is None:
             return None
         return models.Setting(
