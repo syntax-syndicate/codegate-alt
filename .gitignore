@@ -39,3 +39,6 @@ htmlcov/
 
 # Misc
 .DS_Store
+
+# Weaviate
+weaviate_data/
