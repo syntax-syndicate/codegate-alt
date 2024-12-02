@@ -1,11 +1,16 @@
+import re
+from typing import Optional
+
 import structlog
-from litellm import ChatCompletionRequest
+from litellm import ChatCompletionRequest, ModelResponse
+from litellm.types.utils import Delta, StreamingChoices
 
 from codegate.pipeline.base import (
     PipelineContext,
     PipelineResult,
     PipelineStep,
 )
+from codegate.pipeline.output import OutputPipelineContext, OutputPipelineStep
 from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.pipeline.secrets.signatures import CodegateSignatures
 
@@ -185,3 +190,91 @@ class CodegateSecrets(PipelineStep):
         new_request = request.copy()
         new_request["messages"][extracted_index]["content"] = protected_string
         return PipelineResult(request=new_request)
+
+
+class SecretUnredactionStep(OutputPipelineStep):
+    """Pipeline step that unredacts protected content in the stream"""
+
+    def __init__(self):
+        self.redacted_pattern = re.compile(r"REDACTED<\$([^>]+)>")
+        self.marker_start = "REDACTED<$"
+        self.marker_end = ">"
+
+    @property
+    def name(self) -> str:
+        return "secret-unredaction"
+
+    def _is_partial_marker_prefix(self, text: str) -> bool:
+        """Check if text ends with a partial marker prefix"""
+        for i in range(1, len(self.marker_start) + 1):
+            if text.endswith(self.marker_start[:i]):
+                return True
+        return False
+
+    def _find_complete_redaction(self, text: str) -> tuple[Optional[re.Match[str]], str]:
+        """
+        Find the first complete REDACTED marker in text.
+        Returns (match, remaining_text) if found, (None, original_text) if not.
+        """
+        matches = list(self.redacted_pattern.finditer(text))
+        if not matches:
+            return None, text
+
+        # Get the first complete match
+        match = matches[0]
+        return match, text[match.end() :]
+
+    async def process_chunk(
+        self,
+        chunk: ModelResponse,
+        context: OutputPipelineContext,
+        input_context: Optional[PipelineContext] = None,
+    ) -> Optional[ModelResponse]:
+        """Process a single chunk of the stream"""
+        if input_context.sensitive is None or input_context.sensitive.manager is None:
+            raise ValueError("Secrets manager not found in input context")
+        if input_context.sensitive.session_id == "":
+            raise ValueError("Session ID not found in input context")
+
+        if not chunk.choices[0].delta.content:
+            return chunk
+
+        # Check the buffered content
+        buffered_content = "".join(context.buffer)
+
+        # Look for complete REDACTED markers first
+        match, remaining = self._find_complete_redaction(buffered_content)
+        if match:
+            # Found a complete marker, process it
+            encrypted_value = match.group(1)
+            original_value = input_context.sensitive.manager.get_original_value(
+                encrypted_value,
+                input_context.sensitive.session_id,
+            )
+
+            if original_value is None:
+                # If value not found, leave as is
+                original_value = match.group(0)  # Keep the REDACTED marker
+
+            # Return the unredacted content up to this point
+            chunk.choices = [
+                StreamingChoices(
+                    finish_reason=None,
+                    index=0,
+                    delta=Delta(
+                        content=buffered_content[: match.start()] + original_value + remaining,
+                        role="assistant",
+                    ),
+                    logprobs=None,
+                )
+            ]
+            return chunk
+
+        # If we have a partial marker at the end, keep buffering
+        if self.marker_start in buffered_content or self._is_partial_marker_prefix(
+            buffered_content
+        ):
+            return None
+
+        # No markers or partial markers, let pipeline handle the chunk normally
+        return chunk
