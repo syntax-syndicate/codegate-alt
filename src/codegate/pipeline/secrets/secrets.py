@@ -231,6 +231,8 @@ class SecretUnredactionStep(OutputPipelineStep):
         input_context: Optional[PipelineContext] = None,
     ) -> Optional[ModelResponse]:
         """Process a single chunk of the stream"""
+        if not input_context:
+            raise ValueError("Input context not found")
         if input_context.sensitive is None or input_context.sensitive.manager is None:
             raise ValueError("Secrets manager not found in input context")
         if input_context.sensitive.session_id == "":

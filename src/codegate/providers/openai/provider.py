@@ -3,6 +3,8 @@ from typing import Optional
 
 from fastapi import Header, HTTPException, Request
 
+from codegate.pipeline.output import OutputPipelineProcessor
+from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.base import BaseProvider, SequentialPipelineProcessor
 from codegate.providers.litellmshim import LiteLLmShim, sse_stream_generator
 from codegate.providers.openai.adapter import OpenAIInputNormalizer, OpenAIOutputNormalizer
@@ -11,16 +13,20 @@ from codegate.providers.openai.adapter import OpenAIInputNormalizer, OpenAIOutpu
 class OpenAIProvider(BaseProvider):
     def __init__(
         self,
+        secrets_manager: SecretsManager,
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
         fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
     ):
         completion_handler = LiteLLmShim(stream_generator=sse_stream_generator)
         super().__init__(
+            secrets_manager,
             OpenAIInputNormalizer(),
             OpenAIOutputNormalizer(),
             completion_handler,
             pipeline_processor,
             fim_pipeline_processor,
+            output_pipeline_processor,
         )
 
     @property

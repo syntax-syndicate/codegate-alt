@@ -8,7 +8,9 @@ from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
 from codegate.pipeline.codegate_context_retriever.codegate import CodegateContextRetriever
 from codegate.pipeline.codegate_system_prompt.codegate import CodegateSystemPrompt
 from codegate.pipeline.extract_snippets.extract_snippets import CodeSnippetExtractor
-from codegate.pipeline.secrets.secrets import CodegateSecrets
+from codegate.pipeline.output import OutputPipelineProcessor, OutputPipelineStep
+from codegate.pipeline.secrets.manager import SecretsManager
+from codegate.pipeline.secrets.secrets import CodegateSecrets, SecretUnredactionStep
 from codegate.pipeline.secrets.signatures import CodegateSignatures
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
@@ -27,6 +29,12 @@ def init_app() -> FastAPI:
         version=__version__,
     )
 
+    # Initialize secrets manager
+    # TODO: we need to clean up the secrets manager
+    # after the conversation is concluded
+    # this was done in the pipeline step but I just removed it for now
+    secrets_manager = SecretsManager()
+
     steps: List[PipelineStep] = [
         CodegateVersion(),
         CodeSnippetExtractor(),
@@ -39,6 +47,11 @@ def init_app() -> FastAPI:
     pipeline = SequentialPipelineProcessor(steps)
     fim_pipeline = SequentialPipelineProcessor(fim_steps)
 
+    output_steps: List[OutputPipelineStep] = [
+        SecretUnredactionStep(),
+    ]
+    output_pipeline = OutputPipelineProcessor(output_steps)
+
     # Create provider registry
     registry = ProviderRegistry(app)
 
@@ -47,21 +60,49 @@ def init_app() -> FastAPI:
 
     # Register all known providers
     registry.add_provider(
-        "openai", OpenAIProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline)
+        "openai",
+        OpenAIProvider(
+            secrets_manager=secrets_manager,
+            pipeline_processor=pipeline,
+            fim_pipeline_processor=fim_pipeline,
+            output_pipeline_processor=output_pipeline,
+        ),
     )
     registry.add_provider(
         "anthropic",
-        AnthropicProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline),
+        AnthropicProvider(
+            secrets_manager=secrets_manager,
+            pipeline_processor=pipeline,
+            fim_pipeline_processor=fim_pipeline,
+            output_pipeline_processor=output_pipeline,
+        ),
     )
     registry.add_provider(
         "llamacpp",
-        LlamaCppProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline),
+        LlamaCppProvider(
+            secrets_manager=secrets_manager,
+            pipeline_processor=pipeline,
+            fim_pipeline_processor=fim_pipeline,
+            output_pipeline_processor=output_pipeline,
+        ),
     )
     registry.add_provider(
-        "vllm", VLLMProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline)
+        "vllm",
+        VLLMProvider(
+            secrets_manager=secrets_manager,
+            pipeline_processor=pipeline,
+            fim_pipeline_processor=fim_pipeline,
+            output_pipeline_processor=output_pipeline,
+        ),
     )
     registry.add_provider(
-        "ollama", OllamaProvider(pipeline_processor=pipeline, fim_pipeline_processor=fim_pipeline)
+        "ollama",
+        OllamaProvider(
+            secrets_manager=secrets_manager,
+            pipeline_processor=pipeline,
+            fim_pipeline_processor=fim_pipeline,
+            output_pipeline_processor=output_pipeline,
+        ),
     )
 
     # Create and add system routes
