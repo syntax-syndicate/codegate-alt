@@ -33,7 +33,7 @@ jobs:
     - name: Download artifact
       if: ${{ github.event.inputs.enable_artifact_download == 'true' }}    
       id: download-artifact
-      uses: dawidd6/action-download-artifact@v6
+      uses: dawidd6/action-download-artifact@v7
       with:
         github_token: ${{ github.token }}
         workflow: ".github/workflows/import_packages.yml"
