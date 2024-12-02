@@ -7,7 +7,7 @@ from weaviate.embedded import EmbeddedOptions
 from weaviate.util import generate_uuid5
 
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
-from src.codegate.utils.utils import generate_vector_string
+from codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
@@ -71,7 +71,7 @@ class PackageImporter:
                         print("Package already exists", key)
                         continue
 
-                    vector_str = self.generate_vector_string(package)
+                    vector_str = generate_vector_string(package)
                     vector = await self.inference_engine.embed(self.model_path, [vector_str])
                     packages_to_insert.append((package, vector[0]))
 

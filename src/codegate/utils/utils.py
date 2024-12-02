@@ -12,15 +12,15 @@ def generate_vector_string(package) -> str:
         "archived": "However, this package is found to be archived and no longer maintained.",
         "deprecated": "However, this package is found to be deprecated and no longer "
         "recommended for use.",
-        "malicious": "However, this package is found to be malicious.",
+        "malicious": "However, this package is found to be malicious and must not be used.",
     }
-    vector_str += f" is a {type_map.get(package['type'], 'unknown type')} "
+    vector_str += f" is a {type_map.get(package['type'], 'package of unknown type')}. "
     package_url = f"https://trustypkg.dev/{package['type']}/{package['name']}"
 
     # Add extra status
     status_suffix = status_messages.get(package["status"], "")
     if status_suffix:
-        vector_str += f"{status_suffix} For additional information refer to {package_url}"
+        vector_str += f" {status_suffix} For additional information refer to {package_url}"
 
     # add description
     vector_str += f" - Package offers this functionality: {package['description']}"

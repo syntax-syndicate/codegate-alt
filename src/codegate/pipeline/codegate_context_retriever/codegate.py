@@ -31,12 +31,11 @@ class CodegateContextRetriever(PipelineStep):
         return "codegate-context-retriever"
 
     async def get_objects_from_search(self, search: str) -> list[object]:
-        objects = await self.storage_engine.search(search)
+        objects = await self.storage_engine.search(search, distance=0.5)
         return objects
 
     def generate_context_str(self, objects: list[object]) -> str:
-        context_str = "Please use the information about related packages "
-        "to influence your answer:\n"
+        context_str = ""
         for obj in objects:
             # generate dictionary from object
             package_obj = {
@@ -64,19 +63,34 @@ class CodegateContextRetriever(PipelineStep):
 
         if last_user_message is not None:
             last_user_message_str, last_user_idx = last_user_message
-            if "codegate" in last_user_message_str.lower():
-                # strip codegate from prompt and trim it
-                last_user_message_str = (
-                    last_user_message_str.lower().replace("codegate", "").strip()
-                )
+            if last_user_message_str.lower():
+                # Look for matches in vector DB
                 searched_objects = await self.get_objects_from_search(last_user_message_str)
-                context_str = self.generate_context_str(searched_objects)
-                # Add a system prompt to the completion request
-                new_request = request.copy()
-                new_request["messages"].insert(last_user_idx, context_str)
-                return PipelineResult(
-                    request=new_request,
-                )
+
+                # If matches are found, add the matched content to context
+                if len(searched_objects) > 0:
+                    context_str = self.generate_context_str(searched_objects)
+
+                    # Make a copy of the request
+                    new_request = request.copy()
+
+                    # Add the context to the last user message
+                    # Format: "Context: {context_str} \n Query: {last user message conent}"
+                    # Handle the two cases: (a) message content is str, (b)message content
+                    # is list
+                    message = new_request["messages"][last_user_idx]
+                    if isinstance(message["content"], str):
+                        message["content"] = (
+                            f'Context: {context_str} \n\n Query: {message["content"]}'
+                        )
+                    elif isinstance(message["content"], (list, tuple)):
+                        for item in message["content"]:
+                            if isinstance(item, dict) and item.get("type") == "text":
+                                item["text"] = f'Context: {context_str} \n\n Query: {item["text"]}'
+
+                    return PipelineResult(
+                        request=new_request,
+                    )
 
         # Fall through
         return PipelineResult(request=request)
