@@ -17,3 +17,4 @@ sql:
           emit_sync_querier: true
           emit_async_querier: true
           query_parameter_limit: 5
+          emit_pydantic_models: true

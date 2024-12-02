@@ -5,9 +5,8 @@ INSERT INTO prompts (
     provider,
     system_prompt,
     user_prompt,
-    type,
-    status
-) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *;
+    type
+) VALUES (?, ?, ?, ?, ?, ?) RETURNING *;
 
 -- name: GetPrompt :one
 SELECT * FROM prompts WHERE id = ?;
@@ -22,9 +21,8 @@ INSERT INTO outputs (
     id,
     prompt_id,
     timestamp,
-    output,
-    status
-) VALUES (?, ?, ?, ?, ?) RETURNING *;
+    output
+) VALUES (?, ?, ?, ?) RETURNING *;
 
 -- name: GetOutput :one
 SELECT * FROM outputs WHERE id = ?;
@@ -79,7 +77,6 @@ SELECT
     p.*,
     o.id as output_id,
     o.output,
-    o.status as output_status,
     a.id as alert_id,
     a.code_snippet,
     a.trigger_string,

@@ -7,8 +7,7 @@ CREATE TABLE prompts (
     provider TEXT,       -- VARCHAR(255)
     system_prompt TEXT,
     user_prompt TEXT NOT NULL,
-    type TEXT NOT NULL, -- VARCHAR(50) (e.g. "fim", "chat")
-    status TEXT NOT NULL  -- VARCHAR(50)
+    type TEXT NOT NULL -- VARCHAR(50) (e.g. "fim", "chat")
 );
 
 -- Outputs table
@@ -17,7 +16,6 @@ CREATE TABLE outputs (
     prompt_id TEXT NOT NULL,
     timestamp DATETIME NOT NULL,
     output TEXT NOT NULL,
-    status TEXT NOT NULL, -- VARCHAR(50)
     FOREIGN KEY (prompt_id) REFERENCES prompts(id)
 );
 

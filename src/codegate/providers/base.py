@@ -1,14 +1,12 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Dict, Optional, Union
 
 import structlog
 from fastapi import APIRouter, Request
 from litellm import ModelResponse
 from litellm.types.llms.openai import ChatCompletionRequest
-from sqlalchemy.ext.asyncio import create_async_engine
 
-from codegate.db.utils import create_prompt_record
+from codegate.db.connection import DbRecorder
 from codegate.pipeline.base import PipelineResult, SequentialPipelineProcessor
 from codegate.providers.completion.base import BaseCompletionHandler
 from codegate.providers.formatting.input_pipeline import PipelineResponseFormatter
@@ -40,14 +38,7 @@ class BaseProvider(ABC):
         self._pipeline_processor = pipeline_processor
         self._fim_pipelin_processor = fim_pipeline_processor
         self._pipeline_response_formatter = PipelineResponseFormatter(output_normalizer)
-
-        # Initialize SQLite database engine with proper async URL
-        db_path = Path("codegate.db").absolute()
-        self._db_engine = create_async_engine(
-            f"sqlite+aiosqlite:///{db_path}",
-            echo=True,  # Set to False in production
-            isolation_level="AUTOCOMMIT",  # Required for SQLite
-        )
+        self.db_recorder = DbRecorder()
 
         self._setup_routes()
 
@@ -151,22 +142,18 @@ class BaseProvider(ABC):
         Main completion flow with pipeline integration
 
         The flow has three main steps:
-        - Store the incoming request in the database
-        - Process the request with the pipeline processor
-        - Execute the completion and translate the response
+        - Translate the request to the OpenAI API format used internally
+        - Process the request with the pipeline processor. This can modify the request
+          or yield a response. The response can either be returned or streamed back to
+          the client
+        - Execute the completion and translate the response back to the
+          provider-specific format
         """
         normalized_request = self._input_normalizer.normalize(data)
         streaming = data.get("stream", False)
-
-        # Store the prompt in the database
-        async with self._db_engine.begin() as conn:
-            prompt_type = "fim" if is_fim_request else "chat"
-            await create_prompt_record(
-                conn=conn,
-                data=data,
-                provider=self.provider_route_name,
-                prompt_type=prompt_type,
-            )
+        await self.db_recorder.record_request(
+            normalized_request, is_fim_request, self.provider_route_name
+        )
 
         input_pipeline_result = await self._run_input_pipeline(normalized_request, is_fim_request)
         if input_pipeline_result.response:
