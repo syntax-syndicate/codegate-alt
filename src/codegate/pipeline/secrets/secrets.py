@@ -1,5 +1,3 @@
-import re
-
 import structlog
 from litellm import ChatCompletionRequest
 
@@ -8,7 +6,7 @@ from codegate.pipeline.base import (
     PipelineResult,
     PipelineStep,
 )
-from codegate.pipeline.secrets.gatecrypto import CodeGateCrypto
+from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.pipeline.secrets.signatures import CodegateSignatures
 
 logger = structlog.get_logger("codegate")
@@ -20,9 +18,6 @@ class CodegateSecrets(PipelineStep):
     def __init__(self):
         """Initialize the CodegateSecrets pipeline step."""
         super().__init__()
-        self.crypto = CodeGateCrypto()
-        self._session_store = {}
-        self._encrypted_to_session = {}  # Reverse lookup index
 
     @property
     def name(self) -> str:
@@ -73,7 +68,7 @@ class CodegateSecrets(PipelineStep):
 
         return start, end
 
-    def _redeact_text(self, text: str) -> str:
+    def _redeact_text(self, text: str, secrets_manager: SecretsManager, session_id: str) -> str:
         """
         Find and encrypt secrets in the given text.
 
@@ -114,34 +109,19 @@ class CodegateSecrets(PipelineStep):
 
         # Replace each match with its encrypted value
         for start, end, match in absolute_matches:
-            # Generate session key and encrypt the value
-            session_id = self.crypto.generate_session_key(None).hex()
-            encrypted_value = self.crypto.encrypt_token(match.value, session_id)
-
-            print("Original value: ", match.value)
-            print("Encrypted value: ", encrypted_value)
-            print("Service: ", match.service)
-            print("Type: ", match.type)
-
-            # Store the mapping
-            self._session_store[session_id] = {
-                "original": match.value,
-                "encrypted": encrypted_value,
-                "service": match.service,
-                "type": match.type,
-            }
-            # Store reverse lookup
-            self._encrypted_to_session[encrypted_value] = session_id
-
-            # Print the session store
-            logger.info(f"Session store: {self._session_store}")
+            # Encrypt and store the value
+            encrypted_value = secrets_manager.store_secret(
+                match.value,
+                match.service,
+                match.type,
+                session_id,
+            )
 
             # Create the replacement string
             replacement = f"REDACTED<${encrypted_value}>"
 
             # Replace the secret in the text
             protected_text[start:end] = replacement
-
             # Store for logging
             found_secrets.append(
                 {
@@ -152,110 +132,20 @@ class CodegateSecrets(PipelineStep):
                 }
             )
 
-        # Convert back to string
-        protected_string = "".join(protected_text)
+            # Convert back to string
+            protected_string = "".join(protected_text)
 
-        # Log the findings
-        logger.info("\nFound secrets:")
-        for secret in found_secrets:
-            logger.info(f"\nService: {secret['service']}")
-            logger.info(f"Type: {secret['type']}")
-            logger.info(f"Original: {secret['original']}")
-            logger.info(f"Encrypted: REDACTED<${secret['encrypted']}>")
+            # Log the findings
+            logger.info("\nFound secrets:")
 
-        (f"\nProtected text:\n{protected_string}")
-        return protected_string
+            for secret in found_secrets:
+                logger.info(f"\nService: {secret['service']}")
+                logger.info(f"Type: {secret['type']}")
+                logger.info(f"Original: {secret['original']}")
+                logger.info(f"Encrypted: REDACTED<${secret['encrypted']}>")
 
-    def _get_original_value(self, encrypted_value: str) -> str:
-        """
-        Get the original value for an encrypted value from the session store.
-
-        Args:
-            encrypted_value: The encrypted value to look up
-
-        Returns:
-            Original value if found, or the encrypted value if not found
-        """
-        try:
-            # Use reverse lookup index to get session_id
-            session_id = self._encrypted_to_session.get(encrypted_value)
-            if session_id:
-                return self._session_store[session_id]["original"]
-        except Exception as e:
-            logger.error(f"Error looking up original value: {e}")
-        return encrypted_value
-
-    def get_by_session_id(self, session_id: str) -> dict | None:
-        """
-        Get stored data directly by session ID.
-
-        Args:
-            session_id: The session ID to look up
-
-        Returns:
-            Dict containing the stored data if found, None otherwise
-        """
-        try:
-            return self._session_store.get(session_id)
-        except Exception as e:
-            logger.error(f"Error looking up by session ID: {e}")
-            return None
-
-    def _cleanup_session_store(self):
-        """
-        Securely wipe sensitive data from session stores.
-        """
-        try:
-            # Convert and wipe original values
-            for session_data in self._session_store.values():
-                if "original" in session_data:
-                    original_bytes = bytearray(session_data["original"].encode())
-                    self.crypto.wipe_bytearray(original_bytes)
-
-            # Clear the dictionaries
-            self._session_store.clear()
-            self._encrypted_to_session.clear()
-
-            logger.info("Session stores securely wiped")
-        except Exception as e:
-            logger.error(f"Error during secure cleanup: {e}")
-
-    def _unredact_text(self, protected_text: str) -> str:
-        """
-        Decrypt and restore the original text from protected text.
-
-        Args:
-            protected_text: The protected text containing encrypted values
-
-        Returns:
-            Original text with decrypted values
-        """
-        # Find all REDACTED markers
-        pattern = r"REDACTED<\$([^>]+)>"
-
-        # Start from the beginning of the text
-        result = []
-        last_end = 0
-
-        # Find each REDACTED section and replace with original value
-        for match in re.finditer(pattern, protected_text):
-            # Add text before this match
-            result.append(protected_text[last_end : match.start()])
-
-            # Get and add the original value
-            encrypted_value = match.group(1)
-            original_value = self._get_original_value(encrypted_value)
-            result.append(original_value)
-
-            last_end = match.end()
-
-        # Add any remaining text
-        result.append(protected_text[last_end:])
-
-        # Join all parts together
-        unprotected_text = "".join(result)
-        logger.info(f"\nUnprotected text:\n{unprotected_text}")
-        return unprotected_text
+            print(f"\nProtected text:\n{protected_string}")
+            return "".join(protected_text)
 
     async def process(
         self, request: ChatCompletionRequest, context: PipelineContext
@@ -270,32 +160,28 @@ class CodegateSecrets(PipelineStep):
         Returns:
             PipelineResult containing the processed request
         """
+        secrets_manager = context.sensitive.manager
+        if not secrets_manager or not isinstance(secrets_manager, SecretsManager):
+            # Should this be an error?
+            raise ValueError("Secrets manager not found in context")
+        session_id = context.sensitive.session_id
+        if not session_id:
+            raise ValueError("Session ID not found in context")
+
         last_user_message = self.get_last_user_message(request)
-        extracted_string = last_user_message[0] if last_user_message else None
-        print(f"Original text:\n{extracted_string}")
+        extracted_string = None
+        extracted_index = None
+        if last_user_message:
+            extracted_string = last_user_message[0]
+            extracted_index = last_user_message[1]
 
         if not extracted_string:
             return PipelineResult(request=request)
 
-        try:
-            # Protect the text
-            protected_string = self._redeact_text(extracted_string)
-            print(f"\nProtected text:\n{protected_string}")
+        # Protect the text
+        protected_string = self._redeact_text(extracted_string, secrets_manager, session_id)
 
-            # LLM
-            unprotected_string = self._unredact_text(protected_string)
-            print(f"\nUnprotected text:\n{unprotected_string}")
-
-            # Update the user message with protected text
-            if isinstance(request["messages"], list):
-                for msg in request["messages"]:
-                    if msg.get("role") == "user" and msg.get("content") == extracted_string:
-                        msg["content"] = protected_string
-
-            return PipelineResult(request=request)
-        except Exception as e:
-            logger.error(f"CodegateSecrets operation failed: {e}")
-
-        finally:
-            # Clean up sensitive data
-            self._cleanup_session_store()
+        # Update the user message
+        new_request = request.copy()
+        new_request["messages"][extracted_index]["content"] = protected_string
+        return PipelineResult(request=new_request)
