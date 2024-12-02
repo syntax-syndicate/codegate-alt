@@ -8,7 +8,6 @@ from litellm import ModelResponse
 from litellm.types.llms.openai import ChatCompletionRequest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from codegate.codegate_logging import setup_logging
 from codegate.db.utils import create_prompt_record
 from codegate.pipeline.base import PipelineResult, SequentialPipelineProcessor
 from codegate.providers.completion.base import BaseCompletionHandler

@@ -42,3 +42,6 @@ htmlcov/
 
 # Weaviate
 weaviate_data/
+
+# Codegate Dashboard DB
+codegate.db
