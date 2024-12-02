@@ -120,6 +120,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dev dependencies
 pip install -e ".[dev]"
+
+# Download models
+git lfs install
+git lfs pull
 ```
 
 ### Testing
