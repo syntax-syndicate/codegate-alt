@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - release-*
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -15,7 +14,7 @@ permissions:
 jobs:
   docker-image:
     name: Check docker image build
-    runs-on: ubuntu-latest
+    runs-on: codegate-pipeline
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
