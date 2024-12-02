@@ -15,25 +15,34 @@ class OllamaInputNormalizer(ModelInputNormalizer):
         """
         # Make a copy of the data to avoid modifying the original
         normalized_data = data.copy()
+        normalized_data["options"] = data.get("options", {})
+
+        # Add any context or system prompt if provided
+        if "context" in data:
+            normalized_data["context"] = data["context"]
+        if "system" in data:
+            normalized_data["system"] = data["system"]
 
         # Format the model name
         if "model" in normalized_data:
-            normalized_data["model"] = normalized_data["model"].strip()
+            normalized_data["model"] = data["model"].strip()
 
         # Convert messages format if needed
-        if "messages" in normalized_data:
-            messages = normalized_data["messages"]
+        if "messages" in data:
+            messages = data["messages"]
             converted_messages = []
             for msg in messages:
-                if isinstance(msg.get("content"), list):
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                new_msg = {"role": role, "content": content}
+                if isinstance(content, list):
                     # Convert list format to string
                     content_parts = []
                     for part in msg["content"]:
                         if part.get("type") == "text":
                             content_parts.append(part["text"])
-                    msg = msg.copy()
-                    msg["content"] = " ".join(content_parts)
-                converted_messages.append(msg)
+                    new_msg["content"] = " ".join(content_parts)
+                converted_messages.append(new_msg)
             normalized_data["messages"] = converted_messages
 
         # Ensure the base_url ends with /api if provided

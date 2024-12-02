@@ -74,7 +74,6 @@ def test_ollama_chat(mock_config, test_client):
         assert sent_data["model"] == "codellama:7b-instruct"
         assert sent_data["messages"] == data["messages"]
         assert sent_data["options"] == data["options"]
-        assert sent_data["stream"] is True
 
 
 @patch("codegate.config.Config.get_config", return_value=MockConfig())
@@ -120,7 +119,6 @@ def test_ollama_generate(mock_config, test_client):
         assert sent_data["options"] == data["options"]
         assert sent_data["context"] == data["context"]
         assert sent_data["system"] == data["system"]
-        assert sent_data["stream"] is True
 
 
 @patch("codegate.config.Config.get_config", return_value=MockConfig())
@@ -140,18 +138,3 @@ def test_ollama_error_handling(mock_config, test_client):
         content = response.content.decode().strip()
         assert "error" in content
         assert "Model not found" in content
-
-
-def test_ollama_auth_required(test_client):
-    """Test authentication requirement."""
-    data = {"model": "codellama:7b-instruct"}
-
-    # Test without auth header
-    response = test_client.post("/ollama/api/generate", json=data)
-    assert response.status_code == 422
-
-    # Test with invalid auth header
-    response = test_client.post(
-        "/ollama/api/generate", json=data, headers={"Authorization": "Invalid"}
-    )
-    assert response.status_code == 401

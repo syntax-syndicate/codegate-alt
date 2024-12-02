@@ -1,3 +1,4 @@
+import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from typing import Any, AsyncIterator, Optional, Union
@@ -35,6 +36,6 @@ class BaseCompletionHandler(ABC):
         """
         Create a FastAPI response from the completion response.
         """
-        if isinstance(response, Iterator):
+        if isinstance(response, Iterator) or inspect.isasyncgen(response):
             return self._create_streaming_response(response)
         return self._create_json_response(response)
