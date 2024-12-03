@@ -24,7 +24,16 @@ class LlamaCppInferenceEngine:
             self.__models = {}
 
     def __del__(self):
-        self.__close_models()
+        self._close_models()
+
+    def _close_models(self):
+        """
+        Closes all open models and samplers
+        """
+        for _, model in self.__models.items():
+            if model._sampler:
+                model._sampler.close()
+            model.close()
 
     async def __get_model(self, model_path, embedding=False, n_ctx=512, n_gpu_layers=0):
         """
@@ -70,12 +79,3 @@ class LlamaCppInferenceEngine:
         """
         model = await self.__get_model(model_path=model_path, embedding=True)
         return model.embed(content)
-
-    async def __close_models(self):
-        """
-        Closes all open models and samplers
-        """
-        for _, model in self.__models:
-            if model._sampler:
-                model._sampler.close()
-            model.close()
