@@ -34,23 +34,21 @@ def mock_inference_engine():
 
 @pytest.mark.asyncio
 async def test_search(mock_weaviate_client, mock_inference_engine):
-    # Patch the WeaviateClient and LlamaCppInferenceEngine inside the test function
-    with (
-        patch("weaviate.WeaviateClient", return_value=mock_weaviate_client),
-        patch(
-            "codegate.inference.inference_engine.LlamaCppInferenceEngine",
-            return_value=mock_inference_engine,
-        ),
-    ):
+    # Patch the LlamaCppInferenceEngine.embed method (not the entire class)
+    with patch("codegate.inference.inference_engine.LlamaCppInferenceEngine.embed",
+               mock_inference_engine.embed):
 
-        # Initialize StorageEngine
-        storage_engine = StorageEngine(data_path="./weaviate_data")
+        # Mock the WeaviateClient as before
+        with patch("weaviate.WeaviateClient", return_value=mock_weaviate_client):
 
-        # Invoke the search method
-        results = await storage_engine.search("test query", 5, 0.3)
+            # Initialize StorageEngine
+            storage_engine = StorageEngine(data_path="./weaviate_data")
 
-        # Assertions to validate the expected behavior
-        assert len(results) == 1  # Assert that one result is returned
-        assert results[0]["properties"]["name"] == "test"
-        mock_weaviate_client.connect.assert_called()
-        mock_weaviate_client.close.assert_called()
+            # Invoke the search method
+            results = await storage_engine.search("test query", 5, 0.3)
+
+            # Assertions to validate the expected behavior
+            assert len(results) == 1  # Assert that one result is returned
+            assert results[0]["properties"]["name"] == "test"
+            mock_weaviate_client.connect.assert_called()
+            mock_weaviate_client.close.assert_called()
