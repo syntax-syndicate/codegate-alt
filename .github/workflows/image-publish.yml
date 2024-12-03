@@ -16,7 +16,7 @@ on:
 jobs:
   build-image:
     name: Build Docker image
-    runs-on: codegate-pipeline
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
