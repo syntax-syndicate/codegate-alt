@@ -20,8 +20,7 @@ INSERT INTO alerts (
     trigger_type,
     trigger_category,
     timestamp
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, prompt_id, output_id, code_snippet,
-trigger_string, trigger_type, trigger_category, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category, timestamp
 """
 
 
@@ -51,25 +50,14 @@ INSERT INTO prompts (
     id,
     timestamp,
     provider,
-    system_prompt,
-    user_prompt,
+    request,
     type
-) VALUES (?, ?, ?, ?, ?, ?) RETURNING id, timestamp, provider, system_prompt, user_prompt, type
+) VALUES (?, ?, ?, ?, ?) RETURNING id, timestamp, provider, request, type
 """
 
 
-class CreatePromptParams(pydantic.BaseModel):
-    id: Any
-    timestamp: Any
-    provider: Optional[Any]
-    system_prompt: Optional[Any]
-    user_prompt: Any
-    type: Any
-
-
 GET_ALERT = """-- name: get_alert \\:one
-SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category,
-timestamp FROM alerts WHERE id = ?
+SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category, timestamp FROM alerts WHERE id = ?
 """
 
 
@@ -79,20 +67,20 @@ SELECT id, prompt_id, timestamp, output FROM outputs WHERE id = ?
 
 
 GET_OUTPUTS_BY_PROMPT_ID = """-- name: get_outputs_by_prompt_id \\:many
-SELECT id, prompt_id, timestamp, output FROM outputs
-WHERE prompt_id = ?
+SELECT id, prompt_id, timestamp, output FROM outputs 
+WHERE prompt_id = ? 
 ORDER BY timestamp DESC
 """
 
 
 GET_PROMPT = """-- name: get_prompt \\:one
-SELECT id, timestamp, provider, system_prompt, user_prompt, type FROM prompts WHERE id = ?
+SELECT id, timestamp, provider, request, type FROM prompts WHERE id = ?
 """
 
 
 GET_PROMPT_WITH_OUTPUTS_AND_ALERTS = """-- name: get_prompt_with_outputs_and_alerts \\:many
-SELECT
-    p.id, p.timestamp, p.provider, p.system_prompt, p.user_prompt, p.type,
+SELECT 
+    p.id, p.timestamp, p.provider, p.request, p.type,
     o.id as output_id,
     o.output,
     a.id as alert_id,
@@ -112,8 +100,7 @@ class GetPromptWithOutputsAndAlertsRow(pydantic.BaseModel):
     id: Any
     timestamp: Any
     provider: Optional[Any]
-    system_prompt: Optional[Any]
-    user_prompt: Any
+    request: Any
     type: Any
     output_id: Optional[Any]
     output: Optional[Any]
@@ -130,16 +117,15 @@ SELECT id, ip, port, llm_model, system_prompt, other_settings FROM settings ORDE
 
 
 LIST_ALERTS_BY_PROMPT = """-- name: list_alerts_by_prompt \\:many
-SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category,
-timestamp FROM alerts
-WHERE prompt_id = ?
+SELECT id, prompt_id, output_id, code_snippet, trigger_string, trigger_type, trigger_category, timestamp FROM alerts 
+WHERE prompt_id = ? 
 ORDER BY timestamp DESC
 """
 
 
 LIST_PROMPTS = """-- name: list_prompts \\:many
-SELECT id, timestamp, provider, system_prompt, user_prompt, type FROM prompts
-ORDER BY timestamp DESC
+SELECT id, timestamp, provider, request, type FROM prompts 
+ORDER BY timestamp DESC 
 LIMIT ? OFFSET ?
 """
 
@@ -224,16 +210,17 @@ class Querier:
             output=row[3],
         )
 
-    def create_prompt(self, arg: CreatePromptParams) -> Optional[models.Prompt]:
+    def create_prompt(
+        self, *, id: Any, timestamp: Any, provider: Optional[Any], request: Any, type: Any
+    ) -> Optional[models.Prompt]:
         row = self._conn.execute(
             sqlalchemy.text(CREATE_PROMPT),
             {
-                "p1": arg.id,
-                "p2": arg.timestamp,
-                "p3": arg.provider,
-                "p4": arg.system_prompt,
-                "p5": arg.user_prompt,
-                "p6": arg.type,
+                "p1": id,
+                "p2": timestamp,
+                "p3": provider,
+                "p4": request,
+                "p5": type,
             },
         ).first()
         if row is None:
@@ -242,9 +229,8 @@ class Querier:
             id=row[0],
             timestamp=row[1],
             provider=row[2],
-            system_prompt=row[3],
-            user_prompt=row[4],
-            type=row[5],
+            request=row[3],
+            type=row[4],
         )
 
     def get_alert(self, *, id: Any) -> Optional[models.Alert]:
@@ -291,9 +277,8 @@ class Querier:
             id=row[0],
             timestamp=row[1],
             provider=row[2],
-            system_prompt=row[3],
-            user_prompt=row[4],
-            type=row[5],
+            request=row[3],
+            type=row[4],
         )
 
     def get_prompt_with_outputs_and_alerts(
@@ -305,16 +290,15 @@ class Querier:
                 id=row[0],
                 timestamp=row[1],
                 provider=row[2],
-                system_prompt=row[3],
-                user_prompt=row[4],
-                type=row[5],
-                output_id=row[6],
-                output=row[7],
-                alert_id=row[8],
-                code_snippet=row[9],
-                trigger_string=row[10],
-                trigger_type=row[11],
-                trigger_category=row[12],
+                request=row[3],
+                type=row[4],
+                output_id=row[5],
+                output=row[6],
+                alert_id=row[7],
+                code_snippet=row[8],
+                trigger_string=row[9],
+                trigger_type=row[10],
+                trigger_category=row[11],
             )
 
     def get_settings(self) -> Optional[models.Setting]:
@@ -351,9 +335,8 @@ class Querier:
                 id=row[0],
                 timestamp=row[1],
                 provider=row[2],
-                system_prompt=row[3],
-                user_prompt=row[4],
-                type=row[5],
+                request=row[3],
+                type=row[4],
             )
 
     def upsert_settings(self, arg: UpsertSettingsParams) -> Optional[models.Setting]:
@@ -436,17 +419,18 @@ class AsyncQuerier:
             output=row[3],
         )
 
-    async def create_prompt(self, arg: CreatePromptParams) -> Optional[models.Prompt]:
+    async def create_prompt(
+        self, *, id: Any, timestamp: Any, provider: Optional[Any], request: Any, type: Any
+    ) -> Optional[models.Prompt]:
         row = (
             await self._conn.execute(
                 sqlalchemy.text(CREATE_PROMPT),
                 {
-                    "p1": arg.id,
-                    "p2": arg.timestamp,
-                    "p3": arg.provider,
-                    "p4": arg.system_prompt,
-                    "p5": arg.user_prompt,
-                    "p6": arg.type,
+                    "p1": id,
+                    "p2": timestamp,
+                    "p3": provider,
+                    "p4": request,
+                    "p5": type,
                 },
             )
         ).first()
@@ -456,9 +440,8 @@ class AsyncQuerier:
             id=row[0],
             timestamp=row[1],
             provider=row[2],
-            system_prompt=row[3],
-            user_prompt=row[4],
-            type=row[5],
+            request=row[3],
+            type=row[4],
         )
 
     async def get_alert(self, *, id: Any) -> Optional[models.Alert]:
@@ -507,9 +490,8 @@ class AsyncQuerier:
             id=row[0],
             timestamp=row[1],
             provider=row[2],
-            system_prompt=row[3],
-            user_prompt=row[4],
-            type=row[5],
+            request=row[3],
+            type=row[4],
         )
 
     async def get_prompt_with_outputs_and_alerts(
@@ -523,16 +505,15 @@ class AsyncQuerier:
                 id=row[0],
                 timestamp=row[1],
                 provider=row[2],
-                system_prompt=row[3],
-                user_prompt=row[4],
-                type=row[5],
-                output_id=row[6],
-                output=row[7],
-                alert_id=row[8],
-                code_snippet=row[9],
-                trigger_string=row[10],
-                trigger_type=row[11],
-                trigger_category=row[12],
+                request=row[3],
+                type=row[4],
+                output_id=row[5],
+                output=row[6],
+                alert_id=row[7],
+                code_snippet=row[8],
+                trigger_string=row[9],
+                trigger_type=row[10],
+                trigger_category=row[11],
             )
 
     async def get_settings(self) -> Optional[models.Setting]:
@@ -569,9 +550,8 @@ class AsyncQuerier:
                 id=row[0],
                 timestamp=row[1],
                 provider=row[2],
-                system_prompt=row[3],
-                user_prompt=row[4],
-                type=row[5],
+                request=row[3],
+                type=row[4],
             )
 
     async def upsert_settings(self, arg: UpsertSettingsParams) -> Optional[models.Setting]:

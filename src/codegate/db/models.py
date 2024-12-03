@@ -28,8 +28,7 @@ class Prompt(pydantic.BaseModel):
     id: Any
     timestamp: Any
     provider: Optional[Any]
-    system_prompt: Optional[Any]
-    user_prompt: Any
+    request: Any
     type: Any
 
 

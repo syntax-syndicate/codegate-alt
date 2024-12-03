@@ -175,7 +175,7 @@ class BaseProvider(ABC):
         """
         normalized_request = self._input_normalizer.normalize(data)
         streaming = data.get("stream", False)
-        await self.db_recorder.record_request(
+        prompt_db = await self.db_recorder.record_request(
             normalized_request, is_fim_request, self.provider_route_name
         )
 
@@ -194,10 +194,12 @@ class BaseProvider(ABC):
             provider_request, api_key=api_key, stream=streaming, is_fim_request=is_fim_request
         )
         if not streaming:
+            await self.db_recorder.record_output_non_stream(prompt_db, model_response)
             normalized_response = self._output_normalizer.normalize(model_response)
             pipeline_output = self._run_output_pipeline(normalized_response)
             return self._output_normalizer.denormalize(pipeline_output)
 
+        model_response = self.db_recorder.record_output_stream(prompt_db, model_response)
         normalized_stream = self._output_normalizer.normalize_streaming(model_response)
         pipeline_output_stream = await self._run_output_stream_pipeline(
             input_pipeline_result.context,

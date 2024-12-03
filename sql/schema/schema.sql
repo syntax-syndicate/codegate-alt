@@ -5,8 +5,7 @@ CREATE TABLE prompts (
     id TEXT PRIMARY KEY,  -- UUID stored as TEXT
     timestamp DATETIME NOT NULL,
     provider TEXT,       -- VARCHAR(255)
-    system_prompt TEXT,
-    user_prompt TEXT NOT NULL,
+    request TEXT NOT NULL,  -- Record the full request that arrived to the server
     type TEXT NOT NULL -- VARCHAR(50) (e.g. "fim", "chat")
 );
 
@@ -15,7 +14,7 @@ CREATE TABLE outputs (
     id TEXT PRIMARY KEY,  -- UUID stored as TEXT
     prompt_id TEXT NOT NULL,
     timestamp DATETIME NOT NULL,
-    output TEXT NOT NULL,
+    output TEXT NOT NULL,   -- Record the full response. If it was stream will be a list of objects.
     FOREIGN KEY (prompt_id) REFERENCES prompts(id)
 );
 
