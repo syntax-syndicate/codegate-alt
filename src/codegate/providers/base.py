@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 from litellm import ModelResponse
 from litellm.types.llms.openai import ChatCompletionRequest
 
+from codegate.db.connection import DbRecorder
 from codegate.pipeline.base import PipelineResult, SequentialPipelineProcessor
 from codegate.providers.completion.base import BaseCompletionHandler
 from codegate.providers.formatting.input_pipeline import PipelineResponseFormatter
@@ -36,8 +37,8 @@ class BaseProvider(ABC):
         self._output_normalizer = output_normalizer
         self._pipeline_processor = pipeline_processor
         self._fim_pipelin_processor = fim_pipeline_processor
-
         self._pipeline_response_formatter = PipelineResponseFormatter(output_normalizer)
+        self.db_recorder = DbRecorder()
 
         self._setup_routes()
 
@@ -126,7 +127,7 @@ class BaseProvider(ABC):
 
     def _is_fim_request(self, request: Request, data: Dict) -> bool:
         """
-        Determin if the request is FIM by the URL or the data of the request.
+        Determine if the request is FIM by the URL or the data of the request.
         """
         # Avoid more expensive inspection of body by just checking the URL.
         if self._is_fim_request_url(request):
@@ -150,6 +151,10 @@ class BaseProvider(ABC):
         """
         normalized_request = self._input_normalizer.normalize(data)
         streaming = data.get("stream", False)
+        await self.db_recorder.record_request(
+            normalized_request, is_fim_request, self.provider_route_name
+        )
+
         input_pipeline_result = await self._run_input_pipeline(normalized_request, is_fim_request)
         if input_pipeline_result.response:
             return self._pipeline_response_formatter.handle_pipeline_response(

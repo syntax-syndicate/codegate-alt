@@ -8,8 +8,8 @@ from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
 from codegate.pipeline.codegate_context_retriever.codegate import CodegateContextRetriever
 from codegate.pipeline.codegate_system_prompt.codegate import CodegateSystemPrompt
 from codegate.pipeline.extract_snippets.extract_snippets import CodeSnippetExtractor
-from codegate.pipeline.secrets.signatures import CodegateSignatures
 from codegate.pipeline.secrets.secrets import CodegateSecrets
+from codegate.pipeline.secrets.signatures import CodegateSignatures
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
@@ -20,6 +20,7 @@ from codegate.providers.vllm.provider import VLLMProvider
 
 
 def init_app() -> FastAPI:
+    """Create the FastAPI application."""
     app = FastAPI(
         title="CodeGate",
         description=__description__,
