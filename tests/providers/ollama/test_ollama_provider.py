@@ -18,7 +18,7 @@ class MockConfig:
 def app():
     """Create FastAPI app with Ollama provider."""
     app = FastAPI()
-    provider = OllamaProvider()
+    provider = OllamaProvider(None)
     app.include_router(provider.get_routes())
     return app
 

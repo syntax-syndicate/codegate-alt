@@ -7,7 +7,9 @@ from litellm import ModelResponse
 from litellm.types.llms.openai import ChatCompletionRequest
 
 from codegate.db.connection import DbRecorder
-from codegate.pipeline.base import PipelineResult, SequentialPipelineProcessor
+from codegate.pipeline.base import PipelineContext, PipelineResult, SequentialPipelineProcessor
+from codegate.pipeline.output import OutputPipelineInstance, OutputPipelineProcessor
+from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.completion.base import BaseCompletionHandler
 from codegate.providers.formatting.input_pipeline import PipelineResponseFormatter
 from codegate.providers.normalizer.base import ModelInputNormalizer, ModelOutputNormalizer
@@ -25,18 +27,22 @@ class BaseProvider(ABC):
 
     def __init__(
         self,
+        secrets_manager: Optional[SecretsManager],
         input_normalizer: ModelInputNormalizer,
         output_normalizer: ModelOutputNormalizer,
         completion_handler: BaseCompletionHandler,
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
         fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
     ):
         self.router = APIRouter()
+        self._secrets_manager = secrets_manager
         self._completion_handler = completion_handler
         self._input_normalizer = input_normalizer
         self._output_normalizer = output_normalizer
         self._pipeline_processor = pipeline_processor
         self._fim_pipelin_processor = fim_pipeline_processor
+        self._output_pipeline_processor = output_pipeline_processor
         self._pipeline_response_formatter = PipelineResponseFormatter(output_normalizer)
         self.db_recorder = DbRecorder()
 
@@ -53,16 +59,20 @@ class BaseProvider(ABC):
 
     async def _run_output_stream_pipeline(
         self,
+        input_context: PipelineContext,
         normalized_stream: AsyncIterator[ModelResponse],
     ) -> AsyncIterator[ModelResponse]:
-        # we don't have a pipeline for output stream yet
-        return normalized_stream
+        output_pipeline_instance = OutputPipelineInstance(
+            self._output_pipeline_processor.pipeline_steps,
+            input_context=input_context,
+        )
+        return output_pipeline_instance.process_stream(normalized_stream)
 
     def _run_output_pipeline(
         self,
         normalized_response: ModelResponse,
     ) -> ModelResponse:
-        # we don't have a pipeline for output yet
+        # we don't have a pipeline for non-streamed output yet
         return normalized_response
 
     async def _run_input_pipeline(
@@ -78,7 +88,9 @@ class BaseProvider(ABC):
         if pipeline_processor is None:
             return PipelineResult(request=normalized_request)
 
-        result = await pipeline_processor.process_request(normalized_request)
+        result = await pipeline_processor.process_request(
+            secret_manager=self._secrets_manager, request=normalized_request
+        )
 
         # TODO(jakub): handle this by returning a message to the client
         if result.error_message:
@@ -135,6 +147,18 @@ class BaseProvider(ABC):
 
         return self._is_fim_request_body(data)
 
+    async def _cleanup_after_streaming(
+        self, stream: AsyncIterator[ModelResponse], context: PipelineContext
+    ) -> AsyncIterator[ModelResponse]:
+        """Wraps the stream to ensure cleanup after consumption"""
+        try:
+            async for item in stream:
+                yield item
+        finally:
+            # Ensure sensitive data is cleaned up after the stream is consumed
+            if context and context.sensitive:
+                context.sensitive.secure_cleanup()
+
     async def complete(
         self, data: Dict, api_key: Optional[str], is_fim_request: bool
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
@@ -175,8 +199,12 @@ class BaseProvider(ABC):
             return self._output_normalizer.denormalize(pipeline_output)
 
         normalized_stream = self._output_normalizer.normalize_streaming(model_response)
-        pipeline_output_stream = await self._run_output_stream_pipeline(normalized_stream)
-        return self._output_normalizer.denormalize_streaming(pipeline_output_stream)
+        pipeline_output_stream = await self._run_output_stream_pipeline(
+            input_pipeline_result.context,
+            normalized_stream,
+        )
+        denormalized_stream = self._output_normalizer.denormalize_streaming(pipeline_output_stream)
+        return self._cleanup_after_streaming(denormalized_stream, input_pipeline_result.context)
 
     def get_routes(self) -> APIRouter:
         return self.router

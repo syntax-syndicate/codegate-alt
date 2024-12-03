@@ -3,6 +3,8 @@ from typing import Optional
 
 from fastapi import Request
 
+from codegate.pipeline.output import OutputPipelineProcessor
+from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.base import BaseProvider, SequentialPipelineProcessor
 from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHandler
 from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLamaCppOutputNormalizer
@@ -11,16 +13,20 @@ from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLam
 class LlamaCppProvider(BaseProvider):
     def __init__(
         self,
+        secrets_manager: SecretsManager,
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
         fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
+        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
     ):
         completion_handler = LlamaCppCompletionHandler()
         super().__init__(
+            secrets_manager,
             LLamaCppInputNormalizer(),
             LLamaCppOutputNormalizer(),
             completion_handler,
             pipeline_processor,
             fim_pipeline_processor,
+            output_pipeline_processor,
         )
 
     @property

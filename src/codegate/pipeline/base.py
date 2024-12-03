@@ -1,8 +1,11 @@
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from litellm import ChatCompletionRequest
+
+from codegate.pipeline.secrets.manager import SecretsManager
 
 
 @dataclass
@@ -25,9 +28,24 @@ class CodeSnippet:
 
 
 @dataclass
+class PipelineSensitiveData:
+    manager: SecretsManager
+    session_id: str
+
+    def secure_cleanup(self):
+        """Securely cleanup sensitive data for this session"""
+        if self.manager is None or self.session_id == "":
+            return
+
+        self.manager.cleanup_session(self.session_id)
+        self.session_id = ""
+
+
+@dataclass
 class PipelineContext:
     code_snippets: List[CodeSnippet] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    sensitive: Optional[PipelineSensitiveData] = field(default_factory=lambda: None)
 
     def add_code_snippet(self, snippet: CodeSnippet):
         self.code_snippets.append(snippet)
@@ -139,6 +157,7 @@ class SequentialPipelineProcessor:
 
     async def process_request(
         self,
+        secret_manager: SecretsManager,
         request: ChatCompletionRequest,
     ) -> PipelineResult:
         """
@@ -146,11 +165,15 @@ class SequentialPipelineProcessor:
 
         Args:
             request: The chat completion request to process
+            secret_manager: The secrets manager instance to gather sensitive data from the request
 
         Returns:
             PipelineResult containing either a modified request or response structure
         """
         context = PipelineContext()
+        context.sensitive = PipelineSensitiveData(
+            manager=secret_manager, session_id=str(uuid.uuid4())
+        )  # Generate a new session ID for each request
         current_request = request
 
         for step in self.pipeline_steps:
