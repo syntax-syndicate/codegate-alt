@@ -46,7 +46,12 @@ ENV PYTHONPATH=/app/src
 
 # Copy weaviate_data into the container if the build argument exists
 # This step will only work if the build argument is set
-COPY ${WEAVIATE_DATA_PATH} /app/weaviate_data
+RUN if [ -n "$WEAVIATE_DATA_PATH" ]; then \
+        echo "Copying weaviate_data from $WEAVIATE_DATA_PATH"; \
+        cp -r $WEAVIATE_DATA_PATH /app/weaviate_data; \
+    else \
+        echo "No WEAVIATE_DATA_PATH provided, skipping copy."; \
+    fi
 
 # Allow to expose weaviate_data volume
 VOLUME ["/app/weaviate_data"]
