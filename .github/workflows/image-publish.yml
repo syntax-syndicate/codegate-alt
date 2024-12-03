@@ -1,8 +1,3 @@
-# Post-submit and daily build and publish of the Helm chart and Docker container
-# This is a separate workflow than image-build.yml because image-build.yml is
-# run in the PR context, and those runs aren't allowed package:write permissions if
-# the source is a fork (GitHub errors and invalidates the entire workflow if you try).
-
 name: Publish Docker Image
 on:
   push:
@@ -11,23 +6,21 @@ on:
   schedule:
     # Once weekly on fridays at noon
     - cron: '00 12 * * 5'
-  # Allow for manually triggering the workflow
   workflow_dispatch:
+
 jobs:
-  build-image:
-    name: Build Docker image
+  build-linux-image:
+    name: Build Docker image for Linux
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     env:
       BASE_REPO: "ghcr.io/stacklok"
-      CODEGATE_SERVER_IMAGE: "ghcr.io/stacklok/codegate"
+      CODEGATE_SERVER_IMAGE: "ghcr.io/stacklok/codegate-linux"
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-      - name: Set up QEMU for cross-platform builds
-        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3
       - name: Compute version number
@@ -55,13 +48,10 @@ jobs:
             org.opencontainers.image.version=${{ github.sha }}
           flavor: |
             latest=true
-          # Even if tags are floating, it's handy and user-friendly to have a
-          # matching tag for each build. This way, we can search for the digest
-          # and verify that it's the same as the digest in the Helm chart.
           tags: |
             type=raw,value=${{ steps.version-string.outputs.tag }}
-      - name: Build image
-        id: image-build
+      - name: Build image for Linux
+        id: image-build-linux
         uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v5
         with:
           context: .
@@ -72,4 +62,57 @@ jobs:
           labels: ${{ steps.docker-metadata.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-  
+
+  build-macos-image:
+    name: Build Docker image for macOS
+    runs-on: macos-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      BASE_REPO: "ghcr.io/stacklok"
+      CODEGATE_SERVER_IMAGE: "ghcr.io/stacklok/codegate-macos"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3
+      - name: Compute version number
+        id: version-string
+        run: |
+          DATE="$(date +%Y%m%d)"
+          COMMIT="$(git rev-parse --short HEAD)"
+          echo "tag=0.$DATE.$GITHUB_RUN_NUMBER+ref.$COMMIT" >> "$GITHUB_OUTPUT"
+      - name: Login to GHCR
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set container metadata
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5
+        id: docker-metadata
+        with:
+          images: ${{ env.CODEGATE_SERVER_IMAGE }}
+          labels: |
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.description="This is a container for the Stacklok Codegate server"
+            org.opencontainers.image.title="Stacklok Codegate Server"
+            org.opencontainers.image.vendor="Stacklok Inc."
+            org.opencontainers.image.version=${{ github.sha }}
+          flavor: |
+            latest=true
+          tags: |
+            type=raw,value=${{ steps.version-string.outputs.tag }}
+      - name: Build image for macOS
+        id: image-build-macos
+        uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v5
+        with:
+          context: .
+          platforms: darwin/amd64
+          push: true
+          file: ./Dockerfile
+          tags: ${{ steps.docker-metadata.outputs.tags }}
+          labels: ${{ steps.docker-metadata.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
