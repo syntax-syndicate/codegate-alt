@@ -30,7 +30,7 @@ class DbRecorder:
         logger.debug(f"Initializing DB from path: {self._db_path}")
         engine_dict = {
             "url": f"sqlite+aiosqlite:///{self._db_path}",
-            "echo": True,  # Set to False in production
+            "echo": False,  # Set to False in production
             "isolation_level": "AUTOCOMMIT",  # Required for SQLite
         }
         self._async_db_engine = create_async_engine(**engine_dict)

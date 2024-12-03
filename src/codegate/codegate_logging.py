@@ -132,6 +132,9 @@ def setup_logging(
     root_logger.addHandler(stdout_handler)
     root_logger.addHandler(stderr_handler)
 
+    # Set explicitly the log level for other modules
+    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
+
     # Create a logger for our package
     logger = structlog.get_logger("codegate")
     logger.debug(
