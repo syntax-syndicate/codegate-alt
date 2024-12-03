@@ -126,6 +126,8 @@ class VLLMInputNormalizer(ModelInputNormalizer):
         ret_data = normalized_data
         if self._has_chat_ml_format(normalized_data):
             ret_data = self._chat_ml_normalizer.normalize(normalized_data)
+        else:
+            ret_data = ChatCompletionRequest(**normalized_data)
         return ret_data
 
     def denormalize(self, data: ChatCompletionRequest) -> Dict:
