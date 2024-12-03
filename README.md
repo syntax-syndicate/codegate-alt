@@ -122,6 +122,12 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
+```bash
+# Download models
+git lfs install
+git lfs pull
+```
+
 ### Testing
 ```bash
 pytest

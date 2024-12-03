@@ -95,8 +95,3 @@ def parse_json_log(log_line: str) -> dict[str, Any]:
         return json.loads(log_line)
     except json.JSONDecodeError as e:
         pytest.fail(f"Invalid JSON log line: {e}")
-
-
-@pytest.fixture
-def inference_engine() -> LlamaCppInferenceEngine:
-    return LlamaCppInferenceEngine()
