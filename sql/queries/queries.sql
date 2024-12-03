@@ -3,10 +3,9 @@ INSERT INTO prompts (
     id,
     timestamp,
     provider,
-    system_prompt,
-    user_prompt,
+    request,
     type
-) VALUES (?, ?, ?, ?, ?, ?) RETURNING *;
+) VALUES (?, ?, ?, ?, ?) RETURNING *;
 
 -- name: GetPrompt :one
 SELECT * FROM prompts WHERE id = ?;
