@@ -47,4 +47,4 @@ jobs:
       with:
         name: weaviate_data
         path: weaviate_data
-        retention-days: 5
+        retention-days: 90
