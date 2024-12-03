@@ -35,6 +35,9 @@ class DbRecorder:
         }
         self._async_db_engine = create_async_engine(**engine_dict)
         self._db_engine = create_engine(**engine_dict)
+        if not self.does_db_exist():
+            logger.info(f"Database does not exist at {self._db_path}. Creating..")
+            asyncio.run(self.init_db())
 
     def does_db_exist(self):
         return self._db_path.is_file()
