@@ -36,6 +36,10 @@ class BaseCompletionHandler(ABC):
         """
         Create a FastAPI response from the completion response.
         """
-        if isinstance(response, Iterator) or inspect.isasyncgen(response):
+        if (
+            isinstance(response, Iterator)
+            or isinstance(response, AsyncIterator)
+            or inspect.isasyncgen(response)
+        ):
             return self._create_streaming_response(response)
         return self._create_json_response(response)
