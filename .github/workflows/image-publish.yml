@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      actions: read
     env:
       BASE_REPO: "ghcr.io/stacklok"
       CODEGATE_SERVER_IMAGE: "ghcr.io/stacklok/codegate-linux"
