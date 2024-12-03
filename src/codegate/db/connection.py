@@ -149,7 +149,6 @@ class DbRecorder:
         if output_chunks:
             # Record the output chunks
             output_str = json.dumps(output_chunks)
-            logger.info(f"Recorded chunks: {output_chunks}. Str: {output_str}")
             await self._record_output(prompt, output_str)
 
     async def record_output_non_stream(
