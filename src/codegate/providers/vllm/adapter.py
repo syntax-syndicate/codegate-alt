@@ -108,8 +108,8 @@ class VLLMInputNormalizer(ModelInputNormalizer):
         Normalize the input data to the format expected by LiteLLM.
         Ensures the model name has the hosted_vllm prefix and base_url has /v1.
         """
-        # Make a copy of the data to avoid modifying the original
-        normalized_data = data.copy()
+        # Make a copy of the data to avoid modifying the original and normalize the message content
+        normalized_data = self._normalize_content_messages(data)
 
         # Format the model name to include the provider
         if "model" in normalized_data:

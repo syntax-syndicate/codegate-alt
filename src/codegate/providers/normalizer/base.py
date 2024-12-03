@@ -11,6 +11,32 @@ class ModelInputNormalizer(ABC):
     to the format expected by the pipeline.
     """
 
+    def _normalize_content_messages(self, data: Dict) -> Dict:
+        """
+        If the request contains the "messages" key, make sure that it's content is a string.
+        """
+        # Anyways copy the original data to avoid modifying it
+        if "messages" not in data:
+            return data.copy()
+
+        normalized_data = data.copy()
+        messages = normalized_data["messages"]
+        converted_messages = []
+        for msg in messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            new_msg = {"role": role, "content": content}
+            if isinstance(content, list):
+                # Convert list format to string
+                content_parts = []
+                for part in msg["content"]:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        content_parts.append(part["text"])
+                new_msg["content"] = " ".join(content_parts)
+            converted_messages.append(new_msg)
+        normalized_data["messages"] = converted_messages
+        return normalized_data
+
     @abstractmethod
     def normalize(self, data: Dict) -> ChatCompletionRequest:
         """Normalize the input data"""

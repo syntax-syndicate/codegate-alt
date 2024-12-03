@@ -17,13 +17,18 @@ class LLamaCppInputNormalizer(ModelInputNormalizer):
         """
         Normalize the input data
         """
+        # Make a copy of the data to avoid modifying the original and normalize the message content
+        normalized_data = self._normalize_content_messages(data)
+
         # When doing FIM, we receive "prompt" instead of messages. Normalizing.
-        if "prompt" in data:
-            data["messages"] = [{"content": data.pop("prompt"), "role": "user"}]
+        if "prompt" in normalized_data:
+            normalized_data["messages"] = [
+                {"content": normalized_data.pop("prompt"), "role": "user"}
+            ]
             # We can add as many parameters as we like to data. ChatCompletionRequest is not strict.
-            data["had_prompt_before"] = True
+            normalized_data["had_prompt_before"] = True
         try:
-            return ChatCompletionRequest(**data)
+            return ChatCompletionRequest(**normalized_data)
         except Exception as e:
             raise ValueError(f"Invalid completion parameters: {str(e)}")
 

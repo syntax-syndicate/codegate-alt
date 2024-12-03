@@ -13,7 +13,8 @@ class OpenAIInputNormalizer(ModelInputNormalizer):
         """
         No normalizing needed, already OpenAI format
         """
-        return ChatCompletionRequest(**data)
+        normalized_data = self._normalize_content_messages(data)
+        return ChatCompletionRequest(**normalized_data)
 
     def denormalize(self, data: ChatCompletionRequest) -> Dict:
         """
