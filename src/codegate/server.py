@@ -4,6 +4,7 @@ from fastapi import APIRouter, FastAPI
 
 from codegate import __description__, __version__
 from codegate.config import Config
+from codegate.dashboard.dashboard import dashboard_router
 from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
 from codegate.pipeline.codegate_context_retriever.codegate import CodegateContextRetriever
 from codegate.pipeline.codegate_system_prompt.codegate import CodegateSystemPrompt
@@ -114,5 +115,8 @@ def init_app() -> FastAPI:
 
     # Include the router in the app - this exposes the health check endpoint
     app.include_router(system_router)
+
+    # Include the routes for the dashboard
+    app.include_router(dashboard_router)
 
     return app

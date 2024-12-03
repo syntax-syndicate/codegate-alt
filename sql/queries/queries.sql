@@ -86,3 +86,14 @@ LEFT JOIN outputs o ON p.id = o.prompt_id
 LEFT JOIN alerts a ON p.id = a.prompt_id
 WHERE p.id = ?
 ORDER BY o.timestamp DESC, a.timestamp DESC;
+
+
+-- name: GetPromptWithOutputs :many
+SELECT 
+    p.*,
+    o.id as output_id,
+    o.output,
+    o.timestamp as output_timestamp
+FROM prompts p
+LEFT JOIN outputs o ON p.id = o.prompt_id
+ORDER BY o.timestamp DESC;
