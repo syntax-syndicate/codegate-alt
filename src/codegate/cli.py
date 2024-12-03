@@ -9,6 +9,7 @@ import structlog
 
 from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
 from codegate.config import Config, ConfigurationError
+from codegate.db.connection import init_db_sync
 from codegate.server import init_app
 
 
@@ -164,6 +165,7 @@ def serve(
             },
         )
 
+        init_db_sync()
         app = init_app()
 
         import uvicorn

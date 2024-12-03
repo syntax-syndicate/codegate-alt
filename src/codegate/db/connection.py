@@ -35,7 +35,6 @@ class DbRecorder:
         }
         self._async_db_engine = create_async_engine(**engine_dict)
         self._db_engine = create_engine(**engine_dict)
-
         if not self.does_db_exist():
             logger.info(f"Database does not exist at {self._db_path}. Creating..")
             asyncio.run(self.init_db())
@@ -153,7 +152,6 @@ class DbRecorder:
         if output_chunks:
             # Record the output chunks
             output_str = json.dumps(output_chunks)
-            logger.info(f"Recorded chunks: {output_chunks}. Str: {output_str}")
             await self._record_output(prompt, output_str)
 
     async def record_output_non_stream(
@@ -181,7 +179,12 @@ class DbRecorder:
 
 def init_db_sync():
     """DB will be initialized in the constructor in case it doesn't exist."""
-    DbRecorder()
+    db = DbRecorder()
+    # Remove the DB file if exists for the moment to not cause issues at schema change.
+    # We can replace this in the future with migrations or something similar.
+    if db.does_db_exist():
+        db._db_path.unlink()
+    asyncio.run(db.init_db())
 
 
 if __name__ == "__main__":
