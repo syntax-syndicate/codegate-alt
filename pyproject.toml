@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Generative AI CodeGen security gateway"
 readme = "README.md"
 authors = []
-packages = [{include = "codegate", from = "src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11"
