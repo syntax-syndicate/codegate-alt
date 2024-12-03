@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Generative AI CodeGen security gateway"
 readme = "README.md"
 authors = []
-packages = [{include = "codegate", from = "src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11"
@@ -14,8 +13,6 @@ fastapi = ">=0.115.5"
 uvicorn = ">=0.32.1"
 weaviate = ">=0.1.2"
 weaviate-client = ">=4.9.3"
-torch = ">=2.5.1"
-transformers = ">=4.46.3"
 structlog = ">=24.4.0"
 litellm = "^1.53.2"
 llama_cpp_python = ">=0.3.2"

@@ -11,7 +11,6 @@ import pytest
 import yaml
 
 from codegate.config import Config
-from codegate.inference import LlamaCppInferenceEngine
 
 
 @pytest.fixture
