@@ -1,0 +1,33 @@
+# Attempt to build (but not push) the Docker image on Pull Requests
+name: Image build
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "static/**"
+      - "LICENSE"
+permissions:
+  contents: read
+jobs:
+  docker-image:
+    name: Check docker image build
+    runs-on: codegate-pipeline
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3
+      - name: Test build on x86
+        id: docker_build
+        uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false # Only attempt to build, to verify the Dockerfile is working
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
