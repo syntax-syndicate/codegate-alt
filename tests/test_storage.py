@@ -35,8 +35,10 @@ def mock_inference_engine():
 @pytest.mark.asyncio
 async def test_search(mock_weaviate_client, mock_inference_engine):
     # Patch the LlamaCppInferenceEngine.embed method (not the entire class)
-    with patch("codegate.inference.inference_engine.LlamaCppInferenceEngine.embed",
-               mock_inference_engine.embed):
+    with patch(
+        "codegate.inference.inference_engine.LlamaCppInferenceEngine.embed",
+        mock_inference_engine.embed,
+    ):
 
         # Mock the WeaviateClient as before
         with patch("weaviate.WeaviateClient", return_value=mock_weaviate_client):

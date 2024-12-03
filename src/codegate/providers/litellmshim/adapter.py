@@ -50,7 +50,9 @@ class LiteLLMAdapterInputNormalizer(ModelInputNormalizer):
         Uses an LiteLLM adapter to translate the request data from the native
         LLM format to the OpenAI API format used by LiteLLM internally.
         """
-        return self._adapter.translate_completion_input_params(data)
+        # Make a copy of the data to avoid modifying the original and normalize the message content
+        normalized_data = self._normalize_content_messages(data)
+        return self._adapter.translate_completion_input_params(normalized_data)
 
     def denormalize(self, data: ChatCompletionRequest) -> Dict:
         """
