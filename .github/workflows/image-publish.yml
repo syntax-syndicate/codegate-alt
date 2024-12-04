@@ -76,4 +76,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            WEAVIATE_DATA_PATH=./weaviate_data/
+            WEAVIATE_DATA_PATH=./weaviate_data
