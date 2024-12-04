@@ -15,7 +15,7 @@ jobs:
       actions: read
     env:
       BASE_REPO: "ghcr.io/stacklok"
-      CODEGATE_SERVER_IMAGE: "ghcr.io/stacklok/codegate"
+      CODEGATE_SERVER_IMAGE: "ghcr.io/stacklok/codegate/codegate"
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
