@@ -15,8 +15,8 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock* /app/
 
 # Configure Poetry and install dependencies
-RUN poetry config virtualenvs.create false && poetry config installer.parallel false && \
-    poetry install -vvv --no-dev
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-dev
 
 # Copy the rest of the application
 COPY . /app
