@@ -24,9 +24,6 @@ COPY . /app
 # Runtime stage: Create the final lightweight image
 FROM python:3.12-slim AS runtime
 
-# Accept build argument for weaviate_data path
-ARG WEAVIATE_DATA_PATH
-
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
@@ -43,16 +40,6 @@ COPY --from=builder /app /app
 
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src
-
-# Copy weaviate_data into the container if the build argument exists
-# This step will only work if the build argument is set
-RUN if [ -n "$WEAVIATE_DATA_PATH" ]; then \
-        echo "Copying weaviate_data from $WEAVIATE_DATA_PATH"; \
-        mkdir -p /app/weaviate_data; \
-        cp -r $WEAVIATE_DATA_PATH/* /app/weaviate_data || true; \
-    else \
-        echo "No WEAVIATE_DATA_PATH provided, skipping copy."; \
-    fi
 
 # Allow to expose weaviate_data volume
 VOLUME ["/app/weaviate_data"]
