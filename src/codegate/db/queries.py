@@ -2,13 +2,14 @@
 # versions:
 #   sqlc v1.27.0
 # source: queries.sql
+import pydantic
 from typing import Any, AsyncIterator, Iterator, Optional
 
-import pydantic
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 from codegate.db import models
+
 
 CREATE_ALERT = """-- name: create_alert \\:one
 INSERT INTO alerts (
@@ -76,6 +77,29 @@ ORDER BY timestamp DESC
 GET_PROMPT = """-- name: get_prompt \\:one
 SELECT id, timestamp, provider, request, type FROM prompts WHERE id = ?
 """
+
+
+GET_PROMPT_WITH_OUTPUTS = """-- name: get_prompt_with_outputs \\:many
+SELECT 
+    p.id, p.timestamp, p.provider, p.request, p.type,
+    o.id as output_id,
+    o.output,
+    o.timestamp as output_timestamp
+FROM prompts p
+LEFT JOIN outputs o ON p.id = o.prompt_id
+ORDER BY o.timestamp DESC
+"""
+
+
+class GetPromptWithOutputsRow(pydantic.BaseModel):
+    id: Any
+    timestamp: Any
+    provider: Optional[Any]
+    request: Any
+    type: Any
+    output_id: Optional[Any]
+    output: Optional[Any]
+    output_timestamp: Optional[Any]
 
 
 GET_PROMPT_WITH_OUTPUTS_AND_ALERTS = """-- name: get_prompt_with_outputs_and_alerts \\:many
@@ -280,6 +304,20 @@ class Querier:
             request=row[3],
             type=row[4],
         )
+
+    def get_prompt_with_outputs(self) -> Iterator[GetPromptWithOutputsRow]:
+        result = self._conn.execute(sqlalchemy.text(GET_PROMPT_WITH_OUTPUTS))
+        for row in result:
+            yield GetPromptWithOutputsRow(
+                id=row[0],
+                timestamp=row[1],
+                provider=row[2],
+                request=row[3],
+                type=row[4],
+                output_id=row[5],
+                output=row[6],
+                output_timestamp=row[7],
+            )
 
     def get_prompt_with_outputs_and_alerts(
         self, *, id: Any
@@ -493,6 +531,20 @@ class AsyncQuerier:
             request=row[3],
             type=row[4],
         )
+
+    async def get_prompt_with_outputs(self) -> AsyncIterator[GetPromptWithOutputsRow]:
+        result = await self._conn.stream(sqlalchemy.text(GET_PROMPT_WITH_OUTPUTS))
+        async for row in result:
+            yield GetPromptWithOutputsRow(
+                id=row[0],
+                timestamp=row[1],
+                provider=row[2],
+                request=row[3],
+                type=row[4],
+                output_id=row[5],
+                output=row[6],
+                output_timestamp=row[7],
+            )
 
     async def get_prompt_with_outputs_and_alerts(
         self, *, id: Any

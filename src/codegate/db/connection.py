@@ -4,7 +4,7 @@ import datetime
 import json
 import uuid
 from pathlib import Path
-from typing import AsyncGenerator, AsyncIterator, Optional
+from typing import AsyncGenerator, AsyncIterator, List, Optional
 
 import structlog
 from litellm import ChatCompletionRequest, ModelResponse
@@ -13,11 +13,12 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from codegate.db.models import Output, Prompt
+from codegate.db.queries import AsyncQuerier, GetPromptWithOutputsRow
 
 logger = structlog.get_logger("codegate")
 
 
-class DbRecorder:
+class DbCodeGate:
 
     def __init__(self, sqlite_path: Optional[str] = None):
         # Initialize SQLite database engine with proper async URL
@@ -27,6 +28,9 @@ class DbRecorder:
         else:
             self._db_path = Path(sqlite_path).absolute()
 
+        # Initialize SQLite database engine with proper async URL
+        current_dir = Path(__file__).parent
+        self._db_path = (current_dir.parent.parent.parent / "codegate.db").absolute()
         logger.debug(f"Initializing DB from path: {self._db_path}")
         engine_dict = {
             "url": f"sqlite+aiosqlite:///{self._db_path}",
@@ -35,12 +39,19 @@ class DbRecorder:
         }
         self._async_db_engine = create_async_engine(**engine_dict)
         self._db_engine = create_engine(**engine_dict)
-        if not self.does_db_exist():
-            logger.info(f"Database does not exist at {self._db_path}. Creating..")
-            asyncio.run(self.init_db())
 
     def does_db_exist(self):
         return self._db_path.is_file()
+
+
+class DbRecorder(DbCodeGate):
+
+    def __init__(self, sqlite_path: Optional[str] = None):
+        super().__init__(sqlite_path)
+
+        if not self.does_db_exist():
+            logger.info(f"Database does not exist at {self._db_path}. Creating..")
+            asyncio.run(self.init_db())
 
     async def init_db(self):
         """Initialize the database with the schema."""
@@ -175,6 +186,19 @@ class DbRecorder:
             return
 
         return await self._record_output(prompt, output_str)
+
+
+class DbReader(DbCodeGate):
+
+    def __init__(self, sqlite_path: Optional[str] = None):
+        super().__init__(sqlite_path)
+
+    async def get_prompts_with_output(self) -> List[GetPromptWithOutputsRow]:
+        conn = await self._async_db_engine.connect()
+        querier = AsyncQuerier(conn)
+        prompts = [prompt async for prompt in querier.get_prompt_with_outputs()]
+        await conn.close()
+        return prompts
 
 
 def init_db_sync():
