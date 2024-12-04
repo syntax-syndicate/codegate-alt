@@ -1,11 +1,19 @@
+import dataclasses
+import datetime
+import json
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import structlog
 from litellm import ChatCompletionRequest
 
+from codegate.db.models import Alert
 from codegate.pipeline.secrets.manager import SecretsManager
+
+logger = structlog.get_logger("codegate")
 
 
 @dataclass
@@ -27,6 +35,11 @@ class CodeSnippet:
             self.language = self.language.strip().lower()
 
 
+class AlertSeverity(Enum):
+    INFO = "info"
+    CRITICAL = "critical"
+
+
 @dataclass
 class PipelineSensitiveData:
     manager: SecretsManager
@@ -46,12 +59,45 @@ class PipelineContext:
     code_snippets: List[CodeSnippet] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     sensitive: Optional[PipelineSensitiveData] = field(default_factory=lambda: None)
+    alerts_raised: List[Alert] = field(default_factory=list)
 
     def add_code_snippet(self, snippet: CodeSnippet):
         self.code_snippets.append(snippet)
 
     def get_snippets_by_language(self, language: str) -> List[CodeSnippet]:
         return [s for s in self.code_snippets if s.language.lower() == language.lower()]
+
+    def add_alert(
+        self,
+        step_name: str,
+        severity_category: AlertSeverity = AlertSeverity.INFO,
+        code_snippet: Optional[CodeSnippet] = None,
+        trigger_string: Optional[str] = None,
+    ) -> None:
+        """
+        Add an alert to the pipeline step alerts_raised.
+        """
+        if not self.metadata.get("prompt_id"):
+            logger.warning("No prompt_id found in context. Alert will not be created")
+            return
+
+        if not code_snippet and not trigger_string:
+            logger.warning("No code snippet or trigger string provided for alert. Will not create")
+            return
+
+        code_snippet_str = json.dumps(dataclasses.asdict(code_snippet)) if code_snippet else None
+
+        self.alerts_raised.append(
+            Alert(
+                id=str(uuid.uuid4()),
+                prompt_id=self.metadata["prompt_id"],
+                code_snippet=code_snippet_str,
+                trigger_string=trigger_string,
+                trigger_type=step_name,
+                trigger_category=severity_category.value,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+            )
+        )
 
 
 @dataclass
@@ -156,9 +202,7 @@ class SequentialPipelineProcessor:
         self.pipeline_steps = pipeline_steps
 
     async def process_request(
-        self,
-        secret_manager: SecretsManager,
-        request: ChatCompletionRequest,
+        self, secret_manager: SecretsManager, request: ChatCompletionRequest, prompt_id: str
     ) -> PipelineResult:
         """
         Process a request through all pipeline steps
@@ -174,6 +218,7 @@ class SequentialPipelineProcessor:
         context.sensitive = PipelineSensitiveData(
             manager=secret_manager, session_id=str(uuid.uuid4())
         )  # Generate a new session ID for each request
+        context.metadata["prompt_id"] = prompt_id
         current_request = request
 
         for step in self.pipeline_steps:

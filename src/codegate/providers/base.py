@@ -1,3 +1,4 @@
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator, Callable, Dict, Optional, Union
 
@@ -43,8 +44,10 @@ class BaseProvider(ABC):
         self._pipeline_processor = pipeline_processor
         self._fim_pipelin_processor = fim_pipeline_processor
         self._output_pipeline_processor = output_pipeline_processor
-        self._pipeline_response_formatter = PipelineResponseFormatter(output_normalizer)
-        self.db_recorder = DbRecorder()
+        self._db_recorder = DbRecorder()
+        self._pipeline_response_formatter = PipelineResponseFormatter(
+            output_normalizer, self._db_recorder
+        )
 
         self._setup_routes()
 
@@ -76,7 +79,7 @@ class BaseProvider(ABC):
         return normalized_response
 
     async def _run_input_pipeline(
-        self, normalized_request: ChatCompletionRequest, is_fim_request: bool
+        self, normalized_request: ChatCompletionRequest, is_fim_request: bool, prompt_id: str
     ) -> PipelineResult:
         # Decide which pipeline processor to use
         if is_fim_request:
@@ -89,7 +92,7 @@ class BaseProvider(ABC):
             return PipelineResult(request=normalized_request)
 
         result = await pipeline_processor.process_request(
-            secret_manager=self._secrets_manager, request=normalized_request
+            secret_manager=self._secrets_manager, request=normalized_request, prompt_id=prompt_id
         )
 
         # TODO(jakub): handle this by returning a message to the client
@@ -158,6 +161,7 @@ class BaseProvider(ABC):
             # Ensure sensitive data is cleaned up after the stream is consumed
             if context and context.sensitive:
                 context.sensitive.secure_cleanup()
+                await self._db_recorder.record_alerts(context.alerts_raised)
 
     async def complete(
         self, data: Dict, api_key: Optional[str], is_fim_request: bool
@@ -175,14 +179,17 @@ class BaseProvider(ABC):
         """
         normalized_request = self._input_normalizer.normalize(data)
         streaming = data.get("stream", False)
-        prompt_db = await self.db_recorder.record_request(
+        prompt_db = await self._db_recorder.record_request(
             normalized_request, is_fim_request, self.provider_route_name
         )
 
-        input_pipeline_result = await self._run_input_pipeline(normalized_request, is_fim_request)
+        input_pipeline_result = await self._run_input_pipeline(
+            normalized_request, is_fim_request, prompt_id=prompt_db.id
+        )
         if input_pipeline_result.response:
-            return self._pipeline_response_formatter.handle_pipeline_response(
-                input_pipeline_result.response, streaming
+            await self._db_recorder.record_alerts(input_pipeline_result.context.alerts_raised)
+            return await self._pipeline_response_formatter.handle_pipeline_response(
+                input_pipeline_result.response, streaming, prompt_db=prompt_db
             )
 
         provider_request = self._input_normalizer.denormalize(input_pipeline_result.request)
@@ -194,12 +201,20 @@ class BaseProvider(ABC):
             provider_request, api_key=api_key, stream=streaming, is_fim_request=is_fim_request
         )
         if not streaming:
-            await self.db_recorder.record_output_non_stream(prompt_db, model_response)
             normalized_response = self._output_normalizer.normalize(model_response)
             pipeline_output = self._run_output_pipeline(normalized_response)
+            # Record the output and alerts in the database can be done in parallel
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(
+                    self._db_recorder.record_output_non_stream(prompt_db, model_response)
+                )
+                if input_pipeline_result and input_pipeline_result.context:
+                    tg.create_task(
+                        self._db_recorder.record_alerts(input_pipeline_result.context.alerts_raised)
+                    )
             return self._output_normalizer.denormalize(pipeline_output)
 
-        model_response = self.db_recorder.record_output_stream(prompt_db, model_response)
+        model_response = self._db_recorder.record_output_stream(prompt_db, model_response)
         normalized_stream = self._output_normalizer.normalize_streaming(model_response)
         pipeline_output_stream = await self._run_output_stream_pipeline(
             input_pipeline_result.context,

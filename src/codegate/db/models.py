@@ -9,9 +9,8 @@ import pydantic
 class Alert(pydantic.BaseModel):
     id: Any
     prompt_id: Any
-    output_id: Any
-    code_snippet: Any
-    trigger_string: Any
+    code_snippet: Optional[Any]
+    trigger_string: Optional[Any]
     trigger_type: Any
     trigger_category: Optional[Any]
     timestamp: Any
