@@ -131,9 +131,10 @@ class CodegateContextRetriever(PipelineStep):
                     if isinstance(item, dict) and item.get("type") == "text":
                         item["text"] = f'Context: {context_str} \n\n Query: {item["text"]}'
 
-            return PipelineResult(
-                request=new_request,
-            )
+                    return PipelineResult(
+                        request=new_request,
+                        context=context,
+                    )
 
         # Fall through
-        return PipelineResult(request=request)
+        return PipelineResult(request=request, context=context)

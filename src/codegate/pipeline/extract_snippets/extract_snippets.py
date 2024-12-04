@@ -139,6 +139,7 @@ class CodeSnippetExtractor(PipelineStep):
 
         if len(snippets) > 0:
             for snippet in snippets:
+                context.add_alert(self.name, code_snippet=snippet)
                 logger.debug(f"Code snippet: {snippet}")
                 context.add_code_snippet(snippet)
 

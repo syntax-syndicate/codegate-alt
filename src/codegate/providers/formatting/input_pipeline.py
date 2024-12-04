@@ -4,6 +4,8 @@ from typing import AsyncIterator, Union
 from litellm import ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
+from codegate.db.connection import DbRecorder
+from codegate.db.models import Prompt
 from codegate.pipeline.base import PipelineResponse
 from codegate.providers.normalizer.base import ModelOutputNormalizer
 
@@ -82,11 +84,13 @@ class PipelineResponseFormatter:
     def __init__(
         self,
         output_normalizer: ModelOutputNormalizer,
+        db_recorder: DbRecorder,
     ):
         self._output_normalizer = output_normalizer
+        self._db_recorder = db_recorder
 
-    def handle_pipeline_response(
-        self, pipeline_response: PipelineResponse, streaming: bool
+    async def handle_pipeline_response(
+        self, pipeline_response: PipelineResponse, streaming: bool, prompt_db: Prompt
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Convert pipeline response to appropriate format based on streaming flag
@@ -105,11 +109,15 @@ class PipelineResponseFormatter:
         if not streaming:
             # If we're not streaming, we just return the response translated
             # to the provider-specific format
+            await self._db_recorder.record_output_non_stream(prompt_db, model_response)
             return self._output_normalizer.denormalize(model_response)
 
         # If we're streaming, we need to convert the response to a stream first
         # then feed the stream into the completion handler's conversion method
         model_response_stream = _convert_to_stream(
             pipeline_response.content, pipeline_response.step_name, pipeline_response.model
+        )
+        model_response_stream = self._db_recorder.record_output_stream(
+            prompt_db, model_response_stream
         )
         return self._output_normalizer.denormalize_streaming(model_response_stream)

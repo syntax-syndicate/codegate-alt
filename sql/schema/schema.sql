@@ -22,14 +22,12 @@ CREATE TABLE outputs (
 CREATE TABLE alerts (
     id TEXT PRIMARY KEY,  -- UUID stored as TEXT
     prompt_id TEXT NOT NULL,
-    output_id TEXT NOT NULL,
-    code_snippet TEXT NOT NULL,  -- VARCHAR(255)
-    trigger_string TEXT NOT NULL, -- VARCHAR(255)
+    code_snippet TEXT,  -- We check in code that not both code_snippet and trigger_string are NULL
+    trigger_string TEXT, -- VARCHAR(255)
     trigger_type TEXT NOT NULL,   -- VARCHAR(50)
     trigger_category TEXT,
     timestamp DATETIME NOT NULL,
-    FOREIGN KEY (prompt_id) REFERENCES prompts(id),
-    FOREIGN KEY (output_id) REFERENCES outputs(id)
+    FOREIGN KEY (prompt_id) REFERENCES prompts(id)
 );
 
 -- Settings table
@@ -45,7 +43,6 @@ CREATE TABLE settings (
 -- Create indexes for foreign keys and frequently queried columns
 CREATE INDEX idx_outputs_prompt_id ON outputs(prompt_id);
 CREATE INDEX idx_alerts_prompt_id ON alerts(prompt_id);
-CREATE INDEX idx_alerts_output_id ON alerts(output_id);
 CREATE INDEX idx_prompts_timestamp ON prompts(timestamp);
 CREATE INDEX idx_outputs_timestamp ON outputs(timestamp);
 CREATE INDEX idx_alerts_timestamp ON alerts(timestamp);
