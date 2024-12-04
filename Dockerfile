@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Poetry
 RUN pip install poetry==1.8.4 && rm -rf /root/.cache/pip
 
+RUN pip install weaviate-client==4.9.6
+
 # Set the working directory
 WORKDIR /app
 COPY pyproject.toml poetry.lock* /app/
