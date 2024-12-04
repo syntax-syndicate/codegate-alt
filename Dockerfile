@@ -30,13 +30,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and switch to it
-RUN adduser --system --no-create-home codegate --uid 1000
+RUN useradd -rm -d /home/codegate -s /bin/bash -g root -G sudo -u 1001 codegate
 USER codegate
 WORKDIR /app
 
 # Copy necessary artifacts from the builder stage
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /app /app
+
+# change permissions
+USER root
+RUN chown -R codegate /app
+USER codegate
 
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src
