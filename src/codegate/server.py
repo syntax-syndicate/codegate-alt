@@ -7,7 +7,7 @@ from codegate.config import Config
 from codegate.dashboard.dashboard import dashboard_router
 from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
 from codegate.pipeline.codegate_context_retriever.codegate import CodegateContextRetriever
-from codegate.pipeline.codegate_system_prompt.codegate import CodegateSystemPrompt
+from codegate.pipeline.system_prompt.codegate import SystemPrompt
 from codegate.pipeline.extract_snippets.extract_snippets import CodeSnippetExtractor
 from codegate.pipeline.extract_snippets.output import CodeCommentStep
 from codegate.pipeline.output import OutputPipelineProcessor, OutputPipelineStep
@@ -40,8 +40,8 @@ def init_app() -> FastAPI:
     steps: List[PipelineStep] = [
         CodegateVersion(),
         CodeSnippetExtractor(),
-        #CodegateSystemPrompt(Config.get_config().prompts.codegate_chat),
-        CodegateContextRetriever(Config.get_config().prompts.codegate_chat),
+        SystemPrompt(Config.get_config().prompts.default_chat),
+        CodegateContextRetriever(),
         CodegateSecrets(),
     ]
     # Leaving the pipeline empty for now
