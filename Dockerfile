@@ -49,7 +49,7 @@ ENV PYTHONPATH=/app/src
 RUN if [ -n "$WEAVIATE_DATA_PATH" ]; then \
         echo "Copying weaviate_data from $WEAVIATE_DATA_PATH"; \
         cp -r $WEAVIATE_DATA_PATH/* /app/weaviate_data; \
-        cp -r $WEAVIATE_DATA_PATH/.* /app/weaviate_data;
+        cp -r $WEAVIATE_DATA_PATH/.* /app/weaviate_data; \
     else \
         echo "No WEAVIATE_DATA_PATH provided, skipping copy."; \
     fi
