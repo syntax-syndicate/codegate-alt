@@ -68,7 +68,7 @@ def test_default_prompts():
     config = Config.load()
     assert len(config.prompts.prompts) > 0
     assert hasattr(config.prompts, "default_chat")
-    assert "You are a helpful assistant" in config.prompts.default_chat
+    assert "You are CodeGate" in config.prompts.default_chat
 
 
 def test_cli_prompts_override_default(temp_prompts_file):
