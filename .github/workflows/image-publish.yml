@@ -65,6 +65,7 @@ jobs:
         id: image-build
         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v5
         with:
+          github_token: ${{ github.token }}
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
