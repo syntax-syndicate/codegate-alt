@@ -48,9 +48,8 @@ ENV PYTHONPATH=/app/src
 # This step will only work if the build argument is set
 RUN if [ -n "$WEAVIATE_DATA_PATH" ]; then \
         echo "Copying weaviate_data from $WEAVIATE_DATA_PATH"; \
-        chown -R codegate /app/weaviate_data; \
-        cp -r $WEAVIATE_DATA_PATH/* /app/weaviate_data; \
-        cp -r $WEAVIATE_DATA_PATH/.* /app/weaviate_data; \
+        mkdir -p /app/weaviate_data; \
+        cp -r $WEAVIATE_DATA_PATH/* /app/weaviate_data || true; \
     else \
         echo "No WEAVIATE_DATA_PATH provided, skipping copy."; \
     fi
