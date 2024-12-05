@@ -2,7 +2,7 @@ name: Sync vector DB
 
 on:
   workflow_dispatch:
-    inputs:
+    inputs:    
       enable_artifact_download:
         description: 'Enable artifact download step'
         type: boolean
@@ -44,16 +44,18 @@ jobs:
         if_no_artifact_found: ignore
 
     - name: Run sync
-      env:
-        BACKUP_FILESYSTEM_PATH: /tmp/
-        BACKUP_FOLDER: backup
       run: |
         export PYTHONPATH=$PYTHONPATH:./
+        export BACKUP_FILESYSTEM_PATH=./backup_weaviate/
+        # Conditionally export the variables only if artifact download is enabled
+        if [ "${{ github.event.inputs.enable_artifact_download }}" == "true" ]; then
+          export BACKUP_FOLDER=backup
+        fi        
         python scripts/import_packages.py
 
     - name: 'Upload Backup Files'
       uses: actions/upload-artifact@v4
       with:
         name: backup_weaviate
-        path: /tmp/backup-*
+        path: /backup_weaviate/backup*
         retention-days: 90
