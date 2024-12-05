@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and switch to it
-RUN adduser --system --no-create-home codegate --uid 1000
+RUN useradd -m -u 1000 -r codegate 
 USER codegate
 WORKDIR /app
 
@@ -41,9 +41,6 @@ COPY --from=builder /app /app
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src
 
-# Allow to expose weaviate_data volume
-VOLUME ["/app/weaviate_data"]
-
 # Set the container's default entrypoint
 EXPOSE 8989
-ENTRYPOINT ["python", "-m", "src.codegate.cli", "serve", "--port", "8989", "--host", "0.0.0.0"]
+ENTRYPOINT ["/app/scripts/entrypoint.sh", "/app/weaviate_backup", "backup"]
