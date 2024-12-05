@@ -1,5 +1,4 @@
 import asyncio
-from datetime import date
 import json
 import os
 
@@ -18,7 +17,9 @@ class PackageImporter:
         self.client = weaviate.WeaviateClient(
             embedded_options=EmbeddedOptions(
                 persistence_data_path="./weaviate_data", grpc_port=50052,
-                additional_env_vars={"ENABLE_MODULES": "backup-filesystem", "BACKUP_FILESYSTEM_PATH": os.getenv("BACKUP_FILESYSTEM_PATH", "/tmp")}
+                additional_env_vars={"ENABLE_MODULES": "backup-filesystem",
+                                     "BACKUP_FILESYSTEM_PATH": os.getenv("BACKUP_FILESYSTEM_PATH",
+                                                                         "/tmp")}
             )
         )
         self.json_files = [
@@ -29,6 +30,14 @@ class PackageImporter:
         self.client.connect()
         self.inference_engine = LlamaCppInferenceEngine()
         self.model_path = "./models/all-minilm-L6-v2-q5_k_m.gguf"
+
+    def restore_backup(self):
+        if os.getenv("BACKUP_FOLDER"):
+            try:
+                self.client.backup.restore(backup_id=os.getenv("BACKUP_ORIGIN_ID", "backup"),
+                                           backend="filesystem", wait_for_completion=True)
+            except Exception as e:
+                print(f"Failed to restore backup: {e}")
 
     def setup_schema(self):
         if not self.client.collections.exists("Package"):
@@ -87,11 +96,13 @@ class PackageImporter:
                         )
 
     async def run_import(self):
+        self.restore_backup()
         self.setup_schema()
         # await self.add_data()
 
         #  take a backup of the data
-        self.client.backup.create(backup_id="backup-"+date.today().strftime("%Y-%m-%d"), backend="filesystem", wait_for_completion=True)
+        self.client.backup.create(backup_id=os.getenv("BACKUP_TARGET_ID", "backup"),
+                                  backend="filesystem", wait_for_completion=True)
 
 
 if __name__ == "__main__":
