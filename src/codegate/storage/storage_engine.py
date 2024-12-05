@@ -1,8 +1,10 @@
+from typing import List
+
 import structlog
 import weaviate
 import weaviate.classes as wvc
 from weaviate.classes.config import DataType
-from weaviate.classes.query import MetadataQuery
+from weaviate.classes.query import Filter, MetadataQuery
 from weaviate.embedded import EmbeddedOptions
 
 from codegate.config import Config
@@ -87,6 +89,36 @@ class StorageEngine:
                     class_config["name"], properties=class_config["properties"]
                 )
             logger.info(f"Weaviate schema for class {class_config['name']} setup complete.")
+
+    async def search_by_property(self, name: str, properties: List[str]) -> list[object]:
+        if len(properties) == 0:
+            return []
+
+        # Perform the vector search
+        weaviate_client = self.get_client(self.data_path)
+        if weaviate_client is None:
+            logger.error("Could not find client, not returning results.")
+            return []
+
+        if not weaviate_client:
+            logger.error("Invalid client, cannot perform search.")
+            return []
+
+        try:
+            weaviate_client.connect()
+            packages = weaviate_client.collections.get("Package")
+            response = packages.query.fetch_objects(
+                filters=Filter.by_property(name).contains_any(properties),
+            )
+
+            if not response:
+                return []
+            return response.objects
+        except Exception as e:
+            logger.error(f"An error occurred: {str(e)}")
+            return []
+        finally:
+            weaviate_client.close()
 
     async def search(self, query: str, limit=5, distance=0.3, packages=None) -> list[object]:
         """
