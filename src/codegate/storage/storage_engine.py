@@ -3,6 +3,7 @@ import weaviate
 from weaviate.classes.config import DataType
 from weaviate.classes.query import MetadataQuery
 from weaviate.embedded import EmbeddedOptions
+import weaviate.classes as wvc
 
 from codegate.config import Config
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
@@ -87,7 +88,7 @@ class StorageEngine:
                 )
             logger.info(f"Weaviate schema for class {class_config['name']} setup complete.")
 
-    async def search(self, query: str, limit=5, distance=0.3) -> list[object]:
+    async def search(self, query: str, limit=5, distance=0.3, packages=None) -> list[object]:
         """
         Search the 'Package' collection based on a query string.
 
@@ -110,12 +111,21 @@ class StorageEngine:
         try:
             weaviate_client.connect()
             collection = weaviate_client.collections.get("Package")
-            response = collection.query.near_vector(
-                query_vector[0],
-                limit=limit,
-                distance=distance,
-                return_metadata=MetadataQuery(distance=True),
-            )
+            if packages:
+                response = collection.query.near_vector(
+                    query_vector[0],
+                    limit=limit,
+                    distance=distance,
+                    filters=wvc.query.Filter.by_property("name").contains_any(packages),
+                    return_metadata=MetadataQuery(distance=True),
+                )
+            else:
+                response = collection.query.near_vector(
+                    query_vector[0],
+                    limit=limit,
+                    distance=distance,
+                    return_metadata=MetadataQuery(distance=True),
+                )
 
             weaviate_client.close()
             if not response:

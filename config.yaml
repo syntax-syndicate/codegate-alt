@@ -19,7 +19,7 @@ log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG
 ##
 
 # Model to use for chatting
-chat_model_path: "./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
+chat_model_path: "./models"
 
 # Context length of the model
 chat_model_n_ctx: 32768

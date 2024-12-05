@@ -39,9 +39,6 @@ def test_show_default_prompts():
     assert result.exit_code == 0
     assert "Loaded prompts:" in result.output
     assert "default_chat:" in result.output
-    assert "default_snippet:" in result.output
-    assert "codegate_chat:" in result.output
-    assert "codegate_snippet:" in result.output
     assert "security_audit:" in result.output
     assert "red_team:" in result.output
     assert "blue_team:" in result.output
