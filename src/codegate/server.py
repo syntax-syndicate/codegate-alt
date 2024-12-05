@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from codegate import __description__, __version__
 from codegate.config import Config
@@ -33,6 +34,13 @@ def init_app() -> FastAPI:
         title="CodeGate",
         description=__description__,
         version=__version__,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Initialize secrets manager
