@@ -110,7 +110,7 @@ class PackageImporter:
     async def run_import(self):
         self.restore_backup()
         self.setup_schema()
-        # await self.add_data()
+        await self.add_data()
         self.take_backup()
 
 if __name__ == "__main__":
