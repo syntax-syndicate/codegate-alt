@@ -38,8 +38,8 @@ jobs:
         github_token: ${{ github.token }}
         workflow: ".github/workflows/import_packages.yml"
         workflow_conclusion: success
-        name: backup_weaviate.zip
-        name_is_regexp: false
+        name: backup_weaviate
+        name_is_regexp: true
         skip_unpack: false
         if_no_artifact_found: ignore
 
