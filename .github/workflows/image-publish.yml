@@ -58,10 +58,11 @@ jobs:
           workflow: ".github/workflows/import_packages.yml"
           workflow_conclusion: success
           name: backup_weaviate
-          path: weaviate_backup
           name_is_regexp: true
           skip_unpack: false
           if_no_artifact_found: ignore
+      - name: Rename to accomodate to image
+        run: mv ./backup_weaviate ./weaviate_backup
       - name: Build image
         id: image-build
         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v5

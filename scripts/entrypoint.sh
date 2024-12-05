@@ -4,7 +4,7 @@
 if [ -d "$1" ] && [ -d "$1/$2" ]; then
     echo "Restoring backup from $1/$2..."
     # Your restore logic here, e.g., running a Python script or restoring a database
-    python -m src.codegate.cli restore_backup "$1" "$2"
+    python -m src.codegate.cli restore-backup --backup-path "$1" --backup-name "$2"
 else
     echo "No backup found at $1/$2. Skipping restore."
 fi
