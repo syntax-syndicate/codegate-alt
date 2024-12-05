@@ -43,6 +43,12 @@ jobs:
         skip_unpack: false
         if_no_artifact_found: ignore
 
+    - name: Create folder if artifact download is not enabled
+      if: ${{ github.event.inputs.enable_artifact_download == 'false' }}
+      run: |
+        mkdir -p ./backup_weaviate
+        echo "Folder ./backup_weaviate created because artifact download is disabled."        
+
     - name: Run sync
       run: |
         export PYTHONPATH=$PYTHONPATH:./
