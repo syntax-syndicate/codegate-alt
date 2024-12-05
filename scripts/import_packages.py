@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import shutil
 
 
 import weaviate
@@ -34,10 +35,21 @@ class PackageImporter:
     def restore_backup(self):
         if os.getenv("BACKUP_FOLDER"):
             try:
-                self.client.backup.restore(backup_id=os.getenv("BACKUP_ORIGIN_ID", "backup"),
+                self.client.backup.restore(backup_id=os.getenv("BACKUP_FOLDER"),
                                            backend="filesystem", wait_for_completion=True)
             except Exception as e:
                 print(f"Failed to restore backup: {e}")
+
+    def take_backup(self):
+        # if backup folder exists, remove it
+        backup_path = os.path.join(os.getenv("BACKUP_FILESYSTEM_PATH", "/tmp"),
+                                   os.getenv("BACKUP_TARGET_ID", "backup"))
+        if os.path.exists(backup_path):
+            shutil.rmtree(backup_path)
+
+        #  take a backup of the data
+        self.client.backup.create(backup_id=os.getenv("BACKUP_TARGET_ID", "backup"),
+                                  backend="filesystem", wait_for_completion=True)
 
     def setup_schema(self):
         if not self.client.collections.exists("Package"):
@@ -99,11 +111,7 @@ class PackageImporter:
         self.restore_backup()
         self.setup_schema()
         # await self.add_data()
-
-        #  take a backup of the data
-        self.client.backup.create(backup_id=os.getenv("BACKUP_TARGET_ID", "backup"),
-                                  backend="filesystem", wait_for_completion=True)
-
+        self.take_backup()
 
 if __name__ == "__main__":
     importer = PackageImporter()
