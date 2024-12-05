@@ -91,7 +91,7 @@ class PackageImporter:
         # await self.add_data()
 
         #  take a backup of the data
-        await self.client.backup.create(backup_id="backup-"+date.today().strftime("%Y-%m-%d"), backend="filesystem", wait_for_completion=True)
+        self.client.backup.create(backup_id="backup-"+date.today().strftime("%Y-%m-%d"), backend="filesystem", wait_for_completion=True)
 
 
 if __name__ == "__main__":
