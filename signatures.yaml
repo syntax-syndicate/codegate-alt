@@ -309,4 +309,3 @@
   - Monero Private View Key: \b[0-9A-Fa-f]{64}\b
   - Tron Private Key: \b[a-fA-F0-9]{64}\b
   - Solana Private Key: \b[1-9A-HJ-NP-Za-km-z]{43,88}\b
-  - Wallet Mnemonic: \b(?:\w+\s){11,23}\w+\b
