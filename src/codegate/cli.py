@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import click
+from src.codegate.storage.utils import restore_storage_backup
 import structlog
 
 from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
@@ -188,6 +189,29 @@ def serve(
         if logger:
             logger.exception("Unexpected error occurred")
         click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.option(
+    "--backup-path",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    required=True,
+    help="Directory path where the backup file is located.",
+)
+@click.option(
+    "--backup-name",
+    type=str,
+    required=True,
+    help="Name of the backup file to restore.",
+)
+def restore_backup(backup_path: Path, backup_name: str) -> None:
+    """Restore the database from the specified backup."""
+    try:
+        restore_storage_backup(backup_path, backup_name)
+        click.echo(f"Successfully restored the backup '{backup_name}' from {backup_path}.")
+    except Exception as e:
+        click.echo(f"Error restoring backup: {e}", err=True)
         sys.exit(1)
 
 
