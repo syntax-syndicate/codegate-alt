@@ -1,9 +1,9 @@
 import structlog
 import weaviate
+import weaviate.classes as wvc
 from weaviate.classes.config import DataType
 from weaviate.classes.query import MetadataQuery
 from weaviate.embedded import EmbeddedOptions
-import weaviate.classes as wvc
 
 from codegate.config import Config
 from codegate.inference.inference_engine import LlamaCppInferenceEngine

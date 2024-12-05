@@ -157,7 +157,7 @@ class CodegateSecrets(PipelineStep):
                 logger.info(f"Original: {secret['original']}")
                 logger.info(f"Encrypted: REDACTED<${secret['encrypted']}>")
 
-            print(f"\nProtected text:\n{protected_string}")
+            logger.info(f"\nProtected text:\n{protected_string}")
             return "".join(protected_text)
 
     async def process(

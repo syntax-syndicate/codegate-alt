@@ -6,12 +6,13 @@ from litellm import ChatCompletionRequest
 from codegate.config import Config
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
 from codegate.pipeline.base import (
+    AlertSeverity,
     PipelineContext,
     PipelineResult,
     PipelineStep,
 )
-from src.codegate.storage.storage_engine import StorageEngine
-from src.codegate.utils.utils import generate_vector_string
+from codegate.storage.storage_engine import StorageEngine
+from codegate.utils.utils import generate_vector_string
 
 logger = structlog.get_logger("codegate")
 
@@ -54,7 +55,7 @@ class CodegateContextRetriever(PipelineStep):
         return context_str
 
     async def __lookup_packages(self, user_query: str):
-        ## Check which packages are referenced in the user query
+        # Check which packages are referenced in the user query
         request = {
             "messages": [
                 {"role": "system", "content": Config.get_config().prompts.lookup_packages},
@@ -125,16 +126,23 @@ class CodegateContextRetriever(PipelineStep):
             # is list
             message = new_request["messages"][last_user_idx]
             if isinstance(message["content"], str):
-                message["content"] = f'Context: {context_str} \n\n Query: {message["content"]}'
+                context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
+                context.add_alert(
+                    self.name, trigger_string=context_msg, severity_category=AlertSeverity.CRITICAL
+                )
+                message["content"] = context_msg
             elif isinstance(message["content"], (list, tuple)):
                 for item in message["content"]:
                     if isinstance(item, dict) and item.get("type") == "text":
-                        item["text"] = f'Context: {context_str} \n\n Query: {item["text"]}'
+                        context_msg = f'Context: {context_str} \n\n Query: {item["text"]}'
+                        context.add_alert(
+                            self.name,
+                            trigger_string=context_msg,
+                            severity_category=AlertSeverity.CRITICAL,
+                        )
+                        item["text"] = context_msg
 
-                    return PipelineResult(
-                        request=new_request,
-                        context=context,
-                    )
+                    return PipelineResult(request=new_request, context=context)
 
         # Fall through
         return PipelineResult(request=request, context=context)

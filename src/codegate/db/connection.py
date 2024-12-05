@@ -198,7 +198,6 @@ class DbRecorder(DbCodeGate):
     async def record_alerts(self, alerts: List[Alert]) -> None:
         if not alerts:
             return
-        logger.info(f"Recording {len(alerts)} alerts.", alerts=alerts)
         sql = text(
             """
                 INSERT INTO alerts (

@@ -98,11 +98,6 @@ class CodeCommentStep(OutputPipelineStep):
 
             # Add an alert to the context
             input_context.add_alert(self.name, trigger_string=complete_comment)
-            logger.info(
-                f"Added alert {self.name} for new code snippet: {complete_comment}",
-                alerts=input_context.alerts_raised,
-                num=len(input_context.alerts_raised),
-            )
 
             return chunks
 
