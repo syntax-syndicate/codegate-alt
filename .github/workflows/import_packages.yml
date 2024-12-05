@@ -64,5 +64,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: backup_weaviate
-        path: /backup_weaviate/backup*
+        path: /tmp/backup_weaviate/backup*
         retention-days: 90
