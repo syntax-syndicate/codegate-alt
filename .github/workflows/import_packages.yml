@@ -47,9 +47,10 @@ jobs:
       run: |
         export PYTHONPATH=$PYTHONPATH:./
         python scripts/import_packages.py
-    - name: 'Upload Volume'
+
+    - name: 'Upload Backup Files'
       uses: actions/upload-artifact@v4
       with:
-        name: weaviate_data
-        path: weaviate_data
+        name: backup_weaviate
+        path: /tmp/backup-*
         retention-days: 90
