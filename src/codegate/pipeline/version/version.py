@@ -40,14 +40,18 @@ class CodegateVersion(PipelineStep):
         """
         last_user_message = self.get_last_user_message(request)
 
-        if last_user_message is not None and "codegate-version" in last_user_message:
-            return PipelineResult(
-                response=PipelineResponse(
-                    step_name=self.name,
-                    content="Codegate version: {}".format(__version__),
-                    model=request["model"],
-                ),
-            )
+        if last_user_message is not None:
+            last_user_message_str, _ = last_user_message
+            if "codegate-version" in last_user_message_str.lower():
+                context.add_alert(self.name, trigger_string=last_user_message_str)
+                return PipelineResult(
+                    response=PipelineResponse(
+                        step_name=self.name,
+                        content="Codegate version: {}".format(__version__),
+                        model=request["model"],
+                    ),
+                    context=context,
+                )
 
         # Fall through
-        return PipelineResult(request=request)
+        return PipelineResult(request=request, context=context)

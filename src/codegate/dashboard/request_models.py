@@ -3,6 +3,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+from codegate.pipeline.base import CodeSnippet
+
 
 class ChatMessage(BaseModel):
     """
@@ -45,3 +47,17 @@ class Conversation(BaseModel):
     type: str
     chat_id: str
     conversation_timestamp: datetime.datetime
+
+
+class AlertConversation(BaseModel):
+    """
+    Represents an alert with it's respective conversation.
+    """
+
+    conversation: Conversation
+    alert_id: str
+    code_snippet: Optional[CodeSnippet]
+    trigger_string: Optional[str]
+    trigger_type: str
+    trigger_category: Optional[str]
+    timestamp: datetime.datetime

@@ -1,4 +1,4 @@
-from typing import Optional
+import json
 
 from litellm import ChatCompletionRequest, ChatCompletionSystemMessage
 
@@ -16,9 +16,7 @@ class SystemPrompt(PipelineStep):
     """
 
     def __init__(self, system_prompt: str):
-        self._system_message = ChatCompletionSystemMessage(
-            content=system_prompt, role="system"
-        )
+        self._system_message = ChatCompletionSystemMessage(content=system_prompt, role="system")
 
     @property
     def name(self) -> str:
@@ -46,11 +44,17 @@ class SystemPrompt(PipelineStep):
 
         if request_system_message is None:
             # Add system message
+            context.add_alert(self.name, trigger_string=json.dumps(self._system_message))
             new_request["messages"].insert(0, self._system_message)
         elif "codegate" not in request_system_message["content"].lower():
             # Prepend to the system message
-            request_system_message["content"] = self._system_message["content"] + \
-                "\n Here are additional instructions. \n " + request_system_message["content"]
+            prepended_message = (
+                self._system_message["content"]
+                + "\n Here are additional instructions. \n "
+                + request_system_message["content"]
+            )
+            context.add_alert(self.name, trigger_string=prepended_message)
+            request_system_message["content"] = prepended_message
 
         return PipelineResult(
             request=new_request,

@@ -12,8 +12,12 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from codegate.db.models import Output, Prompt
-from codegate.db.queries import AsyncQuerier, GetPromptWithOutputsRow
+from codegate.db.models import Alert, Output, Prompt
+from codegate.db.queries import (
+    AsyncQuerier,
+    GetAlertsWithPromptAndOutputRow,
+    GetPromptWithOutputsRow,
+)
 
 logger = structlog.get_logger("codegate")
 
@@ -88,14 +92,18 @@ class DbRecorder(DbCodeGate):
         # However, the methods are buggy for Pydancti and don't work as expected.
         # Manually writing the SQL query to insert Pydantic models.
         async with self._async_db_engine.begin() as conn:
-            result = await conn.execute(sql_insert, model.model_dump())
-            row = result.first()
-            if row is None:
-                return None
+            try:
+                result = await conn.execute(sql_insert, model.model_dump())
+                row = result.first()
+                if row is None:
+                    return None
 
-            # Get the class of the Pydantic object to create a new object
-            model_class = model.__class__
-            return model_class(**row._asdict())
+                # Get the class of the Pydantic object to create a new object
+                model_class = model.__class__
+                return model_class(**row._asdict())
+            except Exception as e:
+                logger.error(f"Failed to insert model: {model}.", error=str(e))
+                return None
 
     async def record_request(
         self, normalized_request: ChatCompletionRequest, is_fim_request: bool, provider_str: str
@@ -187,6 +195,29 @@ class DbRecorder(DbCodeGate):
 
         return await self._record_output(prompt, output_str)
 
+    async def record_alerts(self, alerts: List[Alert]) -> None:
+        if not alerts:
+            return
+        sql = text(
+            """
+                INSERT INTO alerts (
+                id, prompt_id, code_snippet, trigger_string, trigger_type, trigger_category,
+                timestamp
+                )
+                VALUES (:id, :prompt_id, :code_snippet, :trigger_string, :trigger_type,
+                :trigger_category, :timestamp)
+                RETURNING *
+                """
+        )
+        # We can insert each alert independently in parallel.
+        async with asyncio.TaskGroup() as tg:
+            for alert in alerts:
+                try:
+                    tg.create_task(self._insert_pydantic_model(alert, sql))
+                except Exception as e:
+                    logger.error(f"Failed to record alert: {alert}.", error=str(e))
+        return None
+
 
 class DbReader(DbCodeGate):
 
@@ -197,6 +228,13 @@ class DbReader(DbCodeGate):
         conn = await self._async_db_engine.connect()
         querier = AsyncQuerier(conn)
         prompts = [prompt async for prompt in querier.get_prompt_with_outputs()]
+        await conn.close()
+        return prompts
+
+    async def get_alerts_with_prompt_and_output(self) -> List[GetAlertsWithPromptAndOutputRow]:
+        conn = await self._async_db_engine.connect()
+        querier = AsyncQuerier(conn)
+        prompts = [prompt async for prompt in querier.get_alerts_with_prompt_and_output()]
         await conn.close()
         return prompts
 

@@ -1,16 +1,17 @@
 import asyncio
 import json
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import structlog
 
 from codegate.dashboard.request_models import (
+    AlertConversation,
     ChatMessage,
     Conversation,
     PartialConversation,
     QuestionAnswer,
 )
-from codegate.db.queries import GetPromptWithOutputsRow
+from codegate.db.queries import GetAlertsWithPromptAndOutputRow, GetPromptWithOutputsRow
 
 logger = structlog.get_logger("codegate")
 
@@ -40,7 +41,7 @@ async def parse_request(request_str: str) -> Optional[str]:
     try:
         request = json.loads(request_str)
     except Exception as e:
-        logger.exception(f"Error parsing request: {e}")
+        logger.warning(f"Error parsing request: {request_str}. {e}")
         return None
 
     messages = []
@@ -82,7 +83,7 @@ async def parse_output(output_str: str) -> Tuple[Optional[str], Optional[str]]:
     try:
         output = json.loads(output_str)
     except Exception as e:
-        logger.exception(f"Error parsing request: {e}")
+        logger.warning(f"Error parsing output: {output_str}. {e}")
         return None, None
 
     output_message = ""
@@ -107,9 +108,9 @@ async def parse_output(output_str: str) -> Tuple[Optional[str], Optional[str]]:
     return output_message, chat_id
 
 
-async def parse_get_prompt_with_output(
-    row: GetPromptWithOutputsRow,
-) -> Optional[PartialConversation]:
+async def _get_question_answer(
+    row: Union[GetPromptWithOutputsRow, GetAlertsWithPromptAndOutputRow]
+) -> Tuple[Optional[QuestionAnswer], Optional[str]]:
     """
     Parse a row from the get_prompt_with_outputs query and return a PartialConversation
 
@@ -124,7 +125,7 @@ async def parse_get_prompt_with_output(
 
     # If we couldn't parse the request or output, return None
     if not request_msg_str or not output_msg_str or not chat_id:
-        return None
+        return None, None
 
     request_message = ChatMessage(
         message=request_msg_str,
@@ -136,10 +137,20 @@ async def parse_get_prompt_with_output(
         timestamp=row.output_timestamp,
         message_id=row.output_id,
     )
-    question_answer = QuestionAnswer(
-        question=request_message,
-        answer=output_message,
-    )
+    return QuestionAnswer(question=request_message, answer=output_message), chat_id
+
+
+async def parse_get_prompt_with_output(
+    row: GetPromptWithOutputsRow,
+) -> Optional[PartialConversation]:
+    """
+    Parse a row from the get_prompt_with_outputs query and return a PartialConversation
+
+    The row contains the raw request and output strings from the pipeline.
+    """
+    question_answer, chat_id = await _get_question_answer(row)
+    if not question_answer or not chat_id:
+        return None
     return PartialConversation(
         question_answer=question_answer,
         provider=row.provider,
@@ -187,3 +198,34 @@ async def match_conversations(
         )
 
     return conversations
+
+
+async def parse_get_alert_conversation(
+    row: GetAlertsWithPromptAndOutputRow,
+) -> Optional[AlertConversation]:
+    """
+    Parse a row from the get_alerts_with_prompt_and_output query and return a Conversation
+
+    The row contains the raw request and output strings from the pipeline.
+    """
+    question_answer, chat_id = await _get_question_answer(row)
+    if not question_answer or not chat_id:
+        return None
+
+    conversation = Conversation(
+        question_answers=[question_answer],
+        provider=row.provider,
+        type=row.type,
+        chat_id=chat_id or "chat-id-not-found",
+        conversation_timestamp=row.timestamp,
+    )
+    code_snippet = json.loads(row.code_snippet) if row.code_snippet else None
+    return AlertConversation(
+        conversation=conversation,
+        alert_id=row.id,
+        code_snippet=code_snippet,
+        trigger_string=row.trigger_string,
+        trigger_type=row.trigger_type,
+        trigger_category=row.trigger_category,
+        timestamp=row.timestamp,
+    )

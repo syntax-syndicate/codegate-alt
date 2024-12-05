@@ -2,7 +2,10 @@ import os
 import time
 from base64 import b64decode, b64encode
 
+import structlog
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+logger = structlog.get_logger("codegate")
 
 
 class CodeGateCrypto:
@@ -105,4 +108,4 @@ class CodeGateCrypto:
             raise ValueError("Only bytearray objects can be securely wiped.")
         for i in range(len(data)):
             data[i] = 0  # Overwrite each byte with 0
-        print("Sensitive data securely wiped from memory.")
+        logger.info("Sensitive data securely wiped from memory.")

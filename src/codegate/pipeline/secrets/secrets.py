@@ -6,6 +6,7 @@ from litellm import ChatCompletionRequest, ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
 from codegate.pipeline.base import (
+    AlertSeverity,
     PipelineContext,
     PipelineResult,
     PipelineStep,
@@ -73,13 +74,17 @@ class CodegateSecrets(PipelineStep):
 
         return start, end
 
-    def _redeact_text(self, text: str, secrets_manager: SecretsManager, session_id: str) -> str:
+    def _redeact_text(
+        self, text: str, secrets_manager: SecretsManager, session_id: str, context: PipelineContext
+    ) -> str:
         """
         Find and encrypt secrets in the given text.
 
         Args:
             text: The text to protect
-
+            secrets_manager: ..
+            session_id: ..
+            context: The pipeline context to be able to log alerts
         Returns:
             Protected text with encrypted values
         """
@@ -101,6 +106,9 @@ class CodegateSecrets(PipelineStep):
 
             # Get the full value
             full_value = text[start:end]
+            context.add_alert(
+                self.name, trigger_string=full_value, severity_category=AlertSeverity.CRITICAL
+            )
             absolute_matches.append((start, end, match._replace(value=full_value)))
 
         # Sort matches in reverse order to replace from end to start
@@ -149,7 +157,7 @@ class CodegateSecrets(PipelineStep):
                 logger.info(f"Original: {secret['original']}")
                 logger.info(f"Encrypted: REDACTED<${secret['encrypted']}>")
 
-            print(f"\nProtected text:\n{protected_string}")
+            logger.info(f"\nProtected text:\n{protected_string}")
             return "".join(protected_text)
 
     async def process(
@@ -181,15 +189,17 @@ class CodegateSecrets(PipelineStep):
             extracted_index = last_user_message[1]
 
         if not extracted_string:
-            return PipelineResult(request=request)
+            return PipelineResult(request=request, context=context)
 
         # Protect the text
-        protected_string = self._redeact_text(extracted_string, secrets_manager, session_id)
+        protected_string = self._redeact_text(
+            extracted_string, secrets_manager, session_id, context
+        )
 
         # Update the user message
         new_request = request.copy()
         new_request["messages"][extracted_index]["content"] = protected_string
-        return PipelineResult(request=new_request)
+        return PipelineResult(request=new_request, context=context)
 
 
 class SecretUnredactionStep(OutputPipelineStep):
@@ -258,13 +268,16 @@ class SecretUnredactionStep(OutputPipelineStep):
                 # If value not found, leave as is
                 original_value = match.group(0)  # Keep the REDACTED marker
 
+            # Unredact the content, post an alert and return the chunk
+            unredacted_content = buffered_content[: match.start()] + original_value + remaining
+            input_context.add_alert(self.name, trigger_string=unredacted_content)
             # Return the unredacted content up to this point
             chunk.choices = [
                 StreamingChoices(
                     finish_reason=None,
                     index=0,
                     delta=Delta(
-                        content=buffered_content[: match.start()] + original_value + remaining,
+                        content=unredacted_content,
                         role="assistant",
                     ),
                     logprobs=None,

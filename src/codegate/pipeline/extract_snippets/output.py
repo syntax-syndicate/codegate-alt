@@ -73,6 +73,9 @@ class CodeCommentStep(OutputPipelineStep):
             last_snippet = snippets[-1]
             context.snippets = snippets  # Update context with new snippets
 
+            # Keep track of all the commented code
+            complete_comment = ""
+
             # Split the chunk content if needed
             before, after = self._split_chunk_at_code_end(chunk.choices[0].delta.content)
 
@@ -81,17 +84,20 @@ class CodeCommentStep(OutputPipelineStep):
             # Add the chunk with content up to the end of code block
             if before:
                 chunks.append(self._create_chunk(chunk, before))
+                complete_comment += before
 
             # Add the comment
-            chunks.append(
-                self._create_chunk(
-                    chunk, f"\nThe above is a {last_snippet.language or 'unknown'} code snippet\n\n"
-                )
-            )
+            comment = f"\nThe above is a {last_snippet.language or 'unknown'} code snippet\n\n"
+            chunks.append(self._create_chunk(chunk, comment))
+            complete_comment += comment
 
             # Add the remaining content if any
             if after:
                 chunks.append(self._create_chunk(chunk, after))
+                complete_comment += after
+
+            # Add an alert to the context
+            input_context.add_alert(self.name, trigger_string=complete_comment)
 
             return chunks
 
