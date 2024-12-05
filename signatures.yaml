@@ -1,22 +1,13 @@
 ---
 - Amazon:
   - Access Key: (?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA|ABIA|ACCA)[A-Z0-9]{16}
-  - Secret Access Key Variable: (?i)(amazon|amz|aws)[-_]{0,1}(secret)[-_]{0,1}((access)[-_]{0,1}){0,1}key
   # - Cognito User Pool ID: (?i)us-[a-z]{2,}-[a-z]{4,}-\d{1,}
   - RDS Password: (?i)(rds\-master\-password|db\-password)
-  - S3 Private Key Variable: (?i)AWS_S3_PRIVATE_KEY|s3_key|S3_PRIVATE_KEY
-  - Security Token Header Variable: (?i)X-Amz-Security-Token
-  - API Gateway Key Source Header Variable: (?i)x-amazon-apigateway-api-key-source
-  - S3 Bucket: (?i)AWS_S3_BUCKET|s3_bucket
   - SNS Confirmation URL: (?i)https:\/\/sns\.[a-z0-9-]+\.amazonaws\.com\/?Action=ConfirmSubscription&Token=[a-zA-Z0-9-=_]+
-  - SES SMTP Password Variable: (?i)ses_smtp_password
-  - AWS Private Key Variable: (?i)ec2\-private\-key|EC2_PRIVATE_KEY
   - MWS Token: (amzn\.mws\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})
   - AppSync GraphQL Key: \bda2-[a-z0-9]{26}
 
 - Microsoft:
-  - Azure API Key Variable: (?i)Ocp-Apim-Subscription-Key
-  - Azure Functions Key Header Variable: (?i)x-functions-key
   # - Azure account key
   # - Azure account name
   - Azure Connection String: (?i)(.*.windows.net).+(password)
@@ -24,12 +15,9 @@
   - Client Secret: (?i)(?:client_secret|ClientSecret)[\s:\"]{0,3}[a-zA-Z0-9\-_]{36,}
   - Graph API Key: (?i)MSGRAPH_[a-zA-Z0-9\-_]{20,40}
   - Outlook Webhook URL: (?i)https:\/\/outlook\.office\.com\/webhook\/[A-Za-z0-9\-]{60,}
-  - OneDrive Access Token Variable: (?i)onedrive_access_token
-  - SQL Connection Password Variable: mssql.connection.password
 
 - DigitalOcean:
   - API Key: (?i)do_[a-z0-9]{60}
-  - Environment Variable: (?i)\b(DO|DIGITALOCEAN).+(API|OAUTH|ACCESS)*(TOKEN|KEY)\b
 
 - Shopify:
   - Custom App Token: (?i)shpca_[a-fA-F0-9]{32}
@@ -61,7 +49,6 @@
   - Cloud Service Account Private Key: (?i)"-----BEGIN PRIVATE KEY-----[A-Za-z0-9\/+=\n]+-----END PRIVATE KEY-----"
   - Cloud Service Account Key ID: (?i)"private_key_id":\s*"[a-f0-9]{32}"
   - Cloud Project Number: (?i)"project_number":\s*"\d{12}"
-  - API Key Header Variable: (?i)x-goog-api-key
   - Client ID: "[0-9]+-[0-9A-Za-z_]{32}\\.apps\\.googleusercontent\\.com"
 
 - GitHub:
@@ -77,20 +64,10 @@
 - GitLab:
   - Personal Access Token: (?i)glpat-[A-Za-z0-9\-_]{20}
   - OAuth Access Token: (?i)glOauth-[A-Za-z0-9\-_]{20,50}
-  - GitLab CI Token Variable: (?i)gitlab(?:-|_|.)(?:ci(?:-|_|.))?(?:job(?:-|_|.))?token
   - Repository Access Token: (?i)glrepo-[A-Za-z0-9\-_]{20,50}
   - Secret File Token: (?i)(?:secret_token|CI_JOB_TOKEN)[^{}]{0,20}( ){0,1}[=:]( ){0,1}([A-Za-z0-9\-_]{20,50})
   - Project Secret Token: (?i)glproj-[A-Za-z0-9\-_]{20,50}
   #- Classic Token: (?i)(?:gitlab)[^{}()<>?*&:%@!\/= \n]{0,40}[\"\']?\s{0,50}(?::|=>|=)\s{0,50}[\"\']?([a-zA-Z0-9-_]{20})
-
-- Cisco:
-  - Meraki API Key Header Variable: (?i)X-Cisco-Meraki-API-Key
-
-- CoinMarketCap:
-  - API Key Header Variable: (?i)X-CMC_PRO_API_KEY
-
-- Algolia:
-  - API Key Header Variable: (?i)X-Algolia-API-Key
 
 - Slack:
   - User Token: (xox[ps]-[0-9]{8,13}-[0-9]{8,13}-[0-9]{8,13}-[a-zA-Z0-9-]{10,32})
@@ -168,12 +145,6 @@
 - Telegram:
   - Bot API Key: (?:bot)*[0-9]{8,10}:AA[0-9A-Za-z\-_=]{33}
 
-- SonarSource:
-  - API Key Variable: sonar(qube|source)_(api_key|token|key)
-
-- Kakao:
-  - API Key Variable: (?i)KAKAO(_|-){0,1}API(_|-){0,1}KEY
-
 - Airtable:
   - API Key: (?i)(?:airtable).{0,40}[\"\'`]?\s{0,50}(?::|=>|=|,)\s{0,50}[\"\'`]?(key[a-zA-Z0-9_-]{14})
   - Table URL: https:\/\/api\.airtable\.com\/v0\/[\w]+\/[\w]+
@@ -184,38 +155,12 @@
 #- Clearbit:
 #  - API Key: (?i)(?:clearbit)[^{}]{0,20}( ){0,1}[=:]( ){0,1}.{0,40}(sk_[0-9a-z_]{24,32})
 
-- Flask:
-  - App Secret Key Variable: APP_SECRET_KEY
-
-- Shodan: 
-  - API Key Variable: (?i)(shodan_key|shodan_api_key|shodan_token)
-
-- Homebrew:
-  - API Token Variable: (?i)HOMEBREW_GITHUB_API_TOKEN
-
-- Jekyll:
-  - GitHub API Token Variable: (?i)JEKYLL_GITHUB_TOKEN
-
 - OpenAI:
   - Project API Key: (?i)sk-proj-[\w-]+T3BlbkFJ[\w-]+
   - User API Key: (?i)sk-[^proj]\w.+T3BlbkFJ[\w-]+
-  - API Key Variable: (?i)openai(.|_)api_key
 
 - Groq:
   - API Key: (?i)gsk_[A-Za-z0-9]+
-  - API Key Variable: (?i)GROQ(_|-){0,1}API(_|-){0,1}KEY
-
-- Pinecone:
-  - API Key Variable: (?i)PINECONE(_|-){0,1}API(_|-){0,1}KEY
-
-- LangChain:
-  - API Key Variable: (?i)LANGCHAIN(_|-){0,1}API(_|-){0,1}KEY
-
-- ElevenLabs:
-  - API Key Variable: (?i)ELEVENLABS(_|-){0,1}API(_|-){0,1}KEY
-
-- CartesiaAI:
-  - API Key Variable: (?i)CARTESIA(_|-){0,1}API(_|-){0,1}KEY
 
 - OpenWeatherMap:
   - API Key URL: (?i)(?:https?://api\.openweathermap\.org/data/[a-z0-9.+?\/]+=)([a-z0-9]{32})
@@ -230,9 +175,6 @@
 - MailGun:
   - API Key: (?i)key-[0-9a-zA-Z]{32}
   - Domain Sending Key: "[a-f0-9]{32}-[a-f0-9]{8}-[a-f0-9]{8}"
-
-- Okta:
-  - API Key Variable: (?i)(?:okta_api_key)
 
 - Hashicorp:
   - Terraform API Token: (?i)([A-Za-z0-9]{14}.atlasv1.[A-Za-z0-9]{67})
@@ -255,7 +197,6 @@
 
 - Figma:
   - Personal Access Token: (figd_[a-zA-Z0-9-_]{14,32}_[a-zA-Z0-9-_]{14,32})
-  - Token Header Variable: (?i)X-Figma-Token
 
 - Adafruit.io:
   - API Key: aio_[a-zA-Z0-9]{28}
@@ -268,10 +209,6 @@
 
 #- IBM:
 #  - Cloud User Key: (?i)(?:ibm)[^{}]{0,20}( ){0,1}[=:]( ){0,1}(-_[A-Za-z0-9_-]{42})
-
-- Heroku:
-  - API Key Variable: (?i)heroku_api_key
-  - App Name Variable: (?i)heroku_app_name
 
 - Freshdesk:
   - API Token: (?i)(?:freshdesk)[^{}()<>?*&:%@.\-!\/\n]{0,40}\b([0-9A-Za-z]{16,24})
@@ -304,39 +241,18 @@
   - Access Token:	(sq0atp-[0-9A-Za-z\-_]{22})
 
 - Saucelabs:
-  - TestFairy Key Variable: (?i)testfairy_{0,}(access_key|key|secret|token|shared_secret|sharedsecret)
   - TestFairy OAuth Token URL: https://testfairy\.atlassian\.net/plugins/servlet/oauth/authorize\?oauth_token-\w{32}
-  - Key Variable: (?i)sauce_token
-
-- Hockeyapp:
-  - Key Variable: (?i)(?:hockeyapp_key)
 
 - NuGet:
   - API Key: (?i)(?:nuget).{0,40}(oy2[a-z0-9]{43})
 
 - Cloudinary:
   - API URL: cloudinary://.+/
- 
-- CodeClimate:
-  - Key Variable: (?i)(?:codeclimate_key)
-
-- Pingdom:
-  - Token Variable: (?i)(?:pingdom_token)
 
 - Ngrok:
-  - Auth Token Variable: (?i)ngrok.set_auth_token
   - API Key Block: (?i)add-api-key
   - Authentication Token Block: (?i)add-authtoken	
   - Connection URL Block: (?i)add-connect-url
-
-- Line:
-  - Token Variable: (?i)line_(channel|secret|token)
-
-- Crunchbase:
-  - API Key Header Variable: (?i)X-Cb-User-Key
-
-- RapidAPI:
-  - Key Header Variable: (?i)x-rapidapi-key
 
 - WeChat:
   - App Key: (?:^|['\"`])(wx[a-f0-9]{16})(?:$|['\"`])
@@ -347,17 +263,9 @@
 - Vercel:
   - Blob Read/Write Token: vercel_blob_rw_\w{47,49}
   - Project ID: \bprj_.{28}\b
-  - Project ID Variable: (?i)PROJECT_ID_VERCEL
-  - Turbo Build Token Variable: (?i)TURBO_TOKEN
-  - Access Token Variable: (?i)VERCEL_ACCESS_TOKEN
-
-- PuTTY:
-  - Private Lines Variable: Private-Lines
-  - Private MAC Variable: Private-MAC
 
 - Postgresql:
   - URL: (?i)(?:pgsql:|postgres:|postgresql:)//[\S]{1,256}:[\S]{1,256}@[-.%\w\/:]+\.[\S]+
-  - Password Variable: (?i)POSTGRES_PASSWORD
 
 - GitHub:
   - Access Token: (?i)\bghp_[A-Za-z0-9]{36}\b
@@ -382,19 +290,8 @@
   - Bearer Token: "(Authorization: )*((b|B)earer [a-zA-Z0-9+\\/._=-]{16,512})(={0,2})"
   - Basic Token: "(Authorization: )*((b|B)asic [a-zA-Z0-9+\\/._=-]{16,512})(={0,2})"
   - JSON Web Token: \beyJ[a-zA-Z0-9]{3,}\.eyJ[A-Za-z0-9_\\/+-]{3,}\.[A-Za-z0-9_\\/+-]{3,}\b
-  - JSON Web Token Variable: (?i)JWT_SECRET
   # Tokens
   #- Refresh Token Variable: (?i)refresh[_-]{0,1}token
-  - Access Token Variable: (?i)access[_-]{0,1}token
-  - Token Variable: (?i)token
-  - Password Variable: (?i)password
-  - API Key Variable: (?i)_api_key
-  - API Key Header Variable: X-Api-Key
-  - Secret Key Variable: (?i)secret_key
-  - User Key Variable: (?i)user_key
-  - Secret Variable: (?i).+secret\b
-  - Consumer Key Variable: (?i)consumer(\.|_)?key
-  - Consumer Secret Variable: (?i)consumer(\.|_)?secret
   # URLs
   - Auth URL: (?i)((https?|ftps?|ssh|sftp)://[^":@>\]\[\n\s*/]+:[^:@/>\]\[\n\s*/]+([^>\]\[\n\s*:][@]{1})\w+(\.\w+)+)
   - Redis URL: (?i)((redis?)://[^":@>\]\[\n\s*/]+:[^:@/>\]\[\n\s*/]+([^>\]\[\n\s*:][@]{1})\w+(\.\w+)+)
