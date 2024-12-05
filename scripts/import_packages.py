@@ -1,5 +1,7 @@
 import asyncio
+from datetime import date
 import json
+import os
 
 
 import weaviate
@@ -15,7 +17,8 @@ class PackageImporter:
     def __init__(self):
         self.client = weaviate.WeaviateClient(
             embedded_options=EmbeddedOptions(
-                persistence_data_path="./weaviate_data", grpc_port=50052
+                persistence_data_path="./weaviate_data", grpc_port=50052,
+                additional_env_vars={"ENABLE_MODULES": "backup-filesystem", "BACKUP_FILESYSTEM_PATH": os.getenv("BACKUP_FILESYSTEM_PATH", "/tmp")}
             )
         )
         self.json_files = [
@@ -85,7 +88,10 @@ class PackageImporter:
 
     async def run_import(self):
         self.setup_schema()
-        #await self.add_data()
+        # await self.add_data()
+
+        #  take a backup of the data
+        await self.client.backup.create(backup_id="backup-"+date.today().strftime("%Y-%m-%d"), backend="filesystem", wait_for_completion=True)
 
 
 if __name__ == "__main__":
