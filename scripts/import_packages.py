@@ -1,6 +1,7 @@
 import asyncio
 import json
 
+
 import weaviate
 from weaviate.classes.config import DataType, Property
 from weaviate.embedded import EmbeddedOptions
@@ -84,7 +85,7 @@ class PackageImporter:
 
     async def run_import(self):
         self.setup_schema()
-        await self.add_data()
+        #await self.add_data()
 
 
 if __name__ == "__main__":
