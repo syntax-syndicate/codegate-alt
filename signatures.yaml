@@ -80,9 +80,6 @@
   - App Token: (xapp-[0-9]{0,2}-[A-Z0-9]{8,13}-[0-9]{12,15}-[a-zA-Z0-9-]{60,70})
   - Webhook URL: https://hooks\.slack\.com/services/.{8,128}
 
-- StackUp:
-  - API Key: (?i)STACK_UP_AUTH
-
 - Oracle:
   - Cloud Infrastructure: ocid1\.(tenancy|user)\.oc1\..[a-zA-Z0-9\-_]{59}
 
@@ -283,7 +280,7 @@
   - Ripple: \br[rK][a-zA-Z0-9]{25,35}\b
   - Monero: \b4[0-9AB][1-9A-HJ-NP-Za-km-z]{93}\b
   - Tron: \bT[a-zA-HJ-NP-Z0-9]{33}\b
-  - Solana: \b[1-9A-HJ-NP-Za-km-z]{43,44}\b
+  # - Solana: \b[1-9A-HJ-NP-Za-km-z]{43,44}\b
 
 - Generic:
   - Shell Command: "[\\w. ]+(--username|-u|--user|--uname|--userid|--id|-i) [^$][\\w_\\-.\"']{1,256} (--password|-p|--pwd|--pass)[^$<{][\\w_\\-.\"']{4,253}"
@@ -306,6 +303,6 @@
   - Ethereum Private Key: \b0x[a-fA-F0-9]{64}\b
   - Litecoin Private Key: \b[5KL][1-9A-HJ-NP-Za-km-z]{50,51}\b
   - Ripple Secret Key: \b[sS][a-zA-Z0-9]{28,35}\b
-  - Monero Private View Key: \b[0-9A-Fa-f]{64}\b
-  - Tron Private Key: \b[a-fA-F0-9]{64}\b
-  - Solana Private Key: \b[1-9A-HJ-NP-Za-km-z]{43,88}\b
+  # - Monero Private View Key: \b[0-9A-Fa-f]{64}\b
+  # - Tron Private Key: \b[a-fA-F0-9]{64}\b
+  # - Solana Private Key: \b[1-9A-HJ-NP-Za-km-z]{43,88}\b
