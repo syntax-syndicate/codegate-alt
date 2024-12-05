@@ -11,7 +11,7 @@ fi
 
 # Step 2: Start the main application (serve)
 echo "Starting the application..."
-exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url https://inference.codegate.ai
+exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url https://inference.codegate.ai &
 
 # Step 3: Start the Nginx server with FE
 echo "Starting the dashboard.. "

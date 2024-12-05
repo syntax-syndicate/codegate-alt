@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import click
-from codegate.storage.utils import restore_storage_backup
 import structlog
 
 from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
