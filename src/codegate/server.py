@@ -7,13 +7,13 @@ from codegate.config import Config
 from codegate.dashboard.dashboard import dashboard_router
 from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
 from codegate.pipeline.codegate_context_retriever.codegate import CodegateContextRetriever
-from codegate.pipeline.system_prompt.codegate import SystemPrompt
 from codegate.pipeline.extract_snippets.extract_snippets import CodeSnippetExtractor
 from codegate.pipeline.extract_snippets.output import CodeCommentStep
 from codegate.pipeline.output import OutputPipelineProcessor, OutputPipelineStep
 from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.pipeline.secrets.secrets import CodegateSecrets, SecretUnredactionStep
 from codegate.pipeline.secrets.signatures import CodegateSignatures
+from codegate.pipeline.system_prompt.codegate import SystemPrompt
 from codegate.pipeline.version.version import CodegateVersion
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
