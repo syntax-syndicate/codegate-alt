@@ -9,10 +9,10 @@ else
     echo "No backup found at $1/$2. Skipping restore."
 fi
 
-# Step 2: Start the main application (serve)
-echo "Starting the application..."
-exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url https://inference.codegate.ai &
-
-# Step 3: Start the Nginx server with FE
+# Step 2: Start the Nginx server with FE
 echo "Starting the dashboard.. "
-exec nginx -g 'daemon off;'
+exec nginx -g 'daemon off;' & 
+
+# Step 3: Start the main application (serve)
+echo "Starting the application..."
+exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url https://inference.codegate.ai
