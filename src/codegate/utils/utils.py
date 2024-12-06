@@ -2,11 +2,11 @@ def generate_vector_string(package) -> str:
     vector_str = f"{package['name']}"
     package_url = ""
     type_map = {
-        "pypi": "Python package available on PyPI",
-        "npm": "JavaScript package available on NPM",
-        "go": "Go package",
-        "crates": "Rust package available on Crates",
-        "java": "Java package",
+        "pypi": "Python package available on PyPI ecosystem",
+        "npm": "JavaScript package available on NPM ecosystem",
+        "go": "Go package ecosystem",
+        "crates": "Rust package available on Crates ecosystem",
+        "java": "Java package available on Maven ecosystem",
     }
     status_messages = {
         "archived": "However, this package is found to be archived and no longer maintained.",
