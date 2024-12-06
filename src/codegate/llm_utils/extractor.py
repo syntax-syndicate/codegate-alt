@@ -4,6 +4,7 @@ import structlog
 
 from codegate.config import Config
 from codegate.llm_utils.llmclient import LLMClient
+from codegate.storage import StorageEngine
 
 logger = structlog.get_logger("codegate")
 
@@ -12,6 +13,9 @@ class PackageExtractor:
     """
     Utility class to extract package names from code or queries.
     """
+
+    def __init__(self):
+        self.storage_engine = StorageEngine()
 
     @staticmethod
     async def extract_packages(

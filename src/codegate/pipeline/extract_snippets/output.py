@@ -8,6 +8,7 @@ from codegate.llm_utils.extractor import PackageExtractor
 from codegate.pipeline.base import CodeSnippet, PipelineContext, PipelineSensitiveData
 from codegate.pipeline.extract_snippets.extract_snippets import extract_snippets
 from codegate.pipeline.output import OutputPipelineContext, OutputPipelineStep
+from codegate.storage import StorageEngine
 
 logger = structlog.get_logger("codegate")
 
@@ -16,7 +17,7 @@ class CodeCommentStep(OutputPipelineStep):
     """Pipeline step that adds comments after code blocks"""
 
     def __init__(self):
-        pass
+        self._storage_engine = StorageEngine()
 
     @property
     def name(self) -> str:
@@ -41,8 +42,7 @@ class CodeCommentStep(OutputPipelineStep):
             object="chat.completion.chunk",
         )
 
-    @staticmethod
-    async def _snippet_comment(snippet: CodeSnippet, secrets: PipelineSensitiveData) -> str:
+    async def _snippet_comment(self, snippet: CodeSnippet, secrets: PipelineSensitiveData) -> str:
         """Create a comment for a snippet"""
         snippet.libraries = await PackageExtractor.extract_packages(
             content=snippet.code,
@@ -52,14 +52,33 @@ class CodeCommentStep(OutputPipelineStep):
             base_url=secrets.api_base,
         )
 
+        libobjects = await self._storage_engine.search_by_property("name", snippet.libraries)
+        logger.info(f"Found {len(libobjects)} libraries in the storage engine")
+
         libraries_text = ""
+        warnings = []
+
+        # Use snippet.libraries to generate a CSV list of libraries
         if snippet.libraries:
-            libraries_text = " ".join(f"`{lib}`" for lib in snippet.libraries)
-        if libraries_text:
-            comment = f"\nThe above code snippet uses the following libraries: {libraries_text}\n"
-        else:
-            comment = "\ncodegate didn't detect any libraries in the snippet\n"
-        comment += "\n"
+            libraries_text = ", ".join([f"`{lib}`" for lib in snippet.libraries])
+
+        for lib in libobjects:
+            lib_name = lib.properties["name"]
+            lib_status = lib.properties["status"]
+            lib_url = f"https://www.insight.stacklok.com/report/{lib.properties['type']}/{lib_name}"
+
+            warnings.append(
+                f"- The package `{lib_name}` is marked as **{lib_status}**.\n"
+                f"- More information: [{lib_url}]({lib_url})\n"
+            )
+
+        comment = ""
+        if libraries_text != "":
+            comment += f"\n\nCodegate detected the following libraries: {libraries_text}\n"
+
+        if warnings:
+            comment += "\n### 🚨 Warnings\n" + "\n".join(warnings) + "\n"
+
         return comment
 
     def _split_chunk_at_code_end(self, content: str) -> tuple[str, str]:
