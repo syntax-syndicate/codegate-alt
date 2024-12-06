@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from codegate import __description__, __version__
 from codegate.config import Config
 from codegate.dashboard.dashboard import dashboard_router
+from codegate.sse import router as sse_router
 from codegate.pipeline.base import PipelineStep, SequentialPipelineProcessor
 from codegate.pipeline.codegate_context_retriever.codegate import CodegateContextRetriever
 from codegate.pipeline.extract_snippets.extract_snippets import CodeSnippetExtractor
@@ -133,5 +134,8 @@ def init_app() -> FastAPI:
 
     # Include the routes for the dashboard
     app.include_router(dashboard_router)
+
+    # Include the routes for the SSE
+    app.include_router(sse_router) 
 
     return app

@@ -5,7 +5,6 @@ import json
 import uuid
 from pathlib import Path
 from typing import AsyncGenerator, AsyncIterator, List, Optional
-
 import structlog
 from litellm import ChatCompletionRequest, ModelResponse
 from pydantic import BaseModel
@@ -20,7 +19,7 @@ from codegate.db.queries import (
 )
 
 logger = structlog.get_logger("codegate")
-
+alert_queue = asyncio.Queue()
 
 class DbCodeGate:
 
@@ -213,7 +212,9 @@ class DbRecorder(DbCodeGate):
         async with asyncio.TaskGroup() as tg:
             for alert in alerts:
                 try:
-                    tg.create_task(self._insert_pydantic_model(alert, sql))
+                    result = tg.create_task(self._insert_pydantic_model(alert, sql))
+                    if result and alert.trigger_category == "critical":
+                        await alert_queue.put(f"New alert detected: {alert.timestamp}")
                 except Exception as e:
                     logger.error(f"Failed to record alert: {alert}.", error=str(e))
         return None
