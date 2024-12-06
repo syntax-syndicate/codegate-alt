@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from codegate.config import Config
 from codegate.storage.storage_engine import (
     StorageEngine,
 )  # Adjust the import based on your actual path
@@ -34,17 +35,21 @@ def mock_inference_engine():
 
 @pytest.mark.asyncio
 async def test_search(mock_weaviate_client, mock_inference_engine):
+    Config.load(config_path="./config.yaml")
+
     # Patch the LlamaCppInferenceEngine.embed method (not the entire class)
     with patch(
         "codegate.inference.inference_engine.LlamaCppInferenceEngine.embed",
         mock_inference_engine.embed,
     ):
-
-        # Mock the WeaviateClient as before
-        with patch("weaviate.WeaviateClient", return_value=mock_weaviate_client):
-
+        # Initialize StorageEngine
+        with patch(
+            "codegate.storage.storage_engine.StorageEngine.get_client",
+            return_value=mock_weaviate_client,
+        ):
             # Initialize StorageEngine
-            storage_engine = StorageEngine(data_path="./weaviate_data")
+            # Need to recreate instance to use the mock
+            storage_engine = StorageEngine.recreate_instance(data_path="./weaviate_data")
 
             # Invoke the search method
             results = await storage_engine.search("test query", 5, 0.3)
@@ -53,4 +58,3 @@ async def test_search(mock_weaviate_client, mock_inference_engine):
             assert len(results) == 1  # Assert that one result is returned
             assert results[0]["properties"]["name"] == "test"
             mock_weaviate_client.connect.assert_called()
-            mock_weaviate_client.close.assert_called()

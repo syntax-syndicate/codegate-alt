@@ -20,9 +20,6 @@ class CodegateContextRetriever(PipelineStep):
     the word "codegate" in the user message.
     """
 
-    def __init__(self):
-        self.storage_engine = StorageEngine()
-
     @property
     def name(self) -> str:
         """
@@ -33,7 +30,8 @@ class CodegateContextRetriever(PipelineStep):
     async def get_objects_from_search(
         self, search: str, packages: list[str] = None
     ) -> list[object]:
-        objects = await self.storage_engine.search(search, distance=0.8, packages=packages)
+        storage_engine = StorageEngine()
+        objects = await storage_engine.search(search, distance=0.8, packages=packages)
         return objects
 
     def generate_context_str(self, objects: list[object]) -> str:
