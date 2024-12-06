@@ -40,6 +40,7 @@ class Config:
     model_base_path: str = "./models"
     chat_model_n_ctx: int = 32768
     chat_model_n_gpu_layers: int = -1
+    embedding_model: str = "all-minilm-L6-v2-q5_k_m.gguf"
 
     # Provider URLs with defaults
     provider_urls: Dict[str, str] = field(default_factory=lambda: DEFAULT_PROVIDER_URLS.copy())
@@ -117,11 +118,12 @@ class Config:
                 host=config_data.get("host", cls.host),
                 log_level=config_data.get("log_level", cls.log_level.value),
                 log_format=config_data.get("log_format", cls.log_format.value),
-                model_base_path=config_data.get("chat_model_path", cls.model_base_path),
+                model_base_path=config_data.get("model_base_path", cls.model_base_path),
                 chat_model_n_ctx=config_data.get("chat_model_n_ctx", cls.chat_model_n_ctx),
                 chat_model_n_gpu_layers=config_data.get(
                     "chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers
                 ),
+                embedding_model=config_data.get("embedding_model", cls.embedding_model),
                 prompts=prompts_config,
                 provider_urls=provider_urls,
             )

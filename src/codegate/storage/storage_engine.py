@@ -26,22 +26,60 @@ schema_config = [
 
 
 class StorageEngine:
+    __storage_engine = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__storage_engine is None:
+            cls.__storage_engine = super().__new__(cls)
+        return cls.__storage_engine
+
+    # This function is needed only for the unit testing for the
+    # mocks to work.
+    @classmethod
+    def recreate_instance(cls, *args, **kwargs):
+        cls.__storage_engine = None
+        return cls(*args, **kwargs)
+
+    def __init__(self, data_path="./weaviate_data"):
+        if hasattr(self, "initialized"):
+            return
+
+        self.initialized = True
+        self.data_path = data_path
+        self.inference_engine = LlamaCppInferenceEngine()
+        self.model_path = (
+            f"{Config.get_config().model_base_path}/{Config.get_config().embedding_model}"
+        )
+        self.schema_config = schema_config
+
+        # setup schema for weaviate
+        self.weaviate_client = self.get_client(self.data_path)
+        if self.weaviate_client is not None:
+            try:
+                self.weaviate_client.connect()
+                self.setup_schema(self.weaviate_client)
+            except Exception as e:
+                logger.error(f"Failed to connect or setup schema: {str(e)}")
+
+    def __del__(self):
+        try:
+            self.weaviate_client.close()
+        except Exception as e:
+            logger.error(f"Failed to close client: {str(e)}")
+
     def get_client(self, data_path):
         try:
-            # Get current config
-            config = Config.get_config()
-
             # Configure Weaviate logging
             additional_env_vars = {
                 # Basic logging configuration
-                "LOG_FORMAT": config.log_format.value.lower(),
-                "LOG_LEVEL": config.log_level.value.lower(),
+                "LOG_FORMAT": Config.get_config().log_format.value.lower(),
+                "LOG_LEVEL": Config.get_config().log_level.value.lower(),
                 # Disable colored output
                 "LOG_FORCE_COLOR": "false",
                 # Configure JSON format
                 "LOG_JSON_FIELDS": "timestamp, level,message",
                 # Configure text format
-                "LOG_METHOD": config.log_format.value.lower(),
+                "LOG_METHOD": Config.get_config().log_format.value.lower(),
                 "LOG_LEVEL_IN_UPPER": "false",  # Keep level lowercase like codegate format
                 # Disable additional fields
                 "LOG_GIT_HASH": "false",
@@ -60,28 +98,6 @@ class StorageEngine:
             logger.error(f"Error during client creation: {str(e)}")
             return None
 
-    def __init__(self, data_path="./weaviate_data"):
-        self.data_path = data_path
-        self.inference_engine = LlamaCppInferenceEngine()
-        self.model_path = "./models/all-minilm-L6-v2-q5_k_m.gguf"
-        self.schema_config = schema_config
-
-        # setup schema for weaviate
-        weaviate_client = self.get_client(self.data_path)
-        if weaviate_client is not None:
-            try:
-                weaviate_client.connect()
-                self.setup_schema(weaviate_client)
-            except Exception as e:
-                logger.error(f"Failed to connect or setup schema: {str(e)}")
-            finally:
-                try:
-                    weaviate_client.close()
-                except Exception as e:
-                    logger.error(f"Failed to close client: {str(e)}")
-        else:
-            logger.error("Could not find client, skipping schema setup.")
-
     def setup_schema(self, client):
         for class_config in self.schema_config:
             if not client.collections.exists(class_config["name"]):
@@ -95,18 +111,16 @@ class StorageEngine:
             return []
 
         # Perform the vector search
-        weaviate_client = self.get_client(self.data_path)
-        if weaviate_client is None:
+        if self.weaviate_client is None:
             logger.error("Could not find client, not returning results.")
             return []
 
-        if not weaviate_client:
+        if not self.weaviate_client:
             logger.error("Invalid client, cannot perform search.")
             return []
 
         try:
-            weaviate_client.connect()
-            packages = weaviate_client.collections.get("Package")
+            packages = self.weaviate_client.collections.get("Package")
             response = packages.query.fetch_objects(
                 filters=Filter.by_property(name).contains_any(properties),
             )
@@ -117,8 +131,6 @@ class StorageEngine:
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")
             return []
-        finally:
-            weaviate_client.close()
 
     async def search(self, query: str, limit=5, distance=0.3, packages=None) -> list[object]:
         """
@@ -135,14 +147,8 @@ class StorageEngine:
         query_vector = await self.inference_engine.embed(self.model_path, [query])
 
         # Perform the vector search
-        weaviate_client = self.get_client(self.data_path)
-        if weaviate_client is None:
-            logger.error("Could not find client, not returning results.")
-            return []
-
         try:
-            weaviate_client.connect()
-            collection = weaviate_client.collections.get("Package")
+            collection = self.weaviate_client.collections.get("Package")
             if packages:
                 response = collection.query.near_vector(
                     query_vector[0],
@@ -159,7 +165,6 @@ class StorageEngine:
                     return_metadata=MetadataQuery(distance=True),
                 )
 
-            weaviate_client.close()
             if not response:
                 return []
             return response.objects
@@ -167,8 +172,3 @@ class StorageEngine:
         except Exception as e:
             logger.error(f"Error during search: {str(e)}")
             return []
-        finally:
-            try:
-                weaviate_client.close()
-            except Exception as e:
-                logger.error(f"Failed to close client: {str(e)}")

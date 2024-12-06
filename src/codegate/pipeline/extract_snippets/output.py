@@ -16,9 +16,6 @@ logger = structlog.get_logger("codegate")
 class CodeCommentStep(OutputPipelineStep):
     """Pipeline step that adds comments after code blocks"""
 
-    def __init__(self):
-        self._storage_engine = StorageEngine()
-
     @property
     def name(self) -> str:
         return "code-comment"
@@ -52,7 +49,8 @@ class CodeCommentStep(OutputPipelineStep):
             base_url=secrets.api_base,
         )
 
-        libobjects = await self._storage_engine.search_by_property("name", snippet.libraries)
+        storage_engine = StorageEngine()
+        libobjects = await storage_engine.search_by_property("name", snippet.libraries)
         logger.info(f"Found {len(libobjects)} libraries in the storage engine")
 
         libraries_text = ""
