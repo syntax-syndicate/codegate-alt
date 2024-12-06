@@ -27,7 +27,8 @@ FROM node:20.18-slim AS webbuilder
 # Install curl for downloading the webapp from GH and unzip to extract it
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    unzip
+    unzip\
+    ca-certificates
 
 WORKDIR /usr/src/
 
@@ -40,19 +41,15 @@ WORKDIR /usr/src/
 ARG LATEST_COMMIT_SHA=LATEST
 RUN echo "Latest FE commit: $LATEST_COMMIT_SHA"
 # Download the webapp from GH
-# -O to save the file with the same name as the remote file
 # -L to follow redirects
-# -s to silence the progress bar
-# -k to allow curl to make insecure connections
-# -H to pass the GITHUB_TOKEN as a header
 RUN --mount=type=secret,id=gh_token \
     LATEST_COMMIT_SHA=${LATEST_COMMIT_SHA} \
-    curl -OLSsk "https://api.github.com/repos/stacklok/codegate-ui/zipball/main" \
+    curl -L -o main.zip "https://api.github.com/repos/stacklok/codegate-ui/zipball/main" \
     -H "Authorization: Bearer $(cat /run/secrets/gh_token)"
 
 # Extract the downloaded zip file
-RUN unzip main
-RUN rm main
+RUN unzip main.zip
+RUN rm main.zip
 # Rename the extracted folder
 RUN mv *codegate-ui* webapp
 
