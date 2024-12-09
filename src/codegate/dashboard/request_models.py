@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -57,7 +57,7 @@ class AlertConversation(BaseModel):
     conversation: Conversation
     alert_id: str
     code_snippet: Optional[CodeSnippet]
-    trigger_string: Optional[str]
+    trigger_string: Optional[Union[str, dict]]
     trigger_type: str
     trigger_category: Optional[str]
     timestamp: datetime.datetime

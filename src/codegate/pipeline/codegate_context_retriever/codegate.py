@@ -86,6 +86,10 @@ class CodegateContextRetriever(PipelineStep):
         # Look for matches in vector DB using list of packages as filter
         searched_objects = await self.get_objects_from_search(last_user_message_str, packages)
 
+        logger.info(
+            f"Found {len(searched_objects)} matches in the database",
+            searched_objects=searched_objects,
+        )
         # If matches are found, add the matched content to context
         if len(searched_objects) > 0:
             # Remove searched objects that are not in packages. This is needed
