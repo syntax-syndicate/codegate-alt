@@ -1,11 +1,10 @@
 #!/bin/bash
-
 DEFAULT_VLLM_URL="https://inference.codegate.ai"
+VLLM_URL=${VLLM_URL:-$DEFAULT_VLLM_URL}
 
 # Parse arguments
-VLLM_URL=${1:-$DEFAULT_VLLM_URL}
-BACKUP_PATH=$2
-BACKUP_MODE=$3
+BACKUP_PATH=$1
+BACKUP_MODE=$2
 
 # Function to restore backup if paths are provided
 restore_backup() {
