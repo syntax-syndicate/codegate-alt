@@ -121,6 +121,7 @@ class LLMClient:
                 api_key=api_key,
                 temperature=request["temperature"],
                 base_url=base_url,
+                response_format=request["response_format"],
             )
 
             content = response["choices"][0]["message"]["content"]
