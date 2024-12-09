@@ -22,7 +22,7 @@ RUN poetry config virtualenvs.create false && \
 COPY . /app
 
 # Build the webapp
-FROM node:20.18-slim AS webbuilder
+FROM node:23.3-slim AS webbuilder
 
 # Install curl for downloading the webapp from GH and unzip to extract it
 RUN apt-get update && apt-get install -y --no-install-recommends \
