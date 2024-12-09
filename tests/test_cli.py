@@ -79,11 +79,13 @@ def test_serve_default_options(
         }
 
         # Retrieve the actual call arguments
-        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+        calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
         # Check if one of the calls matches the expected subset
-        assert any(all(expected_extra[k] == actual_extra.get(k)
-                       for k in expected_extra) for actual_extra in calls)
+        assert any(
+            all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
+            for actual_extra in calls
+        )
         mock_run.assert_called_once()
 
 
@@ -114,7 +116,7 @@ def test_serve_custom_options(
         mock_logging.assert_called_with("codegate")
 
         # Retrieve the actual call arguments
-        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+        calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
         expected_extra = {
             "host": "localhost",
@@ -126,8 +128,10 @@ def test_serve_custom_options(
         }
 
         # Check if one of the calls matches the expected subset
-        assert any(all(expected_extra[k] == actual_extra.get(k)
-                       for k in expected_extra) for actual_extra in calls)
+        assert any(
+            all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
+            for actual_extra in calls
+        )
         mock_run.assert_called_once()
 
 
@@ -159,7 +163,7 @@ def test_serve_with_config_file(
         mock_logging.assert_called_with("codegate")
 
         # Retrieve the actual call arguments
-        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+        calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
         expected_extra = {
             "host": "localhost",
@@ -171,8 +175,10 @@ def test_serve_with_config_file(
         }
 
         # Check if one of the calls matches the expected subset
-        assert any(all(expected_extra[k] == actual_extra.get(k)
-                       for k in expected_extra) for actual_extra in calls)
+        assert any(
+            all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
+            for actual_extra in calls
+        )
         mock_run.assert_called_once()
 
 
@@ -216,7 +222,7 @@ def test_serve_priority_resolution(
         mock_logging.assert_called_with("codegate")
 
         # Retrieve the actual call arguments
-        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+        calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
         expected_extra = {
             "host": "example.com",
@@ -228,8 +234,10 @@ def test_serve_priority_resolution(
         }
 
         # Check if one of the calls matches the expected subset
-        assert any(all(expected_extra[k] == actual_extra.get(k)
-                       for k in expected_extra) for actual_extra in calls)
+        assert any(
+            all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
+            for actual_extra in calls
+        )
         mock_run.assert_called_once()
 
 

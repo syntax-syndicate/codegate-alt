@@ -1,3 +1,5 @@
+import json
+
 import structlog
 from litellm import ChatCompletionRequest
 
@@ -34,7 +36,7 @@ class CodegateContextRetriever(PipelineStep):
         objects = await storage_engine.search(search, distance=0.8, packages=packages)
         return objects
 
-    def generate_context_str(self, objects: list[object]) -> str:
+    def generate_context_str(self, objects: list[object], context: PipelineContext) -> str:
         context_str = ""
         for obj in objects:
             # generate dictionary from object
@@ -44,6 +46,12 @@ class CodegateContextRetriever(PipelineStep):
                 "status": obj.properties["status"],
                 "description": obj.properties["description"],
             }
+            # Add one alert for each package found
+            context.add_alert(
+                self.name,
+                trigger_string=json.dumps(package_obj),
+                severity_category=AlertSeverity.CRITICAL,
+            )
             package_str = generate_vector_string(package_obj)
             context_str += package_str + "\n"
         return context_str
@@ -101,8 +109,8 @@ class CodegateContextRetriever(PipelineStep):
             searched_objects = updated_searched_objects
 
             # Generate context string using the searched objects
-            logger.info(f"Adding {len(searched_objects)} packages to the context")
-            context_str = self.generate_context_str(searched_objects)
+            logger.info(f"Adding {len(updated_searched_objects)} packages to the context")
+            context_str = self.generate_context_str(updated_searched_objects, context)
 
             # Make a copy of the request
             new_request = request.copy()
@@ -114,19 +122,11 @@ class CodegateContextRetriever(PipelineStep):
             message = new_request["messages"][last_user_idx]
             if isinstance(message["content"], str):
                 context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
-                context.add_alert(
-                    self.name, trigger_string=context_msg, severity_category=AlertSeverity.CRITICAL
-                )
                 message["content"] = context_msg
             elif isinstance(message["content"], (list, tuple)):
                 for item in message["content"]:
                     if isinstance(item, dict) and item.get("type") == "text":
                         context_msg = f'Context: {context_str} \n\n Query: {item["text"]}'
-                        context.add_alert(
-                            self.name,
-                            trigger_string=context_msg,
-                            severity_category=AlertSeverity.CRITICAL,
-                        )
                         item["text"] = context_msg
 
                     return PipelineResult(request=new_request, context=context)
