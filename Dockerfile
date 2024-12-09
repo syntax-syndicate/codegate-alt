@@ -98,6 +98,9 @@ EXPOSE 80
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src
 
+# Define an argument for vlm_url with a default value
+ENV VLLM_URL=https://inference.codegate.ai
+
 # Set the container's default entrypoint
 EXPOSE 8989
 ENTRYPOINT ["/app/scripts/entrypoint.sh", "/tmp/weaviate_backup", "backup"]
