@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 
+
 import weaviate
 from weaviate.classes.config import DataType, Property
 from weaviate.embedded import EmbeddedOptions
@@ -53,11 +54,14 @@ class PackageImporter:
             shutil.rmtree(backup_path)
 
         #  take a backup of the data
-        self.client.backup.create(
-            backup_id=os.getenv("BACKUP_TARGET_ID", "backup"),
-            backend="filesystem",
-            wait_for_completion=True,
-        )
+        try:
+            self.client.backup.create(
+                backup_id=os.getenv("BACKUP_TARGET_ID", "backup"),
+                backend="filesystem",
+                wait_for_completion=True,
+            )
+        except Exception as e:
+            print(f"Failed to take backup: {e}")
 
     def setup_schema(self):
         if not self.client.collections.exists("Package"):
