@@ -67,6 +67,7 @@ class StorageEngine:
         except Exception as e:
             logger.error(f"Failed to close client: {str(e)}")
 
+
     def get_client(self, data_path):
         try:
             # Configure Weaviate logging
@@ -127,6 +128,15 @@ class StorageEngine:
 
             if not response:
                 return []
+
+            # Weaviate performs substring matching of the properties. So
+            # we need to double check the response.
+            filterd_objects = []
+            for object in response.objects:
+                if object["properties"][name] in properties:
+                    filterd_objects.append(object)
+            response.objects = filterd_objects
+
             return response.objects
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")
