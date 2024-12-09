@@ -2,9 +2,10 @@ import re
 from typing import Optional
 
 import structlog
-from litellm import ChatCompletionRequest, ModelResponse
+from litellm import ChatCompletionRequest, ChatCompletionSystemMessage, ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
+from codegate.config import Config
 from codegate.pipeline.base import (
     AlertSeverity,
     PipelineContext,
@@ -14,6 +15,7 @@ from codegate.pipeline.base import (
 from codegate.pipeline.output import OutputPipelineContext, OutputPipelineStep
 from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.pipeline.secrets.signatures import CodegateSignatures
+from codegate.pipeline.systemmsg import add_or_update_system_message
 
 logger = structlog.get_logger("codegate")
 
@@ -197,6 +199,12 @@ class CodegateSecrets(PipelineStep):
 
         # Store the count in context metadata
         context.metadata["redacted_secrets_count"] = total_redacted
+        if total_redacted > 0:
+            system_message = ChatCompletionSystemMessage(
+                content=Config.get_config().prompts.secrets_redacted,
+                role="system",
+            )
+            new_request = add_or_update_system_message(new_request, system_message, context)
 
         return PipelineResult(request=new_request, context=context)
 

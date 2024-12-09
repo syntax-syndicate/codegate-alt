@@ -1,4 +1,5 @@
-# Codegate
+![image](https://github.com/user-attachments/assets/ab37063d-039d-4857-be88-231047a7b282)
+
 
 [![CI](https://github.com/stacklok/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/stacklok/codegate/actions/workflows/ci.yml)
 

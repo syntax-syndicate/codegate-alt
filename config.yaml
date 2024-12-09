@@ -19,7 +19,7 @@ log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG
 ##
 
 # Model to use for chatting
-chat_model_path: "./models"
+model_base_path: "./models"
 
 # Context length of the model
 chat_model_n_ctx: 32768
@@ -27,3 +27,5 @@ chat_model_n_ctx: 32768
 # Number of layers to offload to GPU. If -1, all layers are offloaded.
 chat_model_n_gpu_layers: -1
 
+# Embedding model
+embedding_model: "all-minilm-L6-v2-q5_k_m.gguf"

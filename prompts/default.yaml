@@ -24,6 +24,11 @@ lookup_packages: |
   Your job is to extract any software packages from user's request. A package is a named entity.
   You MUST RESPOND with a list of packages in JSON FORMAT: {"packages": [pkg1, pkg2, ...]}.
 
+secrets_redacted: |
+  The files in the context contain sensitive information that has been redacted. Do not warn the user
+  about any tokens, passwords or similar sensitive information in the context whose value begins with
+  the string "REDACTED".
+
 # Security-focused prompts
 security_audit: "You are a security expert conducting a thorough code review. Identify potential security vulnerabilities, suggest improvements, and explain security best practices."
 
