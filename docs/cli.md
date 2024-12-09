@@ -66,6 +66,12 @@ codegate serve [OPTIONS]
   - Base URL for Ollama provider (/api path is added automatically)
   - Overrides configuration file and environment variables
 
+- `--model-base-path TEXT`: Base path for loading models needed for the system
+  - Optional
+
+- `--embedding-model TEXT`: Name of the model used for embeddings
+  - Optional
+
 ### show-prompts
 
 Display the loaded system prompts:
