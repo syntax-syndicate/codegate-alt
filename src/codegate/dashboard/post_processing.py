@@ -200,7 +200,23 @@ async def match_conversations(
     return conversations
 
 
-async def parse_get_alert_conversation(
+async def parse_messages_in_conversations(
+    prompts_outputs: List[GetPromptWithOutputsRow],
+) -> List[Conversation]:
+    """
+    Get all the messages from the database and return them as a list of conversations.
+    """
+
+    # Parse the prompts and outputs in parallel
+    async with asyncio.TaskGroup() as tg:
+        tasks = [tg.create_task(parse_get_prompt_with_output(row)) for row in prompts_outputs]
+    partial_conversations = [task.result() for task in tasks]
+
+    conversations = await match_conversations(partial_conversations)
+    return conversations
+
+
+async def parse_row_alert_conversation(
     row: GetAlertsWithPromptAndOutputRow,
 ) -> Optional[AlertConversation]:
     """
@@ -220,12 +236,33 @@ async def parse_get_alert_conversation(
         conversation_timestamp=row.timestamp,
     )
     code_snippet = json.loads(row.code_snippet) if row.code_snippet else None
+    trigger_string = None
+    if row.trigger_string:
+        try:
+            trigger_string = json.loads(row.trigger_string)
+        except Exception:
+            trigger_string = row.trigger_string
+
     return AlertConversation(
         conversation=conversation,
         alert_id=row.id,
         code_snippet=code_snippet,
-        trigger_string=row.trigger_string,
+        trigger_string=trigger_string,
         trigger_type=row.trigger_type,
         trigger_category=row.trigger_category,
         timestamp=row.timestamp,
     )
+
+
+async def parse_get_alert_conversation(
+    alerts_conversations: List[GetAlertsWithPromptAndOutputRow],
+) -> List[AlertConversation]:
+    """
+    Parse a list of rows from the get_alerts_with_prompt_and_output query and return a list of
+    AlertConversation
+
+    The rows contain the raw request and output strings from the pipeline.
+    """
+    async with asyncio.TaskGroup() as tg:
+        tasks = [tg.create_task(parse_row_alert_conversation(row)) for row in alerts_conversations]
+    return [task.result() for task in tasks if task.result() is not None]

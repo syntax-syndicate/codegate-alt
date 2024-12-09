@@ -56,6 +56,4 @@ class SystemPrompt(PipelineStep):
             context.add_alert(self.name, trigger_string=prepended_message)
             request_system_message["content"] = prepended_message
 
-        return PipelineResult(
-            request=new_request,
-        )
+        return PipelineResult(request=new_request, context=context)
