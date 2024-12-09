@@ -49,16 +49,20 @@ class CodeCommentStep(OutputPipelineStep):
             base_url=secrets.api_base,
         )
 
+        # Check if any of the snippet libraries is a bad package
         storage_engine = StorageEngine()
         libobjects = await storage_engine.search_by_property("name", snippet.libraries)
         logger.info(f"Found {len(libobjects)} libraries in the storage engine")
 
-        libraries_text = ""
+        # If no bad packages are found, just return empty comment
+        if len(libobjects) == 0:
+            return ""
+
+        # Otherwise, generate codegate warning message
         warnings = []
 
-        # Use snippet.libraries to generate a CSV list of libraries
-        if snippet.libraries:
-            libraries_text = ", ".join([f"`{lib}`" for lib in snippet.libraries])
+        # Use libobjects to generate a CSV list of bad libraries
+        libobjects_text = ", ".join([f"""`{lib.properties["name"]}`""" for lib in libobjects])
 
         for lib in libobjects:
             lib_name = lib.properties["name"]
@@ -70,12 +74,10 @@ class CodeCommentStep(OutputPipelineStep):
                 f"- More information: [{lib_url}]({lib_url})\n"
             )
 
-        comment = ""
-        if libraries_text != "":
-            comment += f"\n\nCodegate detected the following libraries: {libraries_text}\n"
-
-        if warnings:
-            comment += "\n### 🚨 Warnings\n" + "\n".join(warnings) + "\n"
+        # Add a codegate warning for the bad packages found in the snippet
+        comment = f"\n\nWarning: CodeGate detected one or more potentially malicious or \
+archived packages: {libobjects_text}\n"
+        comment += "\n### 🚨 Warnings\n" + "\n".join(warnings) + "\n"
 
         return comment
 
