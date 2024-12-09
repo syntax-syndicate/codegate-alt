@@ -69,7 +69,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
-RUN useradd -m -u 1000 -r codegate 
+RUN useradd -m -u 1000 -r codegate
+
+# Copy backup if needed
+RUN mkdir -p /tmp/weaviate_backup
+# will not fail if the file does not exist
+COPY weaviate_backu[p] /tmp/weaviate_backup
+RUN chown -R codegate /tmp/weaviate_backup
 
 # Set permissions for user codegate to run nginx
 RUN chown -R codegate /var/lib/nginx && \
@@ -94,4 +100,4 @@ ENV PYTHONPATH=/app/src
 
 # Set the container's default entrypoint
 EXPOSE 8989
-ENTRYPOINT ["/app/scripts/entrypoint.sh", "/app/weaviate_backup", "backup"]
+ENTRYPOINT ["/app/scripts/entrypoint.sh", "/tmp/weaviate_backup", "backup"]
