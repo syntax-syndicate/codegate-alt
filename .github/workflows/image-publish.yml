@@ -2,7 +2,7 @@ name: Publish Docker Image
 on:
   schedule:
     # Once weekly on fridays at noon
-    - cron: '00 12 * * 5'
+    - cron: "00 12 * * 5"
   workflow_dispatch:
 
 jobs:
@@ -20,9 +20,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Set up QEMU for cross-platform builds
-        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3        
+        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3    
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3
       - name: Compute version number
         id: version-string
         run: |
@@ -67,6 +67,10 @@ jobs:
           echo "LATEST_COMMIT_SHA=$(curl -LSsk 'https://api.github.com/repos/stacklok/codegate-ui/commits?per_page=1' -H 'Authorization: Bearer ${{ secrets.GH_CI_TOKEN }}' | jq -r '.[0].sha')" >> $GITHUB_ENV
       - name: Rename to accomodate to image
         run: mv ./backup_weaviate ./weaviate_backup
+      - name: Download git lfs dependencies
+        run: |
+          git lfs install
+          git lfs pull
       - name: Build image
         id: image-build
         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v5

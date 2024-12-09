@@ -66,7 +66,6 @@ FROM python:3.12-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     nginx \
-    vim \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
