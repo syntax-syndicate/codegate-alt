@@ -67,17 +67,23 @@ def test_serve_default_options(
         assert result.exit_code == 0
         mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
         mock_logging.assert_called_with("codegate")
-        logger_instance.info.assert_any_call(
-            "Starting server",
-            extra={
-                "host": "localhost",
-                "port": 8989,
-                "log_level": "INFO",
-                "log_format": "JSON",
-                "prompts_loaded": 6,  # Default prompts are loaded
-                "provider_urls": DEFAULT_PROVIDER_URLS,
-            },
-        )
+
+        # validate only a subset of the expected extra arguments, as image provides more
+        expected_extra = {
+            "host": "localhost",
+            "port": 8989,
+            "log_level": "INFO",
+            "log_format": "JSON",
+            "prompts_loaded": 6,
+            "provider_urls": DEFAULT_PROVIDER_URLS,
+        }
+
+        # Retrieve the actual call arguments
+        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+
+        # Check if one of the calls matches the expected subset
+        assert any(all(expected_extra[k] == actual_extra.get(k)
+                       for k in expected_extra) for actual_extra in calls)
         mock_run.assert_called_once()
 
 
@@ -106,17 +112,22 @@ def test_serve_custom_options(
         assert result.exit_code == 0
         mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.TEXT)
         mock_logging.assert_called_with("codegate")
-        logger_instance.info.assert_any_call(
-            "Starting server",
-            extra={
-                "host": "localhost",
-                "port": 8989,
-                "log_level": "DEBUG",
-                "log_format": "TEXT",
-                "prompts_loaded": 6,  # Default prompts are loaded
-                "provider_urls": DEFAULT_PROVIDER_URLS,
-            },
-        )
+
+        # Retrieve the actual call arguments
+        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+
+        expected_extra = {
+            "host": "localhost",
+            "port": 8989,
+            "log_level": "DEBUG",
+            "log_format": "TEXT",
+            "prompts_loaded": 6,  # Default prompts are loaded
+            "provider_urls": DEFAULT_PROVIDER_URLS,
+        }
+
+        # Check if one of the calls matches the expected subset
+        assert any(all(expected_extra[k] == actual_extra.get(k)
+                       for k in expected_extra) for actual_extra in calls)
         mock_run.assert_called_once()
 
 
@@ -146,17 +157,22 @@ def test_serve_with_config_file(
         assert result.exit_code == 0
         mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.JSON)
         mock_logging.assert_called_with("codegate")
-        logger_instance.info.assert_any_call(
-            "Starting server",
-            extra={
-                "host": "localhost",
-                "port": 8989,
-                "log_level": "DEBUG",
-                "log_format": "JSON",
-                "prompts_loaded": 6,  # Default prompts are loaded
-                "provider_urls": DEFAULT_PROVIDER_URLS,
-            },
-        )
+
+        # Retrieve the actual call arguments
+        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+
+        expected_extra = {
+            "host": "localhost",
+            "port": 8989,
+            "log_level": "DEBUG",
+            "log_format": "JSON",
+            "prompts_loaded": 6,  # Default prompts are loaded
+            "provider_urls": DEFAULT_PROVIDER_URLS,
+        }
+
+        # Check if one of the calls matches the expected subset
+        assert any(all(expected_extra[k] == actual_extra.get(k)
+                       for k in expected_extra) for actual_extra in calls)
         mock_run.assert_called_once()
 
 
@@ -198,17 +214,22 @@ def test_serve_priority_resolution(
         assert result.exit_code == 0
         mock_setup_logging.assert_called_once_with(LogLevel.ERROR, LogFormat.TEXT)
         mock_logging.assert_called_with("codegate")
-        logger_instance.info.assert_any_call(
-            "Starting server",
-            extra={
-                "host": "example.com",
-                "port": 8080,
-                "log_level": "ERROR",
-                "log_format": "TEXT",
-                "prompts_loaded": 6,  # Default prompts are loaded
-                "provider_urls": DEFAULT_PROVIDER_URLS,
-            },
-        )
+
+        # Retrieve the actual call arguments
+        calls = [call[1]['extra'] for call in logger_instance.info.call_args_list]
+
+        expected_extra = {
+            "host": "example.com",
+            "port": 8080,
+            "log_level": "ERROR",
+            "log_format": "TEXT",
+            "prompts_loaded": 6,  # Default prompts are loaded
+            "provider_urls": DEFAULT_PROVIDER_URLS,
+        }
+
+        # Check if one of the calls matches the expected subset
+        assert any(all(expected_extra[k] == actual_extra.get(k)
+                       for k in expected_extra) for actual_extra in calls)
         mock_run.assert_called_once()
 
 

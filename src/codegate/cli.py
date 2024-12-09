@@ -115,6 +115,18 @@ def show_prompts(prompts: Optional[Path]) -> None:
     default=None,
     help="Ollama provider URL (default: http://localhost:11434/api)",
 )
+@click.option(
+    "--model-base-path",
+    type=str,
+    default="./models",
+    help="Path to the model base directory",
+)
+@click.option(
+    "--embedding-model",
+    type=str,
+    default="all-minilm-L6-v2-q5_k_m.gguf",
+    help="Name of the model to use for embeddings",
+)
 def serve(
     port: Optional[int],
     host: Optional[str],
@@ -126,6 +138,8 @@ def serve(
     openai_url: Optional[str],
     anthropic_url: Optional[str],
     ollama_url: Optional[str],
+    model_base_path: Optional[str],
+    embedding_model: Optional[str],
 ) -> None:
     """Start the codegate server."""
     logger = None
@@ -150,6 +164,8 @@ def serve(
             cli_log_level=log_level,
             cli_log_format=log_format,
             cli_provider_urls=cli_provider_urls,
+            model_base_path=model_base_path,
+            embedding_model=embedding_model,
         )
 
         setup_logging(cfg.log_level, cfg.log_format)
@@ -163,6 +179,8 @@ def serve(
                 "log_format": cfg.log_format.value,
                 "prompts_loaded": len(cfg.prompts.prompts),
                 "provider_urls": cfg.provider_urls,
+                "model_base_path": cfg.model_base_path,
+                "embedding_model": cfg.embedding_model,
             },
         )
 

@@ -176,6 +176,8 @@ class Config:
         cli_log_level: Optional[str] = None,
         cli_log_format: Optional[str] = None,
         cli_provider_urls: Optional[Dict[str, str]] = None,
+        model_base_path: Optional[str] = None,
+        embedding_model: Optional[str] = None,
     ) -> "Config":
         """Load configuration with priority resolution.
 
@@ -193,6 +195,8 @@ class Config:
             cli_log_level: Optional CLI log level override
             cli_log_format: Optional CLI log format override
             cli_provider_urls: Optional dict of provider URLs from CLI
+            model_base_path: Optional path to model base directory
+            embedding_model: Optional name of the model to use for embeddings
 
         Returns:
             Config: Resolved configuration
@@ -223,6 +227,10 @@ class Config:
             config.log_format = env_config.log_format
         if "CODEGATE_PROMPTS_FILE" in os.environ:
             config.prompts = env_config.prompts
+        if "CODEGATE_MODEL_BASE_PATH" in os.environ:
+            config.model_base_path = env_config.model_base_path
+        if "CODEGATE_EMBEDDING_MODEL" in os.environ:
+            config.embedding_model = env_config.embedding_model
 
         # Override provider URLs from environment
         for provider, url in env_config.provider_urls.items():
@@ -241,6 +249,10 @@ class Config:
             config.prompts = PromptConfig.from_file(prompts_path)
         if cli_provider_urls is not None:
             config.provider_urls.update(cli_provider_urls)
+        if model_base_path is not None:
+            config.model_base_path = model_base_path
+        if embedding_model is not None:
+            config.embedding_model = embedding_model
 
         # Set the __config class attribute
         Config.__config = config
