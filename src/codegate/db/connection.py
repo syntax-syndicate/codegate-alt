@@ -5,6 +5,7 @@ import json
 import uuid
 from pathlib import Path
 from typing import AsyncGenerator, AsyncIterator, List, Optional
+
 import structlog
 from litellm import ChatCompletionRequest, ModelResponse
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ from codegate.db.queries import (
 
 logger = structlog.get_logger("codegate")
 alert_queue = asyncio.Queue()
+
 
 class DbCodeGate:
 

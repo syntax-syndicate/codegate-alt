@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, AsyncGenerator
+from typing import AsyncGenerator, List
 
 import structlog
 from fastapi import APIRouter
@@ -44,6 +44,7 @@ async def generate_sse_events() -> AsyncGenerator[str, None]:
     while True:
         message = await alert_queue.get()
         yield f"data: {message}\n\n"
+
 
 @dashboard_router.get("/dashboard/alerts_notification")
 async def stream_sse():
