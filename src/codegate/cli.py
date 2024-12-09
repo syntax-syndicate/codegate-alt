@@ -302,7 +302,12 @@ def restore_backup(backup_path: Path, backup_name: str) -> None:
 def main() -> None:
     """Main entry point for the CLI."""
     cli()
-
-
+    pass
 if __name__ == "__main__":
     main()
+
+# FIM try out
+def test():
+    print("test")
+    pass
+

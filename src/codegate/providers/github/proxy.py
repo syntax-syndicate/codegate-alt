@@ -1,10 +1,12 @@
 import asyncio
 import socket
 import ssl
+import re
 from typing import Optional, Tuple
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, urljoin
 
 import structlog
+
 
 from codegate.config import Config
 from codegate.core.security import CertificateManager
@@ -82,34 +84,6 @@ class ProxyProtocol(asyncio.Protocol):
             # Decode headers
             self.headers = [header.decode('utf-8') for header in headers[1:]]
 
-            # Log the request details
-            logger.info("=== Inbound Request ===")
-            logger.info(f"Method: {self.method}")
-            logger.info(f"Original Path: {self.original_path}")
-            logger.info(f"Extracted Path: {self.path}")
-            logger.info(f"Version: {self.version}")
-            logger.info("Headers:")
-
-            proxy_ep_value = None  # Initialize proxy-ep value
-
-            # Process each header
-            for header in self.headers:
-                logger.info(f"  {header}")
-                # Check for `authorization` header and extract `proxy-ep`
-                if header.lower().startswith("authorization:"):
-                    # Use regex to find proxy-ep in the header value
-                    match = re.search(r"proxy-ep=([^;]+)", header)
-                    if match:
-                        proxy_ep_value = match.group(1)
-
-            logger.info("=====================")
-
-            # Log the extracted proxy-ep value
-            if proxy_ep_value:
-                logger.info(f"Extracted proxy-ep value: {proxy_ep_value}")
-            else:
-                logger.info("proxy-ep value not found.")
-
             return True
         except Exception as e:
             logger.error(f"Error parsing headers: {e}")
@@ -117,47 +91,59 @@ class ProxyProtocol(asyncio.Protocol):
 
     async def handle_http_request(self):
         """Handle regular HTTP requests"""
+        logger.debug("Handling HTTP request")
         try:
-            # Get target URL from path
-            print("\n=== Debug Info ===")
-            print(f"Initial path: {self.path}")
+            # Extract proxy_completions_host from headers
+            proxy_completions_host = None
+            for header in self.headers:
+                if header.lower().startswith("authorization:"):
+                    match = re.search(r"proxy-ep=([^;]+)", header)
+                    if match:
+                        proxy_completions_host = match.group(1)
+                        break
+
+            if not proxy_completions_host:
+                raise ValueError("proxy-ep was not found in headers.")
+
+            # Validate and process self.path
+            if not self.path:
+                raise ValueError("self.path is empty or invalid.")
+
+            completions_url = urljoin(f"https://{proxy_completions_host}", self.path)
+            logger.debug(f"Constructed Completions URL: {completions_url}")
 
             self.target_url = await get_target_url(self.path)
-            print(f"Target URL after get_target_url: {self.target_url}")
-
             if not self.target_url:
-                print("Target URL is None, sending 404")
+                logger.warning("Target URL is None, sending 404")
                 self.send_error_response(404, b"Not Found")
                 return
 
-            logger.info("Target URL: %s", self.target_url)
+            logger.debug(f"Target URL for Completions: {self.target_url}")
 
             # Parse target URL
-            print(f"About to parse URL: {self.target_url}")
             parsed_url = urlparse(self.target_url)
-            print("Parsed URL components:")
-            print(f"  scheme: {parsed_url.scheme}")
-            print(f"  hostname: {parsed_url.hostname}")
-            print(f"  port: {parsed_url.port}")
-            print(f"  path: {parsed_url.path}")
-            print("=== End Debug Info ===\n")
-
-            logger.info("Parsed URL: %s", parsed_url)
             self.target_host = parsed_url.hostname
             self.target_port = parsed_url.port or (443 if parsed_url.scheme == 'https' else 80)
 
-            # Create connection to target
+            logger.debug("Parsed URL components:")
+            logger.debug(f"  scheme: {parsed_url.scheme}")
+            logger.debug(f"  hostname: {parsed_url.hostname}")
+            logger.debug(f"  port: {parsed_url.port}")
+            logger.debug(f"  path: {parsed_url.path}")
+
+            # Establish connection to the target
             target_protocol = ProxyTargetProtocol(self)
             await self.loop.create_connection(
                 lambda: target_protocol,
                 self.target_host,
                 self.target_port,
-                ssl=parsed_url.scheme == 'https'
+                ssl=(parsed_url.scheme == 'https')
             )
 
-            # Add or update host header
-            has_host = False
+            # Process headers
             new_headers = []
+
+            has_host = False
             for header in self.headers:
                 if header.lower().startswith('host:'):
                     has_host = True
@@ -168,39 +154,45 @@ class ProxyProtocol(asyncio.Protocol):
             if not has_host:
                 new_headers.append(f"Host: {self.target_host}")
 
-            # Reconstruct request with path
+            # Construct request headers
             request_line = f"{self.method} /{self.path} {self.version}\r\n".encode()
             header_block = '\r\n'.join(new_headers).encode()
             headers = request_line + header_block + b'\r\n\r\n'
 
-            # Send headers
-            if self.target_transport:
-                self.target_transport.write(headers)
+            # Send headers and body
+            try:
+                if self.target_transport:
+                    # Send headers
+                    self.target_transport.write(headers)
 
-                # Send body in chunks
-                body_start = self.buffer.index(b'\r\n\r\n') + 4
-                body = self.buffer[body_start:]
+                    # Extract body
+                    body_start = self.buffer.index(b'\r\n\r\n') + 4
+                    body = self.buffer[body_start:]
 
-                # Send in chunks
-                for i in range(0, len(body), CHUNK_SIZE):
-                    chunk = body[i:i + CHUNK_SIZE]
-                    self.target_transport.write(chunk)
-            else:
-                logger.error("Target transport not available")
-                self.send_error_response(502, b"Failed to establish target connection")
+                    # Send body in chunks
+                    for i in range(0, len(body), CHUNK_SIZE):
+                        self.target_transport.write(body[i:i + CHUNK_SIZE])
+                else:
+                    logger.error("Target transport not available")
+                    self.send_error_response(502, b"Failed to establish target connection")
+            except (OSError, IndexError) as e:
+                logger.error(f"Error sending data to target: {e}", exc_info=True)
+                self.send_error_response(502, b"Error during data transmission")
+
 
         except Exception as e:
-            print("\n=== Error Debug Info ===")
-            print(f"Exception: {str(e)}")
-            print("Current values:")
-            print(f"  self.path: {self.path}")
-            print(f"  self.target_url: {self.target_url}")
-            print(f"  locals(): {locals()}")
-            print("=== End Error Debug Info ===\n")
             logger.error(f"Error handling HTTP request: {e}")
+            logger.debug("Error context:", exc_info=True)
             self.send_error_response(502, str(e).encode())
 
+
     def data_received(self, data: bytes):
+        # Log the request details
+        logger.debug(f"Method: {self.method}")
+        logger.debug(f"Original Path: {self.original_path}")
+        logger.debug(f"Extracted Path: {self.path}")
+        logger.debug(f"Version: {self.version}")
+        logger.debug("Headers:")
         try:
             # Check for buffer size limit
             if len(self.buffer) + len(data) > MAX_BUFFER_SIZE:
@@ -229,8 +221,9 @@ class ProxyProtocol(asyncio.Protocol):
                 body_start = self.buffer.index(b'\r\n\r\n') + 4
                 body = self.buffer[body_start:]
 
-                # Log request body intelligently
-                self.log_request_body(body)
+                if self.cfg.log_level == "LogLevel.DEBUG":
+                    logger.info("Logging request body")
+                    self.log_request_body(body)
 
                 # Forward the full data to the target
                 self.target_transport.write(data)
@@ -245,14 +238,14 @@ class ProxyProtocol(asyncio.Protocol):
         try:
             # Truncate and log binary data
             if b'\x00' in body or not body.isascii():
-                logger.info(f"Request Body (binary), length: {len(body)} bytes")
+                logger.debug(f"Request Body (binary), length: {len(body)} bytes")
                 with open("request_body_dump.bin", "wb") as f:
                     f.write(body)
                 return
 
             # Attempt to decode as UTF-8 text
             decoded_body = body.decode('utf-8', errors='ignore')
-            logger.info(f"Request Body (text): {decoded_body}")
+            logger.debug(f"Request Body (text): {decoded_body}")
 
         except Exception as e:
             logger.error(f"Error logging request body: {e}")
@@ -266,10 +259,10 @@ class ProxyProtocol(asyncio.Protocol):
             if ':' in path:
                 self.target_host, port = path.split(':')
                 self.target_port = int(port)
-                logger.info(f"CONNECT request to {self.target_host}:{self.target_port}")
-                logger.info("Headers:")
+                logger.debug(f"CONNECT request to {self.target_host}:{self.target_port}")
+                logger.debug("Headers:")
                 for header in self.headers:
-                    logger.info(f"  {header}")
+                    logger.debug(f"  {header}")
 
                 # Connect to target
                 self.is_connect = True

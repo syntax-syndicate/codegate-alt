@@ -19,12 +19,6 @@ async def get_target_url(path: str) -> Optional[str]:
     normalized_path = f"/{path.strip('/')}"
     logger.debug("Normalized path: %s", normalized_path)
 
-    # Special handling for Copilot completions endpoint
-    if '/v1/engines/copilot-codex/completions' in normalized_path:
-        logger.debug("Using special case for completions endpoint")
-        return 'https://proxy.individual.githubcopilot.com/v1/engines/copilot-codex/completions'
-
-    logger.info("VALIDATED_ROUTES: %s", VALIDATED_ROUTES)
     # Check for exact path match first
     for route in VALIDATED_ROUTES:
         if normalized_path == route.path:
@@ -110,6 +104,16 @@ async def forward_request(
 
         logger.debug("Received response from %s: status=%d", target_url, response.status_code)
         logger.debug("Response headers: %s", dict(response.headers))
+
+        # Specifically log 421 Misdirected Request errors
+        if response.status_code == 421:
+            logger.error("Misdirected Request error",
+                        status_code=421,
+                        target_url=target_url,
+                        request_method=request.method,
+                        request_headers=headers,
+                        response_headers=dict(response.headers),
+                        response_body=response.text)
 
         # Create FastAPI response
         return Response(
