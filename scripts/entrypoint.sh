@@ -15,4 +15,4 @@ exec nginx -g 'daemon off;' &
 
 # Step 3: Start the main application (serve)
 echo "Starting the application..."
-exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url https://inference.codegate.ai
+exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url https://inference.codegate.ai --model-base-path /app/models
