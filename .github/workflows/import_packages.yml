@@ -54,11 +54,13 @@ jobs:
       run: |
         export PYTHONPATH=$PYTHONPATH:./
         export BACKUP_FILESYSTEM_PATH=/tmp/backup_weaviate/
+        export BACKUP_FOLDER=backup
         # Conditionally export the variables only if artifact download is enabled
         if [ "${{ github.event.inputs.enable_artifact_download }}" == "true" ]; then
-          export BACKUP_FOLDER=backup
-        fi        
-        python scripts/import_packages.py
+          python scripts/import_packages.py
+        else
+          python scripts/import_packages.py --restore_backup False
+        fi
 
     - name: 'Upload Backup Files'
       uses: actions/upload-artifact@v4

@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import shutil
+import argparse
 
 
 import weaviate
@@ -14,7 +15,10 @@ from codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
-    def __init__(self):
+    def __init__(self, take_backup=True, restore_backup=True):
+        self.take_backup_flag = take_backup
+        self.restore_backup_flag = restore_backup
+
         self.client = weaviate.WeaviateClient(
             embedded_options=EmbeddedOptions(
                 persistence_data_path="./weaviate_data",
@@ -120,14 +124,34 @@ class PackageImporter:
                         )
 
     async def run_import(self):
-        self.restore_backup()
+        if self.restore_backup_flag:
+            self.restore_backup()
         self.setup_schema()
         await self.add_data()
-        self.take_backup()
+        if self.take_backup_flag:
+            self.take_backup()
 
 
 if __name__ == "__main__":
-    importer = PackageImporter()
+    parser = argparse.ArgumentParser(
+        description="Run the package importer with optional backup flags.")
+    parser.add_argument(
+        "--take-backup",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help="Specify whether to take a backup after "
+        "data import (True or False). Default is True.",
+    )
+    parser.add_argument(
+        "--restore-backup",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help="Specify whether to restore a backup before "
+        "data import (True or False). Default is True.",
+    )
+    args = parser.parse_args()
+
+    importer = PackageImporter(take_backup=args.take_backup, restore_backup=args.restore_backup)
     asyncio.run(importer.run_import())
     try:
         assert importer.client.is_live()
