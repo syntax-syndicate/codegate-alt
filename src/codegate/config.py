@@ -32,9 +32,15 @@ class Config:
     __config = None
 
     port: int = 8989
+    proxy_port: int = 8990 # Added separate port for proxy server
     host: str = "localhost"
     log_level: LogLevel = LogLevel.INFO
     log_format: LogFormat = LogFormat.JSON
+    certs_dir: str = "certs"
+    server_cert_file: str = "certs/server.crt"
+    server_key_file: str = "certs/server.key"
+    ca_cert_file = str = "certs/ca.crt"
+    ca_key_file = str = "certs/ca.key"
     prompts: PromptConfig = field(default_factory=PromptConfig)
 
     model_base_path: str = "./models"
