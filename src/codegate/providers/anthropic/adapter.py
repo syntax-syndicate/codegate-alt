@@ -1,3 +1,4 @@
+from typing import Optional
 from litellm.adapters.anthropic_adapter import (
     AnthropicAdapter as LitellmAnthropicAdapter,
 )
@@ -6,7 +7,25 @@ from codegate.providers.litellmshim.adapter import (
     LiteLLMAdapterInputNormalizer,
     LiteLLMAdapterOutputNormalizer,
 )
+import litellm
+from litellm import ChatCompletionRequest
+from litellm.types.llms.anthropic import (
+    AnthropicMessagesRequest,
+)
 
+
+class AnthropicAdapter(LitellmAnthropicAdapter):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def translate_completion_input_params(self, kwargs) -> Optional[ChatCompletionRequest]:
+        request_body = AnthropicMessagesRequest(**kwargs)  # type: ignore
+        if not request_body.get("system"):
+            request_body["system"] = "System prompt"
+        translated_body = litellm.AnthropicExperimentalPassThroughConfig()\
+            .translate_anthropic_to_openai(anthropic_message_request=request_body)
+        return translated_body
+    
 
 class AnthropicInputNormalizer(LiteLLMAdapterInputNormalizer):
     """
@@ -16,7 +35,8 @@ class AnthropicInputNormalizer(LiteLLMAdapterInputNormalizer):
     """
 
     def __init__(self):
-        super().__init__(LitellmAnthropicAdapter())
+        self.adapter = AnthropicAdapter()
+        super().__init__(self.adapter)
 
 
 class AnthropicOutputNormalizer(LiteLLMAdapterOutputNormalizer):
