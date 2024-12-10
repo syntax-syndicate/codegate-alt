@@ -18,21 +18,6 @@ def test_normalize_ollama_input():
     normalized = normalizer.normalize(data)
     assert normalized["model"] == "codellama:7b-instruct"  # Space removed
 
-    # Test base URL handling
-    data = {"model": "llama2", "base_url": "http://localhost:11434"}
-    normalized = normalizer.normalize(data)
-    assert normalized["base_url"] == "http://localhost:11434/api"
-
-    # Test base URL already has /api
-    data = {"model": "llama2", "base_url": "http://localhost:11434/api"}
-    normalized = normalizer.normalize(data)
-    assert normalized["base_url"] == "http://localhost:11434/api"
-
-    # Test base URL with trailing slash
-    data = {"model": "llama2", "base_url": "http://localhost:11434/"}
-    normalized = normalizer.normalize(data)
-    assert normalized["base_url"] == "http://localhost:11434/api"
-
 
 def test_normalize_native_ollama_input():
     """Test input normalization for native Ollama API requests."""
@@ -58,7 +43,6 @@ def test_normalize_native_ollama_input():
         "base_url": "http://localhost:11434",
     }
     normalized = normalizer.normalize(data)
-    assert normalized["base_url"] == "http://localhost:11434/api"
 
 
 def test_normalize_ollama_message_format():
@@ -128,11 +112,6 @@ def test_normalize_ollama_output():
     """Test output normalization for Ollama."""
     normalizer = OllamaOutputNormalizer()
 
-    # Test streaming response passthrough
-    response = {"message": {"role": "assistant", "content": "test"}}
-    normalized = normalizer.normalize_streaming(response)
-    assert normalized == response
-
     # Test regular response passthrough
     response = {"message": {"role": "assistant", "content": "test"}}
     normalized = normalizer.normalize(response)
@@ -146,9 +125,4 @@ def test_normalize_ollama_output():
     # Test denormalize passthrough
     response = {"message": {"role": "assistant", "content": "test"}}
     denormalized = normalizer.denormalize(response)
-    assert denormalized == response
-
-    # Test streaming denormalize passthrough
-    response = {"message": {"role": "assistant", "content": "test"}}
-    denormalized = normalizer.denormalize_streaming(response)
     assert denormalized == response

@@ -19,6 +19,7 @@ class OllamaInputNormalizer(ModelInputNormalizer):
         """
         # Make a copy of the data to avoid modifying the original and normalize the message content
         normalized_data = self._normalize_content_messages(data)
+        normalized_data["model"] = data.get("model", "").strip()
         normalized_data["options"] = data.get("options", {})
         # In Ollama force the stream to be True. Continue is not setting this parameter and
         # most of our functionality is for streaming completions.

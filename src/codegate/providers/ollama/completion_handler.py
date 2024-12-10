@@ -45,13 +45,16 @@ class OllamaShim(BaseCompletionHandler):
     ) -> Union[ChatResponse, GenerateResponse]:
         """Stream response directly from Ollama API."""
         if is_fim_request:
-            prompt = request["messages"][0].content
-            response = self.client.generate(model=request["model"], prompt=prompt, stream=stream)
+            prompt = request["messages"][0]["content"]
+            response = self.client.generate(
+                model=request["model"], prompt=prompt, stream=stream, options=request["options"]
+            )
         else:
             response = self.client.chat(
                 model=request["model"],
                 messages=request["messages"],
                 stream=stream,
+                options=request["options"],
             )
         return response
 
