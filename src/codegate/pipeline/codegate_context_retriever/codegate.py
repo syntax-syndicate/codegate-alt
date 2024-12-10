@@ -86,6 +86,7 @@ class CodegateContextRetriever(PipelineStep):
         # Extract packages from the user message
         last_user_message_str, last_user_idx = last_user_message
         packages = await self.__lookup_packages(last_user_message_str, context)
+        packages = [pkg.lower() for pkg in packages]
 
         # If user message does not reference any packages, then just return
         if len(packages) == 0:
@@ -103,7 +104,7 @@ class CodegateContextRetriever(PipelineStep):
         # since Weaviate performs substring match in the filter.
         updated_searched_objects = []
         for searched_object in searched_objects:
-            if searched_object.properties["name"] in packages:
+            if searched_object.properties["name"].lower() in packages:
                 updated_searched_objects.append(searched_object)
         searched_objects = updated_searched_objects
 
