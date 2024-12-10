@@ -79,5 +79,13 @@ class VLLMProvider(BaseProvider):
             data["base_url"] = config.provider_urls.get("vllm")
 
             is_fim_request = self._is_fim_request(request, data)
+
+            # This is an ugly hack to always force the correct model name if CodeGate is trying
+            # to reach Stacklok hosted models. We need a better way of doing this in the future
+            if is_fim_request and "inference.codegate.ai" in data["base_url"]:
+                data["model"] = "Qwen/Qwen2.5-Coder-14B"
+            else:
+                data["model"] = "Qwen/Qwen2.5-Coder-14B-Instruct"
+
             stream = await self.complete(data, api_key, is_fim_request=is_fim_request)
             return self._completion_handler.create_response(stream)
