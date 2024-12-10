@@ -20,10 +20,12 @@ class AnthropicAdapter(LitellmAnthropicAdapter):
 
     def translate_completion_input_params(self, kwargs) -> Optional[ChatCompletionRequest]:
         request_body = AnthropicMessagesRequest(**kwargs)  # type: ignore
+        if not request_body.get("system"):
+            request_body["system"] = "System prompt"
         translated_body = litellm.AnthropicExperimentalPassThroughConfig()\
             .translate_anthropic_to_openai(anthropic_message_request=request_body)
         return translated_body
-
+    
 
 class AnthropicInputNormalizer(LiteLLMAdapterInputNormalizer):
     """
