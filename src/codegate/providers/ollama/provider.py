@@ -3,7 +3,6 @@ from typing import Optional
 
 from fastapi import Request
 
-from codegate.config import Config
 from codegate.pipeline.base import SequentialPipelineProcessor
 from codegate.pipeline.output import OutputPipelineProcessor
 from codegate.providers.base import BaseProvider

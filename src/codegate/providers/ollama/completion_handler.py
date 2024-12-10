@@ -1,9 +1,9 @@
-from typing import Any, AsyncIterator, Optional, Union
+from typing import AsyncIterator, Optional, Union
 
 import structlog
 from fastapi.responses import JSONResponse, StreamingResponse
 from litellm import ChatCompletionRequest
-from ollama import ChatResponse, Client, GenerateResponse
+from ollama import AsyncClient, ChatResponse, GenerateResponse
 
 from codegate.config import Config
 from codegate.providers.base import BaseCompletionHandler
@@ -34,7 +34,7 @@ class OllamaShim(BaseCompletionHandler):
         else:
             provided_urls = config.provider_urls
         base_url = provided_urls.get("ollama", "http://localhost:11434/")
-        self.client = Client(host=base_url)
+        self.client = AsyncClient(host=base_url, timeout=300)
 
     async def execute_completion(
         self,
@@ -46,11 +46,11 @@ class OllamaShim(BaseCompletionHandler):
         """Stream response directly from Ollama API."""
         if is_fim_request:
             prompt = request["messages"][0]["content"]
-            response = self.client.generate(
+            response = await self.client.generate(
                 model=request["model"], prompt=prompt, stream=stream, options=request["options"]
             )
         else:
-            response = self.client.chat(
+            response = await self.client.chat(
                 model=request["model"],
                 messages=request["messages"],
                 stream=stream,
@@ -72,5 +72,7 @@ class OllamaShim(BaseCompletionHandler):
             },
         )
 
-    def _create_json_response(self, response: Any) -> JSONResponse:
-        raise NotImplementedError("JSON Reponse in Ollama not implemented yet.")
+    def _create_json_response(
+        self, response: Union[GenerateResponse, ChatResponse]
+    ) -> JSONResponse:
+        return JSONResponse(content=response.model_dump_json(), status_code=200)

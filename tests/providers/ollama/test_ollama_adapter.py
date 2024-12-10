@@ -92,7 +92,7 @@ def test_normalize_ollama_generate_format():
     }
     normalized = normalizer.normalize(data)
     assert normalized["model"] == "codellama:7b-instruct"
-    assert normalized["prompt"] == "def hello_world"
+    assert normalized["messages"][0]["content"] == "def hello_world"
     assert normalized["options"]["temperature"] == 0.7
 
     # Test generate request with context

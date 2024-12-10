@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, AsyncIterator, Dict, Iterable
+from typing import Any, AsyncIterator, Dict, Union
 
 from litellm import ChatCompletionRequest, ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
@@ -10,8 +10,6 @@ from codegate.providers.normalizer.base import ModelInputNormalizer, ModelOutput
 
 
 class OllamaInputNormalizer(ModelInputNormalizer):
-    def __init__(self):
-        super().__init__()
 
     def normalize(self, data: Dict) -> ChatCompletionRequest:
         """
@@ -21,6 +19,12 @@ class OllamaInputNormalizer(ModelInputNormalizer):
         normalized_data = self._normalize_content_messages(data)
         normalized_data["model"] = data.get("model", "").strip()
         normalized_data["options"] = data.get("options", {})
+
+        if "prompt" in normalized_data:
+            normalized_data["messages"] = [
+                {"content": normalized_data.pop("prompt"), "role": "user"}
+            ]
+
         # In Ollama force the stream to be True. Continue is not setting this parameter and
         # most of our functionality is for streaming completions.
         normalized_data["stream"] = True
@@ -35,16 +39,19 @@ class OllamaInputNormalizer(ModelInputNormalizer):
 
 
 class OLlamaToModel(AsyncIterator[ModelResponse]):
-    def __init__(self, ollama_response: Iterable[ChatResponse]):
+    def __init__(self, ollama_response: AsyncIterator[ChatResponse]):
         self.ollama_response = ollama_response
-        self._iterator = iter(ollama_response)
+        self._aiter = ollama_response.__aiter__()
 
     def __aiter__(self):
         return self
 
     async def __anext__(self):
         try:
-            chunk = next(self._iterator)
+            chunk = await self._aiter.__anext__()
+            if not isinstance(chunk, ChatResponse):
+                return chunk
+
             finish_reason = None
             role = "assistant"
 
@@ -71,7 +78,7 @@ class OLlamaToModel(AsyncIterator[ModelResponse]):
                 ],
             )
             return model_response
-        except StopIteration:
+        except StopAsyncIteration:
             raise StopAsyncIteration
 
 
@@ -84,9 +91,11 @@ class ModelToOllama(AsyncIterator[ChatResponse]):
     def __aiter__(self):
         return self
 
-    async def __anext__(self) -> ChatResponse:
+    async def __anext__(self) -> Union[ChatResponse]:
         try:
             chunk = await self._aiter.__anext__()
+            if not isinstance(chunk, ModelResponse):
+                return chunk
             # Convert the timestamp to a datetime object
             datetime_obj = datetime.fromtimestamp(chunk.created, tz=timezone.utc)
             created_at = datetime_obj.isoformat()
@@ -104,7 +113,6 @@ class ModelToOllama(AsyncIterator[ChatResponse]):
                 done=done,
                 message=Message(content=message, role="assistant"),
             )
-
             return ollama_response
         except StopAsyncIteration:
             raise StopAsyncIteration
@@ -116,8 +124,8 @@ class OllamaOutputNormalizer(ModelOutputNormalizer):
 
     def normalize_streaming(
         self,
-        model_reply: Any,
-    ) -> Any:
+        model_reply: AsyncIterator[ChatResponse],
+    ) -> AsyncIterator[ModelResponse]:
         """
         Pass through Ollama response
         """
@@ -136,9 +144,8 @@ class OllamaOutputNormalizer(ModelOutputNormalizer):
         return normalized_reply
 
     def denormalize_streaming(
-        self,
-        normalized_reply: Any,
-    ) -> Any:
+        self, normalized_reply: AsyncIterator[ModelResponse]
+    ) -> AsyncIterator[ChatResponse]:
         """
         Pass through Ollama response
         """

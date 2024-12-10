@@ -219,12 +219,13 @@ class BaseProvider(ABC):
             normalized_request, is_fim_request, self.provider_route_name
         )
 
+        prompt_db_id = prompt_db.id if prompt_db is not None else None
         input_pipeline_result = await self._run_input_pipeline(
             normalized_request,
             api_key,
             data.get("base_url"),
             is_fim_request,
-            prompt_id=prompt_db.id,
+            prompt_id=prompt_db_id,
         )
         if input_pipeline_result.response:
             await self._db_recorder.record_alerts(input_pipeline_result.context.alerts_raised)
@@ -239,7 +240,6 @@ class BaseProvider(ABC):
         # Execute the completion and translate the response
         # This gives us either a single response or a stream of responses
         # based on the streaming flag
-        logger.info(f"Executing completion with {provider_request}")
         model_response = await self._completion_handler.execute_completion(
             provider_request, api_key=api_key, stream=streaming, is_fim_request=is_fim_request
         )
@@ -257,12 +257,9 @@ class BaseProvider(ABC):
                     )
             return self._output_normalizer.denormalize(pipeline_output)
 
-        normalized_stream = self._output_normalizer.normalize_streaming(model_response)
-        normalized_stream = self._db_recorder.record_output_stream(prompt_db, normalized_stream)
+        model_response = self._db_recorder.record_output_stream(prompt_db, model_response)
         pipeline_output_stream = await self._run_output_stream_pipeline(
-            input_pipeline_result.context,
-            model_response,
-            is_fim_request=is_fim_request,
+            input_pipeline_result.context, model_response, is_fim_request=is_fim_request
         )
         return self._cleanup_after_streaming(pipeline_output_stream, input_pipeline_result.context)
 
