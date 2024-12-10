@@ -98,38 +98,41 @@ class CodegateContextRetriever(PipelineStep):
             f"Found {len(searched_objects)} matches in the database",
             searched_objects=searched_objects,
         )
-        # If matches are found, add the matched content to context
+
+        # Remove searched objects that are not in packages. This is needed
+        # since Weaviate performs substring match in the filter.
+        updated_searched_objects = []
+        for searched_object in searched_objects:
+            if searched_object.properties["name"] in packages:
+                updated_searched_objects.append(searched_object)
+        searched_objects = updated_searched_objects
+
+        # Generate context string using the searched objects
+        logger.info(f"Adding {len(searched_objects)} packages to the context")
+
         if len(searched_objects) > 0:
-            # Remove searched objects that are not in packages. This is needed
-            # since Weaviate performs substring match in the filter.
-            updated_searched_objects = []
-            for searched_object in searched_objects:
-                if searched_object.properties["name"] in packages:
-                    updated_searched_objects.append(searched_object)
-            searched_objects = updated_searched_objects
+            context_str = self.generate_context_str(searched_objects, context)
+        else:
+            context_str = "Codegate did not find any malicious or archived packages."
 
-            # Generate context string using the searched objects
-            logger.info(f"Adding {len(updated_searched_objects)} packages to the context")
-            context_str = self.generate_context_str(updated_searched_objects, context)
+        # Make a copy of the request
+        new_request = request.copy()
 
-            # Make a copy of the request
-            new_request = request.copy()
+        # Add the context to the last user message
+        # Format: "Context: {context_str} \n Query: {last user message conent}"
+        # Handle the two cases: (a) message content is str, (b)message content
+        # is list
+        message = new_request["messages"][last_user_idx]
+        if isinstance(message["content"], str):
+            context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
+            message["content"] = context_msg
+        elif isinstance(message["content"], (list, tuple)):
+            for item in message["content"]:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    context_msg = f'Context: {context_str} \n\n Query: {item["text"]}'
+                    item["text"] = context_msg
 
-            # Add the context to the last user message
-            # Format: "Context: {context_str} \n Query: {last user message conent}"
-            # Handle the two cases: (a) message content is str, (b)message content
-            # is list
-            message = new_request["messages"][last_user_idx]
-            if isinstance(message["content"], str):
-                context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
-                message["content"] = context_msg
-            elif isinstance(message["content"], (list, tuple)):
-                for item in message["content"]:
-                    if isinstance(item, dict) and item.get("type") == "text":
-                        context_msg = f'Context: {context_str} \n\n Query: {item["text"]}'
-                        item["text"] = context_msg
-
-                    return PipelineResult(request=new_request, context=context)
+                return PipelineResult(request=new_request, context=context)
 
         # Fall through
         return PipelineResult(request=request, context=context)
