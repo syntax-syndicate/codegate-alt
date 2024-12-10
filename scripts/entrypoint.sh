@@ -38,6 +38,7 @@ start_application() {
 
     # Check and append debug level if set
     [ -n "$CODEGATE_APP_LOG_LEVEL" ] && CMD_ARGS+=" --log-level $CODEGATE_APP_LOG_LEVEL"
+    [ -n "$CODEGATE_LOG_FORMAT" ] && CMD_ARGS+=" --log-format $CODEGATE_LOG_FORMAT"
     echo "Starting the application with args: $CMD_ARGS"
 
     exec python -m src.codegate.cli serve $CMD_ARGS
