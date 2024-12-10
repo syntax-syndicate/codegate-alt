@@ -4,9 +4,10 @@ from typing import Optional, Tuple
 from urllib.parse import unquote, urlparse
 
 from codegate.ca.codegate_ca import CertificateAuthority
+from codegate.utils.proxy import ProxyUtils
 from codegate.config import Config
 from codegate.providers.github.gh_logging import logger
-from codegate.utils.proxy import get_target_url
+from codegate.providers.github.gh_routes import GitHubRoutes
 
 # Increase buffer sizes
 MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 10MB
@@ -34,6 +35,12 @@ class ProxyProtocol(asyncio.Protocol):
         self.ssl_context = None
         self.decrypted_data = bytearray()
         self.ca = CertificateAuthority()
+        self.proxyutils = ProxyUtils(
+            validated_routes=GitHubRoutes.VALIDATED_ROUTES,
+            endpoint_headers=GitHubRoutes.ENDPOINT_HEADERS,
+            preserved_headers=GitHubRoutes.PRESERVED_HEADERS,
+            removed_headers=GitHubRoutes.REMOVED_HEADERS
+        )
 
     def connection_made(self, transport: asyncio.Transport):
         self.transport = transport
@@ -115,7 +122,11 @@ class ProxyProtocol(asyncio.Protocol):
     async def handle_http_request(self):
         logger.debug(f"Method: {self.method}")
         try:
-            target_url = await get_target_url(self.path)
+            logger.info(f"%%%%%%%%%%%%%%% Path:  %%%%%%%%%%%%%%%### {self.path}")
+            try:
+                target_url = await self.proxyutils.get_target_url(self.path)
+            except Exception as e:
+                logger.error(f"Get Target URL {e}")
             if not target_url:
                 self.send_error_response(404, b"Not Found")
                 return

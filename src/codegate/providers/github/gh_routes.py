@@ -1,7 +1,8 @@
 from typing import Dict, List
 
 from pydantic import BaseModel, HttpUrl
-from pydantic_settings import BaseSettings
+
+# from pydantic_settings import BaseSettings
 
 
 class ProxyRoute(BaseModel):
@@ -12,7 +13,7 @@ class ProxyRoute(BaseModel):
     class Config:
         frozen = True
 
-class GitHubRoutes(BaseSettings):
+class GitHubRoutes(ProxyRoute):
     """Application settings"""
     HOST: str = "localhost"
     PORT: int = 8990

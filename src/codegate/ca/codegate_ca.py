@@ -285,7 +285,7 @@ class CertificateAuthority:
     def create_ssl_context(self) -> ssl.SSLContext:
         """Create SSL context with secure configuration"""
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(Config.get_config().ca_cert_path, Config.get_config().ca_key_path)
+        ssl_context.load_cert_chain(Config.get_config().ca_cert_file, Config.get_config().ca_key_file)
         ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
         ssl_context.options |= (
             ssl.OP_NO_SSLv2 |

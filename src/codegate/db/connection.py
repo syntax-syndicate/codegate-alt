@@ -54,9 +54,11 @@ class DbRecorder(DbCodeGate):
     def __init__(self, sqlite_path: Optional[str] = None):
         super().__init__(sqlite_path)
 
+    async def ensure_db_initialized(self):
+        """Ensure database is initialized."""
         if not self.does_db_exist():
             logger.info(f"Database does not exist at {self._db_path}. Creating..")
-            asyncio.run(self.init_db())
+            await self.init_db()
 
     async def init_db(self):
         """Initialize the database with the schema."""
@@ -242,15 +244,19 @@ class DbReader(DbCodeGate):
         return prompts
 
 
-def init_db_sync():
-    """DB will be initialized in the constructor in case it doesn't exist."""
+async def init_db():
+    """Initialize the database asynchronously."""
     db = DbRecorder()
     # Remove the DB file if exists for the moment to not cause issues at schema change.
     # We can replace this in the future with migrations or something similar.
     if db.does_db_exist():
         db._db_path.unlink()
-    asyncio.run(db.init_db())
+    await db.init_db()
 
 
-if __name__ == "__main__":
-    init_db_sync()
+def init_db_sync():
+    """Synchronous wrapper for database initialization."""
+    if not asyncio.get_event_loop().is_running():
+        asyncio.run(init_db())
+    else:
+        logger.warning("Attempted to initialize DB from within a running event loop")
