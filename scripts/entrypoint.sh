@@ -29,7 +29,7 @@ start_dashboard() {
 # Function to start the main application
 start_application() {
     echo "Starting the application with VLLM URL: $VLLM_URL"
-    exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url "$VLLM_URL" --model-base-path /app/models
+    exec python -m src.codegate.cli serve --port 8989 --host 0.0.0.0 --vllm-url "$VLLM_URL" --model-base-path /app/models --log-format TEXT
 }
 
 # Main execution flow
