@@ -1,15 +1,12 @@
+from cryptography import x509
+from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 import datetime
 import os
 import ssl
-from typing import Dict, Tuple
-
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
-
+from typing import Tuple, Dict
 from codegate.config import Config
-
 
 class CertificateAuthority:
     def __init__(self):
@@ -20,10 +17,12 @@ class CertificateAuthority:
 
     def _load_or_generate_ca(self):
         """Load existing CA certificate and key or generate new ones"""
-        ca_cert_path = os.path.join(Config.get_config().certs_dir, "ca.crt")
-        ca_key_path = os.path.join(Config.get_config().certs_dir, "ca.key")
+        # ca_cert_path = os.path.join(settings.CERT_DIR, "ca.crt")
+        # ca_key_path = os.path.join(settings.CERT_DIR, "ca.key")
+        ca_cert_path = os.path.join(Config.get_config().ca_cert_file)
+        ca_key_path = os.path.join(Config.get_config().ca_key_file)
 
-        if os.path.exists(ca_cert_path) and os.path.exists(ca_key_path):
+        if os.path.exists(Config.get_config().certs_dir) and os.path.exists(ca_key_path):
             # Load existing CA certificate and key
             with open(ca_cert_path, "rb") as f:
                 self._ca_cert = x509.load_pem_x509_certificate(f.read())
@@ -145,8 +144,8 @@ class CertificateAuthority:
         )
 
         # Save certificate and key
-        cert_path = os.path.join(Config.get_config().ca_cert_path, f"{domain}.crt")
-        key_path = os.path.join(Config.get_config().ca_cert_path, f"{domain}.key")
+        cert_path = os.path.join(Config.get_config().certs_dir, f"{domain}.crt")
+        key_path = os.path.join(Config.get_config().certs_dir, f"{domain}.key")
 
         with open(cert_path, "wb") as f:
             f.write(certificate.public_bytes(serialization.Encoding.PEM))
@@ -218,8 +217,6 @@ class CertificateAuthority:
             x509.ExtendedKeyUsage([
                 ExtendedKeyUsageOID.SERVER_AUTH,
                 ExtendedKeyUsageOID.CLIENT_AUTH,
-                ExtendedKeyUsageOID.CODE_SIGNING,
-                ExtendedKeyUsageOID.EMAIL_PROTECTION,
             ]),
             critical=False,
         )
@@ -285,11 +282,11 @@ class CertificateAuthority:
     def create_ssl_context(self) -> ssl.SSLContext:
         """Create SSL context with secure configuration"""
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(Config.get_config().ca_cert_file, Config.get_config().ca_key_file)
+        ssl_context.load_cert_chain(Config.get_config().server_cert_file, Config.get_config().server_key_file)
         ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
         ssl_context.options |= (
-            ssl.OP_NO_SSLv2 |
-            ssl.OP_NO_SSLv3 |
+            ssl.OP_NO_SSLv2 | 
+            ssl.OP_NO_SSLv3 | 
             ssl.OP_NO_COMPRESSION |
             ssl.OP_CIPHER_SERVER_PREFERENCE
         )
@@ -307,7 +304,9 @@ class CertificateAuthority:
         self.ensure_certificates_exist()
         return self.create_ssl_context()
 
-    def get_cert_files() -> Tuple[str, str]:
+    def get_cert_files(self) -> Tuple[str, str]:
         """Get certificate and key file paths"""
         return Config.get_config().server_cert_file, Config.get_config().server_key_file
 
+    # Initialize the Certificate Authority
+    # ca = CertificateAuthority()

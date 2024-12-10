@@ -7,15 +7,18 @@ from fastapi import Request, Response, WebSocket
 
 from codegate.providers.github.gh_logging import log_error, log_proxy_forward, logger
 from codegate.providers.github.gh_routes import GitHubRoutes
+from codegate.ca.codegate_ca import CertificateAuthority
 
 
 class ProxyUtils:
     def __init__(self, validated_routes, endpoint_headers, preserved_headers, removed_headers):
         self.ghroute = GitHubRoutes()
+        self.ca = CertificateAuthority()
 
     async def get_target_url(self, path: str) -> Optional[str]:
         """Get target URL for the given path"""
         logger.debug(f"Attempting to get target URL for path: {path}")
+        logger.info(f"VALIDATED_ROUTES {self.ghroute.VALIDATED_ROUTES}")
 
         for route in self.ghroute.VALIDATED_ROUTES:
             if path == route.path:
@@ -137,6 +140,8 @@ class ProxyUtils:
     #     """Create a tunnel between WebSocket and target server"""
     #     logger.info("$$$$$$$$$$$$$$$$$$$$$$ tunnel_websocket $$$$$$$$$$$$$$$$$$$$$$")
     #     try:
+    #         # Get domain certificate before establishing connection
+    #         cert_path, key_path = self.ca.get_domain_certificate(target_host)
     #         # Connect to target server
     #         reader, writer = await asyncio.open_connection(target_host, target_port)
 

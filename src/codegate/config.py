@@ -36,11 +36,11 @@ class Config:
     host: str = "localhost"
     log_level: LogLevel = LogLevel.INFO
     log_format: LogFormat = LogFormat.JSON
-    certs_dir: str = "certs"
+    certs_dir: str = "certs/"
     server_cert_file: str = "certs/server.crt"
     server_key_file: str = "certs/server.key"
-    ca_cert_file = str = "certs/ca.crt"
-    ca_key_file = str = "certs/ca.key"
+    ca_cert_file: str = "certs/ca.crt"
+    ca_key_file: str = "certs/ca.key"
     prompts: PromptConfig = field(default_factory=PromptConfig)
 
     model_base_path: str = "./models"

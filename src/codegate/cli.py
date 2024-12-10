@@ -17,6 +17,7 @@ from codegate.db.connection import init_db
 from codegate.server import init_app
 from codegate.providers.github.provider import run_proxy_server
 from codegate.storage.utils import restore_storage_backup
+from codegate.ca.codegate_ca import CertificateAuthority
 
 
 class UvicornServer:
@@ -28,13 +29,7 @@ class UvicornServer:
             host=host,
             port=port,
             log_level=log_level,
-            log_config=None,
-            # server_key_file=None,
-            # server_cert_file=None,
-            ssl_version=None,
-            ssl_cert_reqs=None,
-            ssl_ca_certs=None,
-            ssl_ciphers=None
+            log_config=None
         )
         self.server = None
         self._startup_complete = asyncio.Event()
@@ -76,11 +71,6 @@ async def setup_and_run_servers(
     host: Optional[str],
     log_level: Optional[str],
     log_format: Optional[str],
-    # certs_dir: Optional[str],
-    # server_cert_file: Optional[str],
-    # server_key_file: Optional[str],
-    # ca_cert_file: Optional[str],
-    # ca_key_file: Optional[str],
     config: Optional[Path],
     prompts: Optional[Path],
     vllm_url: Optional[str],
@@ -113,15 +103,12 @@ async def setup_and_run_servers(
             cli_host=host,
             cli_log_level=log_level,
             cli_log_format=log_format,
-            # cli_certs_dir=certs_dir,
-            # cli_server_cert_file=server_cert_file,
-            # cli_server_key_file=server_key_file,
-            # cli_ca_cert_file = ca_cert_file,
-            # cli_ca_key_file = ca_key_file,
             cli_provider_urls=cli_provider_urls,
             model_base_path=model_base_path,
             embedding_model=embedding_model,
         )
+
+        CertificateAuthority()
 
         setup_logging(cfg.log_level, cfg.log_format)
 
@@ -157,7 +144,7 @@ async def setup_and_run_servers(
 
         # Create tasks for both servers
         tasks = [
-            asyncio.create_task(uvicorn_server.serve()),
+            # asyncio.create_task(uvicorn_server.serve()),
             asyncio.create_task(run_proxy_server())
         ]
 
@@ -304,11 +291,6 @@ def serve(
     host: Optional[str],
     log_level: Optional[str],
     log_format: Optional[str],
-    # certs_dir: Optional[str],
-    # server_cert_file: None,
-    # server_key_file: Optional[str],
-    # ca_cert_file: Optional[str],
-    # ca_key_file: Optional[str],
     config: Optional[Path],
     prompts: Optional[Path],
     vllm_url: Optional[str],
@@ -332,11 +314,6 @@ def serve(
                     host,
                     log_level,
                     log_format,
-                    # certs_dir,
-                    # server_cert_file,
-                    # server_key_file,
-                    # ca_cert_file,
-                    # ca_key_file,
                     config,
                     prompts,
                     vllm_url,
