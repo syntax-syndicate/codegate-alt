@@ -134,7 +134,6 @@ class OutputPipelineInstance:
 
                 # Yield all processed chunks
                 for c in current_chunks:
-                    logger.debug(f"Yielding chunk {c}")
                     self._store_chunk_content(c)
                     self._context.buffer.clear()
                     yield c

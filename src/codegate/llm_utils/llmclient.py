@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict, Optional
 
 import structlog
-from litellm import acompletion
+from litellm import acompletion, completion
 
 from codegate.config import Config
 from codegate.inference import LlamaCppInferenceEngine
@@ -112,18 +112,27 @@ class LLMClient:
             if not base_url.endswith("/v1"):
                 base_url = f"{base_url}/v1"
         else:
-            model = f"{provider}/{model}"
+            if not model.startswith(f"{provider}/"):
+                model = f"{provider}/{model}"
 
         try:
-            response = await acompletion(
-                model=model,
-                messages=request["messages"],
-                api_key=api_key,
-                temperature=request["temperature"],
-                base_url=base_url,
-                response_format=request["response_format"],
-            )
-
+            if provider == "ollama":
+                response = completion(
+                    model=model,
+                    messages=request["messages"],
+                    api_key=api_key,
+                    temperature=request["temperature"],
+                    base_url=base_url,
+                )
+            else:
+                response = await acompletion(
+                    model=model,
+                    messages=request["messages"],
+                    api_key=api_key,
+                    temperature=request["temperature"],
+                    base_url=base_url,
+                    response_format=request["response_format"],
+                )
             content = response["choices"][0]["message"]["content"]
 
             # Clean up code blocks if present
@@ -133,5 +142,5 @@ class LLMClient:
             return json.loads(content)
 
         except Exception as e:
-            logger.error(f"LiteLLM completion failed: {e}")
+            logger.error(f"LiteLLM completion failed {provider}/{model} ({content}): {e}")
             return {}

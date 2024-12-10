@@ -19,7 +19,7 @@ DEFAULT_PROVIDER_URLS = {
     "openai": "https://api.openai.com/v1",
     "anthropic": "https://api.anthropic.com/v1",
     "vllm": "http://localhost:8000",  # Base URL without /v1 path
-    "ollama": "http://localhost:11434/api",  # Default Ollama server URL
+    "ollama": "http://localhost:11434",  # Default Ollama server URL
 }
 
 
