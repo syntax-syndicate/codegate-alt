@@ -21,7 +21,8 @@ default_chat: |
 
 lookup_packages: |
   You are a software expert with knowledge of packages from various ecosystems.
-  Your job is to extract any software packages from user's request. A package is a named entity.
+  Your job is to extract any software packages from user's request.
+  Assume that a package can be any named entity.
   You MUST RESPOND with a list of packages in JSON FORMAT: {"packages": ["pkg1", "pkg2", ...]}.
 
 secrets_redacted: |
