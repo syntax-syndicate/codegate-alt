@@ -98,11 +98,12 @@ EXPOSE 80
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src
 
-# Define an argument for vlm_url with a default value
+# Expose additional env vars
 ENV CODEGATE_VLLM_URL=https://inference.codegate.ai
 ENV CODEGATE_OPENAI_URL=
 ENV CODEGATE_ANTHROPIC_URL=
 ENV CODEGATE_OLLAMA_URL=
+ENV CODEGATE_APP_LOG_LEVEL=WARNING
 
 # Set the container's default entrypoint
 EXPOSE 8989

@@ -29,13 +29,16 @@ start_dashboard() {
 
 # Function to start the main application
 start_application() {
-    echo "Starting the application with VLLM URL: $CODEGATE_VLLM_URL"
     CMD_ARGS="--port 8989 --host 0.0.0.0 --vllm-url \"$CODEGATE_VLLM_URL\" --model-base-path \"$MODEL_BASE_PATH\""
 
     # Check and append additional URLs if they are set
     [ -n "$CODEGATE_OPENAI_URL" ] && CMD_ARGS+=" --openai-url \"$CODEGATE_OPENAI_URL\""
     [ -n "$CODEGATE_ANTHROPIC_URL" ] && CMD_ARGS+=" --anthropic-url \"$CODEGATE_ANTHROPIC_URL\""
     [ -n "$CODEGATE_OLLAMA_URL" ] && CMD_ARGS+=" --ollama-url \"$CODEGATE_OLLAMA_URL\""
+
+    # Check and append debug level if set
+    [ -n "$CODEGATE_APP_LOG_LEVEL" ] && CMD_ARGS+=" --log-level $CODEGATE_APP_LOG_LEVEL"
+    echo "Starting the application with args: $CMD_ARGS"
 
     exec python -m src.codegate.cli serve $CMD_ARGS
 }
