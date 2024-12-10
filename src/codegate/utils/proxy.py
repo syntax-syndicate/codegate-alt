@@ -133,48 +133,49 @@ class ProxyUtils:
                 media_type="text/plain"
             ), 500
 
-    async def tunnel_websocket(self, websocket: WebSocket, target_host: str, target_port: int):
-        """Create a tunnel between WebSocket and target server"""
-        try:
-            # Connect to target server
-            reader, writer = await asyncio.open_connection(target_host, target_port)
+    # async def tunnel_websocket(self, websocket: WebSocket, target_host: str, target_port: int):
+    #     """Create a tunnel between WebSocket and target server"""
+    #     logger.info("$$$$$$$$$$$$$$$$$$$$$$ tunnel_websocket $$$$$$$$$$$$$$$$$$$$$$")
+    #     try:
+    #         # Connect to target server
+    #         reader, writer = await asyncio.open_connection(target_host, target_port)
 
-            # Create bidirectional tunnel
-            async def forward_ws_to_target():
-                try:
-                    while True:
-                        data = await websocket.receive_bytes()
-                        writer.write(data)
-                        await writer.drain()
-                except Exception as e:
-                    logger.error(f"WS to target error: {e}")
+    #         # Create bidirectional tunnel
+    #         async def forward_ws_to_target():
+    #             try:
+    #                 while True:
+    #                     data = await websocket.receive_bytes()
+    #                     writer.write(data)
+    #                     await writer.drain()
+    #             except Exception as e:
+    #                 logger.error(f"WS to target error: {e}")
 
-            async def forward_target_to_ws():
-                try:
-                    while True:
-                        data = await reader.read(8192)
-                        if not data:
-                            break
-                        await websocket.send_bytes(data)
-                except Exception as e:
-                    logger.error(f"Target to WS error: {e}")
+    #         async def forward_target_to_ws():
+    #             try:
+    #                 while True:
+    #                     data = await reader.read(8192)
+    #                     if not data:
+    #                         break
+    #                     await websocket.send_bytes(data)
+    #             except Exception as e:
+    #                 logger.error(f"Target to WS error: {e}")
 
-            # Run both forwarding tasks
-            await asyncio.gather(
-                forward_ws_to_target(),
-                forward_target_to_ws(),
-                return_exceptions=True
-            )
+    #         # Run both forwarding tasks
+    #         await asyncio.gather(
+    #             forward_ws_to_target(),
+    #             forward_target_to_ws(),
+    #             return_exceptions=True
+    #         )
 
-        except Exception as e:
-            log_error("tunnel_error", str(e))
-            await websocket.close(code=1011, reason=str(e))
-        finally:
-            writer.close()
-            try:
-                await writer.wait_closed()
-            except Exception:
-                pass
+    #     except Exception as e:
+    #         log_error("tunnel_error", str(e))
+    #         await websocket.close(code=1011, reason=str(e))
+    #     finally:
+    #         writer.close()
+    #         try:
+    #             await writer.wait_closed()
+    #         except Exception:
+    #             pass
 
     def create_error_response(self, status_code: int, message: str) -> Response:
         """Create an error response"""

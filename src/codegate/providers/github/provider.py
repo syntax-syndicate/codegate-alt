@@ -41,13 +41,16 @@ class ProxyProtocol(asyncio.Protocol):
             preserved_headers=GitHubRoutes.PRESERVED_HEADERS,
             removed_headers=GitHubRoutes.REMOVED_HEADERS
         )
+        self._cleanup_tasks = set()
 
     def connection_made(self, transport: asyncio.Transport):
+        logger.info("connection_made")
         self.transport = transport
         self.peername = transport.get_extra_info('peername')
         logger.info(f"Client connected from {self.peername}")
 
     def extract_path(self, full_path: str) -> str:
+        logger.info("extract_path")
         if full_path.startswith('http://') or full_path.startswith('https://'):
             parsed = urlparse(full_path)
             path = parsed.path
@@ -59,6 +62,7 @@ class ProxyProtocol(asyncio.Protocol):
         return full_path
 
     def parse_headers(self) -> bool:
+        logger.info("parse_headers")
         try:
             if b'\r\n\r\n' not in self.buffer:
                 return False
@@ -183,6 +187,7 @@ class ProxyProtocol(asyncio.Protocol):
             self.send_error_response(502, str(e).encode())
 
     def data_received(self, data: bytes):
+        print("$$$$$$$$$$$$$$$$$$$ data recieved #####################")
         try:
             if len(self.buffer) + len(data) > MAX_BUFFER_SIZE:
                 logger.error("Request too large")
@@ -199,7 +204,9 @@ class ProxyProtocol(asyncio.Protocol):
                 if self.method == 'CONNECT':
                     self.handle_connect()
                 else:
-                    asyncio.create_task(self.handle_http_request())
+                    task = asyncio.create_task(self.handle_http_request())
+                    self._cleanup_tasks.add(task)
+                    task.add_done_callback(self._cleanup_tasks.discard)
             elif self.target_transport and not self.target_transport.is_closing():
                 self.log_decrypted_data(data, "Client to Server")
                 self.target_transport.write(data)
@@ -209,6 +216,7 @@ class ProxyProtocol(asyncio.Protocol):
             self.send_error_response(502, str(e).encode())
 
     def handle_connect(self):
+        logger.info("handle_connect")
         try:
             path = unquote(self.target)
             if ':' in path:
@@ -226,7 +234,9 @@ class ProxyProtocol(asyncio.Protocol):
                 self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
 
                 self.is_connect = True
-                asyncio.create_task(self.connect_to_target())
+                task = asyncio.create_task(self.connect_to_target())
+                self._cleanup_tasks.add(task)
+                task.add_done_callback(self._cleanup_tasks.discard)
                 self.handshake_done = True
             else:
                 logger.error(f"Invalid CONNECT path: {path}")
@@ -256,6 +266,7 @@ class ProxyProtocol(asyncio.Protocol):
         return status_texts.get(status, "Error")
 
     async def connect_to_target(self):
+        logger.info("connect to target")
         try:
             if not self.target_host or not self.target_port:
                 raise ValueError("Target host and port not set")
@@ -302,33 +313,66 @@ class ProxyProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         logger.info(f"Client disconnected from {self.peername}")
+
+        # Cancel any pending tasks
+        for task in self._cleanup_tasks:
+            if not task.done():
+                task.cancel()
+
+        # Close target transport if it exists
         if self.target_transport and not self.target_transport.is_closing():
             self.target_transport.close()
+
+        # Close our transport if it exists
+        if self.transport and not self.transport.is_closing():
+            self.transport.close()
+
+        # Clear any buffers
+        self.buffer.clear()
+        self.decrypted_data.clear()
 
 class ProxyTargetProtocol(asyncio.Protocol):
     def __init__(self, proxy: ProxyProtocol):
         self.proxy = proxy
         self.transport: Optional[asyncio.Transport] = None
+        self._buffer = bytearray()
 
     def connection_made(self, transport: asyncio.Transport):
+        logger.info("connection_made")
         self.transport = transport
         self.proxy.target_transport = transport
 
     def data_received(self, data: bytes):
+        logger.info("data_received 2")
         if self.proxy.transport and not self.proxy.transport.is_closing():
             self.proxy.log_decrypted_data(data, "Server to Client")
             self.proxy.transport.write(data)
+        else:
+            # Buffer data if transport is not ready
+            if len(self._buffer) + len(data) <= MAX_BUFFER_SIZE:
+                self._buffer.extend(data)
 
     def connection_lost(self, exc):
+        logger.info("connection_lost")
+        # Clear any buffered data
+        self._buffer.clear()
+
+        # Close proxy transport if it exists
         if self.proxy.transport and not self.proxy.transport.is_closing():
             self.proxy.transport.close()
 
+        # Close our transport if it exists
+        if self.transport and not self.transport.is_closing():
+            self.transport.close()
+
 async def create_proxy_server(host: str, port: int, ssl_context: Optional[ssl.SSLContext] = None):
+    logger.info("############# create_proxy_server #############")
     loop = asyncio.get_event_loop()
 
     def create_protocol():
         return ProxyProtocol(loop)
 
+    logger.info("############# create_server #############")
     server = await loop.create_server(
         create_protocol,
         host,
@@ -342,6 +386,7 @@ async def create_proxy_server(host: str, port: int, ssl_context: Optional[ssl.SS
     return server
 
 async def run_proxy_server():
+    logger.info("############# run_proxy_server #############")
     try:
         ca = CertificateAuthority()
 
