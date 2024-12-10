@@ -130,9 +130,10 @@ class StorageEngine:
 
             # Weaviate performs substring matching of the properties. So
             # we need to double check the response.
+            properties = [prop.lower() for prop in properties]
             filterd_objects = []
             for object in response.objects:
-                if object["properties"][name] in properties:
+                if object.properties[name].lower() in properties:
                     filterd_objects.append(object)
             response.objects = filterd_objects
 

@@ -48,7 +48,6 @@ class CodeCommentStep(OutputPipelineStep):
             api_key=secrets.api_key,
             base_url=secrets.api_base,
         )
-
         # Check if any of the snippet libraries is a bad package
         storage_engine = StorageEngine()
         libobjects = await storage_engine.search_by_property("name", snippet.libraries)
@@ -88,7 +87,7 @@ archived packages: {libobjects_text}\n"
             if line.strip() == "```":
                 # Return content up to and including ```, and the rest
                 before = "\n".join(lines[: i + 1])
-                after = "\n".join(lines[i + 1 :])
+                after = "\n".join(lines[i + 1:])
                 return before, after
         return content, ""
 
