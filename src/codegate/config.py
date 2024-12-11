@@ -37,10 +37,11 @@ class Config:
     log_format: LogFormat = LogFormat.JSON
     prompts: PromptConfig = field(default_factory=PromptConfig)
 
-    model_base_path: str = "./models"
+    model_base_path: str = "./codegate_volume/models"
     chat_model_n_ctx: int = 32768
     chat_model_n_gpu_layers: int = -1
     embedding_model: str = "all-minilm-L6-v2-q5_k_m.gguf"
+    db_path: Optional[str] = None
 
     # Provider URLs with defaults
     provider_urls: Dict[str, str] = field(default_factory=lambda: DEFAULT_PROVIDER_URLS.copy())
@@ -178,6 +179,7 @@ class Config:
         cli_provider_urls: Optional[Dict[str, str]] = None,
         model_base_path: Optional[str] = None,
         embedding_model: Optional[str] = None,
+        db_path: Optional[str] = None,
     ) -> "Config":
         """Load configuration with priority resolution.
 
@@ -197,6 +199,7 @@ class Config:
             cli_provider_urls: Optional dict of provider URLs from CLI
             model_base_path: Optional path to model base directory
             embedding_model: Optional name of the model to use for embeddings
+            db_path: Optional path to the SQLite database file
 
         Returns:
             Config: Resolved configuration
@@ -253,6 +256,8 @@ class Config:
             config.model_base_path = model_base_path
         if embedding_model is not None:
             config.embedding_model = embedding_model
+        if db_path is not None:
+            config.db_path = db_path
 
         # Set the __config class attribute
         Config.__config = config

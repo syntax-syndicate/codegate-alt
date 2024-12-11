@@ -33,7 +33,7 @@ provider_urls:
 ##
 
 # Model to use for chatting
-chat_model_path: "./models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
+chat_model_path: "./codegate_volume/models/qwen2.5-coder-1.5b-instruct-q5_k_m.gguf"
 
 # Context length of the model
 chat_model_n_ctx: 32768

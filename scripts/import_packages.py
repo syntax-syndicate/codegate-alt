@@ -35,7 +35,7 @@ class PackageImporter:
         ]
         self.client.connect()
         self.inference_engine = LlamaCppInferenceEngine()
-        self.model_path = "./models/all-minilm-L6-v2-q5_k_m.gguf"
+        self.model_path = "./codegate_volume/models/all-minilm-L6-v2-q5_k_m.gguf"
 
     def restore_backup(self):
         if os.getenv("BACKUP_FOLDER"):

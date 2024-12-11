@@ -5,7 +5,8 @@ CODEGATE_VLLM_URL=${CODEGATE_VLLM_URL:-$DEFAULT_CODEGATE_VLLM_URL}
 # those are hardcoded on the image, will not change
 BACKUP_PATH="/tmp/weaviate_backup"
 BACKUP_NAME="backup"
-MODEL_BASE_PATH="/app/models"
+MODEL_BASE_PATH="/app/codegate_volume/models"
+CODEGATE_DB_FILE="/app/codegate_volume/db/codegate.db"
 
 # Function to restore backup if paths are provided
 restore_backup() {
@@ -30,8 +31,8 @@ start_dashboard() {
 # Function to start the main application
 start_application() {
     # first restore the models
-    cp /app/default_models/* /app/models/
-    CMD_ARGS="--port 8989 --host 0.0.0.0 --vllm-url $CODEGATE_VLLM_URL --model-base-path $MODEL_BASE_PATH"
+    cp /app/default_models/* /app/codegate_volume/models
+    CMD_ARGS="--port 8989 --host 0.0.0.0 --vllm-url $CODEGATE_VLLM_URL --model-base-path $MODEL_BASE_PATH --db-path $CODEGATE_DB_FILE"
 
     # Check and append additional URLs if they are set
     [ -n "$CODEGATE_OPENAI_URL" ] && CMD_ARGS+=" --openai-url $CODEGATE_OPENAI_URL"

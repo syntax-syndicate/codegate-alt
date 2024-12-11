@@ -19,7 +19,7 @@ log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG
 ##
 
 # Model to use for chatting
-model_base_path: "./models"
+model_base_path: "./codegate_volume/models"
 
 # Context length of the model
 chat_model_n_ctx: 32768
