@@ -74,7 +74,7 @@ def test_serve_default_options(
             "port": 8989,
             "log_level": "INFO",
             "log_format": "JSON",
-            "prompts_loaded": 6,
+            "prompts_loaded": 7,
             "provider_urls": DEFAULT_PROVIDER_URLS,
         }
 
@@ -123,7 +123,7 @@ def test_serve_custom_options(
             "port": 8989,
             "log_level": "DEBUG",
             "log_format": "TEXT",
-            "prompts_loaded": 6,  # Default prompts are loaded
+            "prompts_loaded": 7,  # Default prompts are loaded
             "provider_urls": DEFAULT_PROVIDER_URLS,
         }
 
@@ -170,7 +170,7 @@ def test_serve_with_config_file(
             "port": 8989,
             "log_level": "DEBUG",
             "log_format": "JSON",
-            "prompts_loaded": 6,  # Default prompts are loaded
+            "prompts_loaded": 7,  # Default prompts are loaded
             "provider_urls": DEFAULT_PROVIDER_URLS,
         }
 
@@ -229,7 +229,7 @@ def test_serve_priority_resolution(
             "port": 8080,
             "log_level": "ERROR",
             "log_format": "TEXT",
-            "prompts_loaded": 6,  # Default prompts are loaded
+            "prompts_loaded": 7,  # Default prompts are loaded
             "provider_urls": DEFAULT_PROVIDER_URLS,
         }
 

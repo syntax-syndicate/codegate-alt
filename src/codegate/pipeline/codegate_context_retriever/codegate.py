@@ -33,7 +33,8 @@ class CodegateContextRetriever(PipelineStep):
         self, search: str, ecosystem, packages: list[str] = None
     ) -> list[object]:
         storage_engine = StorageEngine()
-        objects = await storage_engine.search(search, distance=0.8, ecosystem=ecosystem, packages=packages)
+        objects = await storage_engine.search(
+            search, distance=0.8, ecosystem=ecosystem, packages=packages)
         return objects
 
     def generate_context_str(self, objects: list[object], context: PipelineContext) -> str:
@@ -107,7 +108,8 @@ class CodegateContextRetriever(PipelineStep):
             return PipelineResult(request=request)
 
         # Look for matches in vector DB using list of packages as filter
-        searched_objects = await self.get_objects_from_search(last_user_message_str, ecosystem, packages)
+        searched_objects = await self.get_objects_from_search(
+            last_user_message_str, ecosystem, packages)
 
         logger.info(
             f"Found {len(searched_objects)} matches in the database",
