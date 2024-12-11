@@ -175,7 +175,8 @@ class CodegateSignatures:
             yaml_data = cls._load_yaml(cls._yaml_path)
 
             # Add custom GitHub token patterns
-            github_patterns = {"Access Token": r"ghp_[0-9a-zA-Z]{32}"}
+            github_patterns = {"Access Token": r"ghp_[0-9a-zA-Z]{32}",
+                               "Personal Token": r"github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}"}
             cls._add_signature_group("GitHub", github_patterns)
 
             # Process patterns from YAML
