@@ -5,7 +5,6 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from litellm import ChatCompletionRequest
 from ollama import AsyncClient, ChatResponse, GenerateResponse
 
-from codegate.config import Config
 from codegate.providers.base import BaseCompletionHandler
 
 logger = structlog.get_logger("codegate")
@@ -27,13 +26,7 @@ async def ollama_stream_generator(
 
 class OllamaShim(BaseCompletionHandler):
 
-    def __init__(self):
-        config = Config.get_config()
-        if config is None:
-            provided_urls = {}
-        else:
-            provided_urls = config.provider_urls
-        base_url = provided_urls.get("ollama", "http://localhost:11434/")
+    def __init__(self, base_url):
         self.client = AsyncClient(host=base_url, timeout=300)
 
     async def execute_completion(

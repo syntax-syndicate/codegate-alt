@@ -87,7 +87,7 @@ archived packages: {libobjects_text}\n"
             if line.strip() == "```":
                 # Return content up to and including ```, and the rest
                 before = "\n".join(lines[: i + 1])
-                after = "\n".join(lines[i + 1:])
+                after = "\n".join(lines[i + 1 :])
                 return before, after
         return content, ""
 
