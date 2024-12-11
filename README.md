@@ -51,7 +51,6 @@ Unlike E.T., your code never phones home! 🛸 Codegate is designed with privacy
 Make sure you have these tools installed:
 
 - 🐳 [Docker](https://docs.docker.com/get-docker/)
-- 🔧 [Docker Compose](https://docs.docker.com/compose/install/)
 - 🛠️ [jq](https://stedolan.github.io/jq/download/)
 - 💻 [VSCode](https://code.visualstudio.com/download)
 
@@ -155,10 +154,12 @@ docker run -p 8989:8989 -p 8990:80 codegate:latest
 
 # With pre-built pulled image
 docker pull ghcr.io/stacklok/codegate/codegate:latest
-docker run -p 8989:8989 -p 8990:80 ghcr.io/stacklok/codegate/codegate:latest
+docker run --name codegate -d -p 8989:8989 -p 8990:80 ghcr.io/stacklok/codegate/codegate:latest
 
-# With persistent models
-docker run -p 8989:8989 -p 8990:80 -v /path/to/volume:/app/models ghcr.io/stacklok/codegate/codegate:latest
+# It will mount a volume to /app/codegate_volume
+# The directory supports storing Llama CPP models under subidrectoy /models
+# A sqlite DB with the messages and alerts is stored under the subdirectory /db
+docker run --name codegate -d -v /path/to/volume:/app/codegate_volume -p 8989:8989 -p 8990:80 ghcr.io/stacklok/codegate/codegate:latest
 ```
 
 ### Exposed parameters

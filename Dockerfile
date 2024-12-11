@@ -107,14 +107,17 @@ ENV CODEGATE_APP_LOG_LEVEL=WARNING
 ENV CODEGATE_LOG_FORMAT=TEXT
 
 # Copy the initial models in the image to default models
-RUN mkdir -p /app/default_models && cp /app/models/* /app/default_models/
+RUN mkdir -p /app/default_models && cp /app/codegate_volume/models/* /app/default_models/
 
 # Define volume for persistent data
-VOLUME ["/app/models"]
+VOLUME ["/app/codegate_volume/"]
 
-# give the right permissions
+# This has to be performed after copying from the builder stages.
+# Otherwise, the permissions will be reset to root.
 USER root
-RUN chown -R codegate /app/models
+RUN mkdir -p /app/codegate_volume/db
+# Make codegate user the owner of codegate_volume directory to allow writing to it
+RUN chown -R codegate /app/codegate_volume
 USER codegate
 
 # Set the container's default entrypoint

@@ -9,7 +9,7 @@ from typing import AsyncGenerator, AsyncIterator, List, Optional
 import structlog
 from litellm import ChatCompletionRequest, ModelResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from codegate.db.models import Alert, Output, Prompt
@@ -29,13 +29,11 @@ class DbCodeGate:
         # Initialize SQLite database engine with proper async URL
         if not sqlite_path:
             current_dir = Path(__file__).parent
-            self._db_path = (current_dir.parent.parent.parent / "codegate.db").absolute()
-        else:
-            self._db_path = Path(sqlite_path).absolute()
-
-        # Initialize SQLite database engine with proper async URL
-        current_dir = Path(__file__).parent
-        self._db_path = (current_dir.parent.parent.parent / "codegate.db").absolute()
+            sqlite_path = (
+                current_dir.parent.parent.parent / "codegate_volume" / "db" / "codegate.db"
+            )
+        self._db_path = Path(sqlite_path).absolute()
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
         logger.debug(f"Initializing DB from path: {self._db_path}")
         engine_dict = {
             "url": f"sqlite+aiosqlite:///{self._db_path}",
@@ -43,7 +41,6 @@ class DbCodeGate:
             "isolation_level": "AUTOCOMMIT",  # Required for SQLite
         }
         self._async_db_engine = create_async_engine(**engine_dict)
-        self._db_engine = create_engine(**engine_dict)
 
     def does_db_exist(self):
         return self._db_path.is_file()
@@ -242,13 +239,9 @@ class DbReader(DbCodeGate):
         return prompts
 
 
-def init_db_sync():
+def init_db_sync(db_path: Optional[str] = None):
     """DB will be initialized in the constructor in case it doesn't exist."""
-    db = DbRecorder()
-    # Remove the DB file if exists for the moment to not cause issues at schema change.
-    # We can replace this in the future with migrations or something similar.
-    if db.does_db_exist():
-        db._db_path.unlink()
+    db = DbRecorder(db_path)
     asyncio.run(db.init_db())
 
 

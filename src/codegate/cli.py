@@ -118,7 +118,7 @@ def show_prompts(prompts: Optional[Path]) -> None:
 @click.option(
     "--model-base-path",
     type=str,
-    default="./models",
+    default="./codegate_volume/models",
     help="Path to the model base directory",
 )
 @click.option(
@@ -126,6 +126,12 @@ def show_prompts(prompts: Optional[Path]) -> None:
     type=str,
     default="all-minilm-L6-v2-q5_k_m.gguf",
     help="Name of the model to use for embeddings",
+)
+@click.option(
+    "--db-path",
+    type=str,
+    default=None,
+    help="Path to the SQLite database file",
 )
 def serve(
     port: Optional[int],
@@ -140,6 +146,7 @@ def serve(
     ollama_url: Optional[str],
     model_base_path: Optional[str],
     embedding_model: Optional[str],
+    db_path: Optional[str],
 ) -> None:
     """Start the codegate server."""
     logger = None
@@ -166,6 +173,7 @@ def serve(
             cli_provider_urls=cli_provider_urls,
             model_base_path=model_base_path,
             embedding_model=embedding_model,
+            db_path=db_path,
         )
 
         setup_logging(cfg.log_level, cfg.log_format)
@@ -181,10 +189,11 @@ def serve(
                 "provider_urls": cfg.provider_urls,
                 "model_base_path": cfg.model_base_path,
                 "embedding_model": cfg.embedding_model,
+                "db_path": cfg.db_path,
             },
         )
 
-        init_db_sync()
+        init_db_sync(cfg.db_path)
         app = init_app()
 
         import uvicorn
