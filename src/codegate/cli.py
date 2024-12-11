@@ -33,8 +33,6 @@ class UvicornServer:
         self._shutdown_event = asyncio.Event()
         self._should_exit = False
 
-
-
     async def serve(self) -> None:
         """Start the uvicorn server and handle shutdown gracefully."""
         logger.debug(f"Starting server on {self.host}:{self.port}")
@@ -226,6 +224,7 @@ def show_prompts(prompts: Optional[Path]) -> None:
     type=str,
     default=None,
     help="Server key file name (default: server.key)",
+)
 @click.option(
     "--db-path",
     type=str,
@@ -246,12 +245,12 @@ def serve(
     ollama_url: Optional[str],
     model_base_path: Optional[str],
     embedding_model: Optional[str],
+    db_path: Optional[str],
     certs_dir: Optional[str],
     ca_cert: Optional[str],
     ca_key: Optional[str],
     server_cert: Optional[str],
     server_key: Optional[str],
-    db_path: Optional[str],
 ) -> None:
     """Start the codegate server."""
     try:
@@ -286,7 +285,7 @@ def serve(
             db_path=db_path,
         )
 
-        init_db_sync()
+        init_db_sync(cfg.db_path)
 
 
         # Check certificates and create CA if necessary
@@ -340,11 +339,6 @@ async def run_servers(cfg: Config, app) -> None:
             },
         )
 
-        init_db_sync(cfg.db_path)
-        app = init_app()
-
-        import uvicorn
-
         # Create Uvicorn configuration
         uvicorn_config = UvicornConfig(
             app,
@@ -358,16 +352,11 @@ async def run_servers(cfg: Config, app) -> None:
 
         # Initialize CopilotProvider and call run_proxy_server
         copilot_provider = CopilotProvider(cfg)
-        # copilot_provider.run_proxy_server(cfg.proxy_port)
-
 
         tasks = [
             asyncio.create_task(server.serve()), # Uvicorn server
             asyncio.create_task(copilot_provider.run_proxy_server()) # Proxy server
         ]
-
-        # Create and start Uvicorn server
-        # server = UvicornServer(uvicorn_config, Server(config=uvicorn_config))
 
         try:
             await asyncio.gather(*tasks)
@@ -385,15 +374,6 @@ async def run_servers(cfg: Config, app) -> None:
                 await asyncio.gather(*tasks, return_exceptions=True)
             except asyncio.CancelledError:
                 pass
-
-
-        # Set up signal handlers
-        # loop = asyncio.get_running_loop()
-        # for sig in (signal.SIGTERM, signal.SIGINT):
-        #     loop.add_signal_handler(sig, lambda: asyncio.create_task(server.cleanup()))
-
-        # # Start server
-        # await server.serve()
 
     except Exception as e:
         logger.exception("Error running servers")
@@ -421,11 +401,9 @@ def restore_backup(backup_path: Path, backup_name: str) -> None:
         click.echo(f"Error restoring backup: {e}", err=True)
         sys.exit(1)
 
-
 def main() -> None:
     """Main entry point for the CLI."""
     cli()
-
 
 if __name__ == "__main__":
     main()
