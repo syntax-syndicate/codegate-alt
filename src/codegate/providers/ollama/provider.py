@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import Request
 
+from codegate.config import Config
 from codegate.pipeline.base import SequentialPipelineProcessor
 from codegate.pipeline.output import OutputPipelineProcessor
 from codegate.providers.base import BaseProvider
@@ -18,7 +19,13 @@ class OllamaProvider(BaseProvider):
         output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
         fim_output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
     ):
-        completion_handler = OllamaShim()
+        config = Config.get_config()
+        if config is None:
+            provided_urls = {}
+        else:
+            provided_urls = config.provider_urls
+        self.base_url = provided_urls.get("ollama", "http://localhost:11434/")
+        completion_handler = OllamaShim(self.base_url)
         super().__init__(
             OllamaInputNormalizer(),
             OllamaOutputNormalizer(),
@@ -46,6 +53,9 @@ class OllamaProvider(BaseProvider):
         async def create_completion(request: Request):
             body = await request.body()
             data = json.loads(body)
+            # `base_url` is used in the providers pipeline to do the packages lookup.
+            # Force it to be the one that comes in the configuration.
+            data["base_url"] = self.base_url
 
             is_fim_request = self._is_fim_request(request, data)
             stream = await self.complete(data, api_key=None, is_fim_request=is_fim_request)

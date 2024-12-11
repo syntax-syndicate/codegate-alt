@@ -19,7 +19,7 @@ def mock_client():
 
 @pytest.fixture
 def handler(mock_client):
-    ollama_shim = OllamaShim()
+    ollama_shim = OllamaShim("http://ollama:11434")
     ollama_shim.client = mock_client
     return ollama_shim
 
