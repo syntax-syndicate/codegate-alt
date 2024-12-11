@@ -70,9 +70,9 @@ jobs:
         export BACKUP_FOLDER=backup
         # Conditionally export the variables only if artifact download is enabled
         if [ "${{ github.event.inputs.enable_artifact_download }}" == "true" ]; then
-          python scripts/import_packages.py
+          python scripts/import_packages.py --jsonl-dir /tmp/jsonl-files/
         else
-          python scripts/import_packages.py --restore-backup False
+          python scripts/import_packages.py --restore-backup False --jsonl-dir /tmp/jsonl-files/
         fi
 
     - name: 'Upload Backup Files'
