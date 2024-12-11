@@ -170,8 +170,6 @@ class StorageEngine:
                 if ecosystem and ecosystem in VALID_ECOSYSTEMS:
                     filters.append(wvc.query.Filter.by_property("type").equal(ecosystem))
                 filters.append(wvc.query.Filter.by_property("name").contains_any(packages))
-                print("filters are")
-                print(filters)
                 response = collection.query.near_vector(
                     query_vector[0],
                     limit=limit,
