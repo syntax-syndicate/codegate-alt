@@ -1,25 +1,29 @@
-from cryptography import x509
-from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
 import datetime
 import os
 import ssl
+from typing import Dict, Optional, Tuple
+
 import structlog
-from typing import Tuple, Dict, Optional
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
+
 from codegate.config import Config
 
 logger = structlog.get_logger("codegate")
+
 
 class CertificateAuthority:
     """
     Singleton class for Certificate Authority management.
     Access the instance using CertificateAuthority.get_instance()
     """
-    _instance: Optional['CertificateAuthority'] = None
+
+    _instance: Optional["CertificateAuthority"] = None
 
     @classmethod
-    def get_instance(cls) -> 'CertificateAuthority':
+    def get_instance(cls) -> "CertificateAuthority":
         """Get or create the singleton instance of CertificateAuthority"""
         if cls._instance is None:
             logger.debug("Creating new CertificateAuthority instance")
@@ -63,12 +67,14 @@ class CertificateAuthority:
                 key_size=4096,
             )
 
-            name = x509.Name([
-                x509.NameAttribute(NameOID.COMMON_NAME, "CodeGate CA"),
-                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate"),
-                x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "CodeGate"),
-                x509.NameAttribute(NameOID.COUNTRY_NAME, "UK"),
-            ])
+            name = x509.Name(
+                [
+                    x509.NameAttribute(NameOID.COMMON_NAME, "CodeGate CA"),
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate"),
+                    x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "CodeGate"),
+                    x509.NameAttribute(NameOID.COUNTRY_NAME, "UK"),
+                ]
+            )
 
             builder = x509.CertificateBuilder()
             builder = builder.subject_name(name)
@@ -95,7 +101,7 @@ class CertificateAuthority:
                     key_cert_sign=True,  # This is a CA
                     crl_sign=True,
                     encipher_only=False,
-                    decipher_only=False
+                    decipher_only=False,
                 ),
                 critical=True,
             )
@@ -116,11 +122,13 @@ class CertificateAuthority:
 
             with open(ca_key, "wb") as f:
                 logger.debug(f"Saving CA key to {ca_key}")
-                f.write(self._ca_key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption()
-                ))
+                f.write(
+                    self._ca_key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption(),
+                    )
+                )
 
     def get_domain_certificate(self, domain: str) -> Tuple[str, str]:
         """Get or generate a certificate for a specific domain"""
@@ -135,10 +143,12 @@ class CertificateAuthority:
             key_size=2048,  # 2048 bits is sufficient for domain certs
         )
 
-        name = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, domain),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Proxy Pilot Generated"),
-        ])
+        name = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, domain),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Proxy Pilot Generated"),
+            ]
+        )
 
         builder = x509.CertificateBuilder()
         builder = builder.subject_name(name)
@@ -146,9 +156,7 @@ class CertificateAuthority:
         builder = builder.public_key(key.public_key())
         builder = builder.serial_number(x509.random_serial_number())
         builder = builder.not_valid_before(datetime.datetime.utcnow())
-        builder = builder.not_valid_after(
-            datetime.datetime.utcnow() + datetime.timedelta(days=365)
-        )
+        builder = builder.not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
 
         # Add domain to SAN
         builder = builder.add_extension(
@@ -158,10 +166,12 @@ class CertificateAuthority:
 
         # Add extended key usage
         builder = builder.add_extension(
-            x509.ExtendedKeyUsage([
-                ExtendedKeyUsageOID.SERVER_AUTH,
-                ExtendedKeyUsageOID.CLIENT_AUTH,
-            ]),
+            x509.ExtendedKeyUsage(
+                [
+                    ExtendedKeyUsageOID.SERVER_AUTH,
+                    ExtendedKeyUsageOID.CLIENT_AUTH,
+                ]
+            ),
             critical=False,
         )
 
@@ -188,11 +198,13 @@ class CertificateAuthority:
 
         with open(domain_key_path, "wb") as f:
             logger.debug(f"Saving key to {domain_key_path}")
-            f.write(key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ))
+            f.write(
+                key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
 
         self._cert_cache[domain] = (domain_cert_path, domain_key_path)
         return domain_cert_path, domain_key_path
@@ -217,12 +229,14 @@ class CertificateAuthority:
         ca_public_key = ca_private_key.public_key()
 
         # Add name attributes
-        name = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, "CodeGate CA"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate"),
-            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "CodeGate"),
-            x509.NameAttribute(NameOID.COUNTRY_NAME, "UK"),
-        ])
+        name = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, "CodeGate CA"),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate"),
+                x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "CodeGate"),
+                x509.NameAttribute(NameOID.COUNTRY_NAME, "UK"),
+            ]
+        )
 
         # Create certificate builder
         builder = x509.CertificateBuilder()
@@ -233,9 +247,7 @@ class CertificateAuthority:
         builder = builder.public_key(ca_public_key)
         builder = builder.serial_number(x509.random_serial_number())
         builder = builder.not_valid_before(datetime.datetime.utcnow())
-        builder = builder.not_valid_after(
-            datetime.datetime.utcnow() + datetime.timedelta(days=365)
-        )
+        builder = builder.not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
 
         builder = builder.add_extension(
             x509.BasicConstraints(ca=True, path_length=None),
@@ -253,7 +265,7 @@ class CertificateAuthority:
                 key_cert_sign=True,  # This is a CA
                 crl_sign=True,
                 encipher_only=False,
-                decipher_only=False
+                decipher_only=False,
             ),
             critical=True,
         )
@@ -265,17 +277,23 @@ class CertificateAuthority:
         )
 
         # Save CA certificate and key
-        with open(os.path.join(Config.get_config().certs_dir, Config.get_config().ca_cert), "wb") as f:
+        with open(
+            os.path.join(Config.get_config().certs_dir, Config.get_config().ca_cert), "wb"
+        ) as f:
             logger.debug(f"Saving CA certificate to {Config.get_config().ca_cert}")
             f.write(ca_cert.public_bytes(serialization.Encoding.PEM))
 
-        with open(os.path.join(Config.get_config().certs_dir, Config.get_config().ca_key), "wb") as f:
+        with open(
+            os.path.join(Config.get_config().certs_dir, Config.get_config().ca_key), "wb"
+        ) as f:
             logger.debug(f"Saving CA key to {Config.get_config().ca_key}")
-            f.write(ca_private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ))
+            f.write(
+                ca_private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
 
         # CA generated, now generate server certificate
 
@@ -286,10 +304,12 @@ class CertificateAuthority:
             key_size=2048,  # 2048 bits is sufficient for domain certs
         )
 
-        name = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, "CodeGate Server"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate"),
-        ])
+        name = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, "CodeGate Server"),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate"),
+            ]
+        )
 
         # Add extended key usage extension
         builder = x509.CertificateBuilder()
@@ -298,9 +318,7 @@ class CertificateAuthority:
         builder = builder.public_key(server_key.public_key())
         builder = builder.serial_number(x509.random_serial_number())
         builder = builder.not_valid_before(datetime.datetime.utcnow())
-        builder = builder.not_valid_after(
-            datetime.datetime.utcnow() + datetime.timedelta(days=365)
-        )
+        builder = builder.not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
 
         # Add domain to SAN
         builder = builder.add_extension(
@@ -310,10 +328,12 @@ class CertificateAuthority:
 
         # Add extended key usage
         builder = builder.add_extension(
-            x509.ExtendedKeyUsage([
-                ExtendedKeyUsageOID.SERVER_AUTH,
-                ExtendedKeyUsageOID.CLIENT_AUTH,
-            ]),
+            x509.ExtendedKeyUsage(
+                [
+                    ExtendedKeyUsageOID.SERVER_AUTH,
+                    ExtendedKeyUsageOID.CLIENT_AUTH,
+                ]
+            ),
             critical=False,
         )
 
@@ -330,37 +350,49 @@ class CertificateAuthority:
         )
 
         # os.path.join(Config.get_config().server_key)
-        with open(os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert), "wb") as f:
+        with open(
+            os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert), "wb"
+        ) as f:
             logger.debug(f"Saving server certificate to {Config.get_config().server_cert}")
             f.write(server_cert.public_bytes(serialization.Encoding.PEM))
 
-        with open(os.path.join(Config.get_config().certs_dir, Config.get_config().server_key), "wb") as f:
+        with open(
+            os.path.join(Config.get_config().certs_dir, Config.get_config().server_key), "wb"
+        ) as f:
             logger.debug(f"Saving server key to {Config.get_config().server_key}")
-            f.write(server_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ))
+            f.write(
+                server_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
 
         # Print instructions for trusting the certificates
         print("Certificates generated successfully in the 'certs' directory")
         print("\nTo trust these certificates:")
         print("\nOn macOS:")
-        print("`sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt")
+        print(
+            "`sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt"
+        )
         print("\nOn Windows (PowerShell as Admin):")
-        print("Import-Certificate -FilePath \"certs\\ca.crt\" -CertStoreLocation Cert:\\LocalMachine\\Root")
+        print(
+            'Import-Certificate -FilePath "certs\\ca.crt" -CertStoreLocation Cert:\\LocalMachine\\Root'
+        )
         print("\nOn Linux:")
         print("sudo cp certs/ca.crt /usr/local/share/ca-certificates/codegate.crt")
         print("sudo update-ca-certificates")
         print("\nFor VSCode, add to settings.json:")
-        print('''{
+        print(
+            """{
     "http.proxy": "https://localhost:8990",
     "http.proxySupport": "on",
     "github.copilot.advanced": {
         "debug.testOverrideProxyUrl": "https://localhost:8990",
         "debug.overrideProxyUrl": "https://localhost:8990"
     }
-}''')
+}"""
+        )
         logger.debug("Certificates generated successfully")
         return server_cert, server_key
 
@@ -368,29 +400,41 @@ class CertificateAuthority:
         """Create SSL context with secure configuration"""
         logger.debug("Creating SSL context fn: create_ssl_context")
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        logger.debug(f"Loading server certificate for ssl_context from: {Config.get_config().server_cert}")
+        logger.debug(
+            f"Loading server certificate for ssl_context from: {Config.get_config().server_cert}"
+        )
         ssl_context.load_cert_chain(
-            os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert), 
-            os.path.join(Config.get_config().certs_dir, Config.get_config().server_key))
+            os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert),
+            os.path.join(Config.get_config().certs_dir, Config.get_config().server_key),
+        )
         ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
         ssl_context.options |= (
-            ssl.OP_NO_SSLv2 |
-            ssl.OP_NO_SSLv3 |
-            ssl.OP_NO_COMPRESSION |
-            ssl.OP_CIPHER_SERVER_PREFERENCE
+            ssl.OP_NO_SSLv2
+            | ssl.OP_NO_SSLv3
+            | ssl.OP_NO_COMPRESSION
+            | ssl.OP_CIPHER_SERVER_PREFERENCE
         )
-        ssl_context.set_ciphers('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20')
+        ssl_context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20")
         logger.debug("SSL context created successfully")
         return ssl_context
 
     def ensure_certificates_exist(self) -> None:
         """Ensure SSL certificates exist, generate if they don't"""
         logger.debug("Ensuring certificates exist. fn ensure_certificates_exist")
-        if not (os.path.exists(os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert)) and os.path.exists(os.path.join(Config.get_config().certs_dir, Config.get_config().server_key))):
+        if not (
+            os.path.exists(
+                os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert)
+            )
+            and os.path.exists(
+                os.path.join(Config.get_config().certs_dir, Config.get_config().server_key)
+            )
+        ):
             logger.debug("Certificates not found, generating new certificates")
             self.generate_certificates()
         else:
-            logger.debug(f"Certificates found at: {Config.get_config().server_cert} and {Config.get_config().server_key}")
+            logger.debug(
+                f"Certificates found at: {Config.get_config().server_cert} and {Config.get_config().server_key}"
+            )
 
     def get_ssl_context(self) -> ssl.SSLContext:
         """Get SSL context with certificates"""

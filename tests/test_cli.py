@@ -1,16 +1,16 @@
 """Tests for the CLI module."""
 
 import asyncio
+import signal
 from pathlib import Path
 from typing import Any, AsyncGenerator
-import signal
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
 from uvicorn.config import Config as UvicornConfig
 
-from codegate.cli import cli, UvicornServer
+from codegate.cli import UvicornServer, cli
 from codegate.codegate_logging import LogFormat, LogLevel
 from codegate.config import DEFAULT_PROVIDER_URLS
 
@@ -78,13 +78,13 @@ async def test_uvicorn_server_serve(mock_uvicorn_server: UvicornServer) -> None:
     """Test UvicornServer serve method."""
     # Start server in background task
     server_task = asyncio.create_task(mock_uvicorn_server.serve())
-    
+
     # Wait for startup to complete
     await mock_uvicorn_server.wait_startup_complete()
-    
+
     # Verify server started
     assert mock_uvicorn_server.server.serve.called
-    
+
     # Cleanup
     await mock_uvicorn_server.cleanup()
     await server_task
@@ -96,14 +96,14 @@ async def test_uvicorn_server_cleanup(mock_uvicorn_server: UvicornServer) -> Non
     # Start server
     server_task = asyncio.create_task(mock_uvicorn_server.serve())
     await mock_uvicorn_server.wait_startup_complete()
-    
+
     # Trigger cleanup
     await mock_uvicorn_server.cleanup()
-    
+
     # Verify shutdown was called
     assert mock_uvicorn_server.server.shutdown.called
     assert mock_uvicorn_server._shutdown_event.is_set()
-    
+
     await server_task
 
 
@@ -111,26 +111,24 @@ async def test_uvicorn_server_cleanup(mock_uvicorn_server: UvicornServer) -> Non
 async def test_uvicorn_server_signal_handling(mock_uvicorn_server: UvicornServer) -> None:
     """Test signal handling in UvicornServer."""
     # Mock signal handlers
-    with patch('asyncio.get_running_loop') as mock_loop:
+    with patch("asyncio.get_running_loop") as mock_loop:
         mock_loop_instance = MagicMock()
         mock_loop.return_value = mock_loop_instance
-        
+
         # Start server
         server_task = asyncio.create_task(mock_uvicorn_server.serve())
         await mock_uvicorn_server.wait_startup_complete()
-        
+
         # Simulate SIGTERM
         mock_loop_instance.add_signal_handler.assert_any_call(
-            signal.SIGTERM,
-            pytest.approx(type(lambda: None))  # Check if a callable was passed
+            signal.SIGTERM, pytest.approx(type(lambda: None))  # Check if a callable was passed
         )
-        
+
         # Simulate SIGINT
         mock_loop_instance.add_signal_handler.assert_any_call(
-            signal.SIGINT,
-            pytest.approx(type(lambda: None))  # Check if a callable was passed
+            signal.SIGINT, pytest.approx(type(lambda: None))  # Check if a callable was passed
         )
-        
+
         await mock_uvicorn_server.cleanup()
         await server_task
 

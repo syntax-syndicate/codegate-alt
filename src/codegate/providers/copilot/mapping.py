@@ -1,11 +1,15 @@
-from typing import List, Dict
+from typing import List
+
 from pydantic import BaseModel, HttpUrl
 from pydantic_settings import BaseSettings
 
+
 class CopilotProxyRoute(BaseModel):
     """Pydantic model for proxy route validation"""
+
     path: str
     target: HttpUrl
+
 
 class CoPilotMappings(BaseSettings):
 
@@ -31,12 +35,11 @@ class CoPilotMappings(BaseSettings):
         ("/v1", "https://copilot-proxy.githubusercontent.com/v1"),
     ]
 
+
 # Create settings instance
 mappings = CoPilotMappings()
 
 # Convert routes to validated ProxyRoute objects
 VALIDATED_ROUTES: List[CopilotProxyRoute] = [
-    CopilotProxyRoute(path=path, target=target)
-    for path, target in mappings.PROXY_ROUTES
+    CopilotProxyRoute(path=path, target=target) for path, target in mappings.PROXY_ROUTES
 ]
-

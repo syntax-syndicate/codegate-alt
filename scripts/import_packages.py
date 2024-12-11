@@ -14,7 +14,7 @@ from codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
-    def __init__(self, jsonl_dir='data', take_backup=True, restore_backup=True):
+    def __init__(self, jsonl_dir="data", take_backup=True, restore_backup=True):
         self.take_backup_flag = take_backup
         self.restore_backup_flag = restore_backup
 
@@ -153,12 +153,13 @@ if __name__ == "__main__":
         "--jsonl-dir",
         type=str,
         default="data",
-        help="Directory containing JSONL files. Default is 'data'."
+        help="Directory containing JSONL files. Default is 'data'.",
     )
     args = parser.parse_args()
 
-    importer = PackageImporter(jsonl_dir=args.jsonl_dir, take_backup=args.take_backup,
-                               restore_backup=args.restore_backup)
+    importer = PackageImporter(
+        jsonl_dir=args.jsonl_dir, take_backup=args.take_backup, restore_backup=args.restore_backup
+    )
     asyncio.run(importer.run_import())
     try:
         assert importer.client.is_live()
