@@ -29,6 +29,8 @@ start_dashboard() {
 
 # Function to start the main application
 start_application() {
+    # first restore the models
+    cp /app/default_models/* /app/models/
     CMD_ARGS="--port 8989 --host 0.0.0.0 --vllm-url $CODEGATE_VLLM_URL --model-base-path $MODEL_BASE_PATH"
 
     # Check and append additional URLs if they are set

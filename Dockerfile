@@ -106,8 +106,16 @@ ENV CODEGATE_OLLAMA_URL=http://host.docker.internal:11434
 ENV CODEGATE_APP_LOG_LEVEL=WARNING
 ENV CODEGATE_LOG_FORMAT=TEXT
 
+# Copy the initial models in the image to default models
+RUN mkdir -p /app/default_models && cp /app/models/* /app/default_models/
+
 # Define volume for persistent data
 VOLUME ["/app/models"]
+
+# give the right permissions
+USER root
+RUN chown -R codegate /app/models
+USER codegate
 
 # Set the container's default entrypoint
 EXPOSE 8989
