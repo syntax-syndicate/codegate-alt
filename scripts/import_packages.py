@@ -14,7 +14,7 @@ from codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
-    def __init__(self, take_backup=True, restore_backup=True):
+    def __init__(self, jsonl_dir='data', take_backup=True, restore_backup=True):
         self.take_backup_flag = take_backup
         self.restore_backup_flag = restore_backup
 
@@ -29,9 +29,9 @@ class PackageImporter:
             )
         )
         self.json_files = [
-            "data/archived.jsonl",
-            "data/deprecated.jsonl",
-            "data/malicious.jsonl",
+            os.path.join(jsonl_dir, "archived.jsonl"),
+            os.path.join(jsonl_dir, "deprecated.jsonl"),
+            os.path.join(jsonl_dir, "malicious.jsonl"),
         ]
         self.client.connect()
         self.inference_engine = LlamaCppInferenceEngine()
@@ -149,9 +149,16 @@ if __name__ == "__main__":
         help="Specify whether to restore a backup before "
         "data import (True or False). Default is True.",
     )
+    parser.add_argument(
+        "--jsonl-dir",
+        type=str,
+        default="data",
+        help="Directory containing JSONL files. Default is 'data'."
+    )
     args = parser.parse_args()
 
-    importer = PackageImporter(take_backup=args.take_backup, restore_backup=args.restore_backup)
+    importer = PackageImporter(jsonl_dir=args.jsonl_dir, take_backup=args.take_backup,
+                               restore_backup=args.restore_backup)
     asyncio.run(importer.run_import())
     try:
         assert importer.client.is_live()
