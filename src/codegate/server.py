@@ -51,11 +51,11 @@ def init_app() -> FastAPI:
 
     # Define input pipeline steps
     input_steps: List[PipelineStep] = [
+        CodegateSecrets(),
         CodegateVersion(),
         CodeSnippetExtractor(),
         SystemPrompt(Config.get_config().prompts.default_chat),
         CodegateContextRetriever(),
-        CodegateSecrets(),
     ]
 
     # Define FIM pipeline steps
