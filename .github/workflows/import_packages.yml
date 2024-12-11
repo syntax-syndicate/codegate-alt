@@ -30,6 +30,20 @@ jobs:
           git lfs install
           git lfs pull
 
+    - name: Download json data
+      id: download-json-data
+      uses: dawidd6/action-download-artifact@v7
+      with:
+        github_token: ${{ github.token }}
+        repo: stacklok/codegate-data
+        workflow: ".github/workflows/generate-artifact.yml"
+        workflow_conclusion: success
+        name: jsonl-files
+        path: /tmp/
+        name_is_regexp: true
+        skip_unpack: false
+        if_no_artifact_found: ignore          
+
     - name: Download artifact
       if: ${{ github.event.inputs.enable_artifact_download == 'true' }}    
       id: download-artifact
