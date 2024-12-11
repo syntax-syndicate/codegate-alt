@@ -106,6 +106,9 @@ ENV CODEGATE_OLLAMA_URL=
 ENV CODEGATE_APP_LOG_LEVEL=WARNING
 ENV CODEGATE_LOG_FORMAT=TEXT
 
+# Define volumes for persistent data
+VOLUME ["/app/weaviate_data", "/app/models"]
+
 # Set the container's default entrypoint
 EXPOSE 8989
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]

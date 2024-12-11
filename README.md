@@ -159,6 +159,9 @@ docker run -p 8989:8989 -p 8990:80 ghcr.io/stacklok/codegate/codegate:latest
 
 # With persistent data
 docker run -p 8989:8989 -p 8990:80 -v /path/to/volume:/app/weaviate_data ghcr.io/stacklok/codegate/codegate:latest
+
+# With persistent models
+docker run -p 8989:8989 -p 8990:80 -v /path/to/volume:/app/models ghcr.io/stacklok/codegate/codegate:latest
 ```
 
 ### Exposed parameters
