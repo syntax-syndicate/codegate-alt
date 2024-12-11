@@ -2,14 +2,15 @@
 
 # Network settings
 port: 8989           # Port to listen on (1-65535)
+proxy_port: 8990     # Proxy port to listen on (1-65535)
 host: "localhost"      # Host to bind to (use localhost for all interfaces)
 
 # Logging configuration
 log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG
 
 # Note: This configuration can be overridden by:
-# 1. CLI arguments (--port, --host, --log-level)
-# 2. Environment variables (CODEGATE_APP_PORT, CODEGATE_APP_HOST, CODEGATE_APP_LOG_LEVEL)
+# 1. CLI arguments (--port, --proxy-port, --host, --log-level)
+# 2. Environment variables (CODEGATE_APP_PORT, CODEGATE_APP_PROXY_PORT, CODEGATE_APP_HOST, CODEGATE_APP_LOG_LEVEL)
 
 # Provider URLs
 provider_urls:
@@ -25,6 +26,22 @@ provider_urls:
 # --vllm-url
 # --openai-url
 # --anthropic-url
+
+# Certificate configuration
+certs_dir: "./certs"  # Directory for certificate files
+ca_cert: "ca.crt"     # CA certificate file name
+ca_key: "ca.key"      # CA key file name
+server_cert: "server.crt"  # Server certificate file name
+server_key: "server.key"   # Server key file name
+
+# Note: Certificate configuration can be overridden by:
+# 1. CLI arguments (--certs-dir, --ca-cert, --ca-key, --server-cert, --server-key)
+# 2. Environment variables:
+#    CODEGATE_CERTS_DIR
+#    CODEGATE_CA_CERT
+#    CODEGATE_CA_KEY
+#    CODEGATE_SERVER_CERT
+#    CODEGATE_SERVER_KEY
 
 # Embedding model configuration
 

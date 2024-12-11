@@ -12,6 +12,7 @@ The configuration system in Codegate is managed through the `Config` class in `c
 ## Default Configuration Values
 
 - Port: 8989
+- Proxy Port: 8990
 - Host: "localhost"
 - Log Level: "INFO"
 - Log Format: "JSON"
@@ -21,6 +22,12 @@ The configuration system in Codegate is managed through the `Config` class in `c
   - OpenAI: "https://api.openai.com/v1"
   - Anthropic: "https://api.anthropic.com/v1"
   - Ollama: "http://localhost:11434"
+- Certificate Configuration:
+  - Certs Directory: "./certs"
+  - CA Certificate: "ca.crt"
+  - CA Key: "ca.key"
+  - Server Certificate: "server.crt"
+  - Server Key: "server.key"
 
 ## Configuration Methods
 
@@ -35,6 +42,7 @@ config = Config.from_file("config.yaml")
 Example config.yaml:
 ```yaml
 port: 8989
+proxy_port: 8990
 host: localhost
 log_level: INFO
 log_format: JSON
@@ -43,6 +51,11 @@ provider_urls:
   openai: "https://api.openai.com/v1"
   anthropic: "https://api.anthropic.com/v1"
   ollama: "http://localhost:11434"
+certs_dir: "./certs"
+ca_cert: "ca.crt"
+ca_key: "ca.key"
+server_cert: "server.crt"
+server_key: "server.key"
 ```
 
 ### From Environment Variables
@@ -50,6 +63,7 @@ provider_urls:
 Environment variables are automatically loaded with these mappings:
 
 - `CODEGATE_APP_PORT`: Server port
+- `CODEGATE_APP_PROXY_PORT`: Server proxy port
 - `CODEGATE_APP_HOST`: Server host
 - `CODEGATE_APP_LOG_LEVEL`: Logging level
 - `CODEGATE_LOG_FORMAT`: Log format
@@ -58,12 +72,40 @@ Environment variables are automatically loaded with these mappings:
 - `CODEGATE_PROVIDER_OPENAI_URL`: OpenAI provider URL
 - `CODEGATE_PROVIDER_ANTHROPIC_URL`: Anthropic provider URL
 - `CODEGATE_PROVIDER_OLLAMA_URL`: Ollama provider URL
+- `CODEGATE_CERTS_DIR`: Directory for certificate files
+- `CODEGATE_CA_CERT`: CA certificate file name
+- `CODEGATE_CA_KEY`: CA key file name
+- `CODEGATE_SERVER_CERT`: Server certificate file name
+- `CODEGATE_SERVER_KEY`: Server key file name
 
 ```python
 config = Config.from_env()
 ```
 
 ## Configuration Options
+
+### Network Settings
+
+Network settings can be configured in several ways:
+
+1. In Configuration File:
+   ```yaml
+   port: 8989           # Port to listen on (1-65535)
+   proxy_port: 8990     # Proxy port to listen on (1-65535)
+   host: "localhost"    # Host to bind to
+   ```
+
+2. Via Environment Variables:
+   ```bash
+   export CODEGATE_APP_PORT=8989
+   export CODEGATE_APP_PROXY_PORT=8990
+   export CODEGATE_APP_HOST=localhost
+   ```
+
+3. Via CLI Flags:
+   ```bash
+   codegate serve --port 8989 --proxy-port 8990 --host localhost
+   ```
 
 ### Provider URLs
 
@@ -94,6 +136,33 @@ Provider URLs can be configured in several ways:
 Note: 
 - For the vLLM provider, the /v1 path is automatically appended to the base URL if not present.
 - For the Ollama provider, the /api path is automatically appended to the base URL if not present.
+
+### Certificate Configuration
+
+Certificate files can be configured in several ways:
+
+1. In Configuration File:
+   ```yaml
+   certs_dir: "./certs"
+   ca_cert: "ca.crt"
+   ca_key: "ca.key"
+   server_cert: "server.crt"
+   server_key: "server.key"
+   ```
+
+2. Via Environment Variables:
+   ```bash
+   export CODEGATE_CERTS_DIR=./certs
+   export CODEGATE_CA_CERT=ca.crt
+   export CODEGATE_CA_KEY=ca.key
+   export CODEGATE_SERVER_CERT=server.crt
+   export CODEGATE_SERVER_KEY=server.key
+   ```
+
+3. Via CLI Flags:
+   ```bash
+   codegate serve --certs-dir ./certs --ca-cert ca.crt --ca-key ca.key --server-cert server.crt --server-key server.key
+   ```
 
 ### Log Levels
 
@@ -160,6 +229,7 @@ prompt = config.prompts.prompt_name
 The configuration system uses a custom `ConfigurationError` exception for handling configuration-related errors, such as:
 
 - Invalid port numbers (must be between 1 and 65535)
+- Invalid proxy port numbers (must be between 1 and 65535)
 - Invalid log levels
 - Invalid log formats
 - YAML parsing errors

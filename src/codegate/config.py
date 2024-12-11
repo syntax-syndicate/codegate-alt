@@ -32,6 +32,7 @@ class Config:
     __config = None
 
     port: int = 8989
+    proxy_port: int = 8990  # New proxy port configuration
     host: str = "localhost"
     log_level: LogLevel = LogLevel.INFO
     log_format: LogFormat = LogFormat.JSON
@@ -43,6 +44,13 @@ class Config:
     embedding_model: str = "all-minilm-L6-v2-q5_k_m.gguf"
     db_path: Optional[str] = None
 
+    # Certificate configuration
+    certs_dir: str = "./certs"
+    ca_cert: str = "ca.crt"
+    ca_key: str = "ca.key"
+    server_cert: str = "server.crt"
+    server_key: str = "server.key"
+
     # Provider URLs with defaults
     provider_urls: Dict[str, str] = field(default_factory=lambda: DEFAULT_PROVIDER_URLS.copy())
 
@@ -50,6 +58,9 @@ class Config:
         """Validate configuration after initialization."""
         if not isinstance(self.port, int) or not (1 <= self.port <= 65535):
             raise ConfigurationError("Port must be between 1 and 65535")
+            
+        if not isinstance(self.proxy_port, int) or not (1 <= self.proxy_port <= 65535):
+            raise ConfigurationError("Proxy port must be between 1 and 65535")
 
         if not isinstance(self.log_level, LogLevel):
             try:
@@ -116,6 +127,7 @@ class Config:
 
             return cls(
                 port=config_data.get("port", cls.port),
+                proxy_port=config_data.get("proxy_port", cls.proxy_port),
                 host=config_data.get("host", cls.host),
                 log_level=config_data.get("log_level", cls.log_level.value),
                 log_format=config_data.get("log_format", cls.log_format.value),
@@ -125,6 +137,11 @@ class Config:
                     "chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers
                 ),
                 embedding_model=config_data.get("embedding_model", cls.embedding_model),
+                certs_dir=config_data.get("certs_dir", cls.certs_dir),
+                ca_cert=config_data.get("ca_cert", cls.ca_cert),
+                ca_key=config_data.get("ca_key", cls.ca_key),
+                server_cert=config_data.get("server_cert", cls.server_cert),
+                server_key=config_data.get("server_key", cls.server_key),
                 prompts=prompts_config,
                 provider_urls=provider_urls,
             )
@@ -146,6 +163,8 @@ class Config:
 
             if "CODEGATE_APP_PORT" in os.environ:
                 config.port = int(os.environ["CODEGATE_APP_PORT"])
+            if "CODEGATE_APP_PROXY_PORT" in os.environ:
+                config.proxy_port = int(os.environ["CODEGATE_APP_PROXY_PORT"])
             if "CODEGATE_APP_HOST" in os.environ:
                 config.host = os.environ["CODEGATE_APP_HOST"]
             if "CODEGATE_APP_LOG_LEVEL" in os.environ:
@@ -156,6 +175,18 @@ class Config:
                 config.prompts = PromptConfig.from_file(
                     os.environ["CODEGATE_PROMPTS_FILE"]
                 )  # noqa: E501
+
+            # Load certificate configuration from environment
+            if "CODEGATE_CERTS_DIR" in os.environ:
+                config.certs_dir = os.environ["CODEGATE_CERTS_DIR"]
+            if "CODEGATE_CA_CERT" in os.environ:
+                config.ca_cert = os.environ["CODEGATE_CA_CERT"]
+            if "CODEGATE_CA_KEY" in os.environ:
+                config.ca_key = os.environ["CODEGATE_CA_KEY"]
+            if "CODEGATE_SERVER_CERT" in os.environ:
+                config.server_cert = os.environ["CODEGATE_SERVER_CERT"]
+            if "CODEGATE_SERVER_KEY" in os.environ:
+                config.server_key = os.environ["CODEGATE_SERVER_KEY"]
 
             # Load provider URLs from environment variables
             for provider in DEFAULT_PROVIDER_URLS.keys():
@@ -173,12 +204,18 @@ class Config:
         config_path: Optional[Union[str, Path]] = None,
         prompts_path: Optional[Union[str, Path]] = None,
         cli_port: Optional[int] = None,
+        cli_proxy_port: Optional[int] = None,
         cli_host: Optional[str] = None,
         cli_log_level: Optional[str] = None,
         cli_log_format: Optional[str] = None,
         cli_provider_urls: Optional[Dict[str, str]] = None,
         model_base_path: Optional[str] = None,
         embedding_model: Optional[str] = None,
+        certs_dir: Optional[str] = None,
+        ca_cert: Optional[str] = None,
+        ca_key: Optional[str] = None,
+        server_cert: Optional[str] = None,
+        server_key: Optional[str] = None,
         db_path: Optional[str] = None,
     ) -> "Config":
         """Load configuration with priority resolution.
@@ -193,12 +230,18 @@ class Config:
             config_path: Optional path to config file
             prompts_path: Optional path to prompts file
             cli_port: Optional CLI port override
+            cli_proxy_port: Optional CLI proxy port override
             cli_host: Optional CLI host override
             cli_log_level: Optional CLI log level override
             cli_log_format: Optional CLI log format override
             cli_provider_urls: Optional dict of provider URLs from CLI
             model_base_path: Optional path to model base directory
             embedding_model: Optional name of the model to use for embeddings
+            certs_dir: Optional path to certificates directory
+            ca_cert: Optional path to CA certificate
+            ca_key: Optional path to CA key
+            server_cert: Optional path to server certificate
+            server_key: Optional path to server key
             db_path: Optional path to the SQLite database file
 
         Returns:
@@ -222,6 +265,8 @@ class Config:
         env_config = cls.from_env()
         if "CODEGATE_APP_PORT" in os.environ:
             config.port = env_config.port
+        if "CODEGATE_APP_PROXY_PORT" in os.environ:
+            config.proxy_port = env_config.proxy_port
         if "CODEGATE_APP_HOST" in os.environ:
             config.host = env_config.host
         if "CODEGATE_APP_LOG_LEVEL" in os.environ:
@@ -234,6 +279,16 @@ class Config:
             config.model_base_path = env_config.model_base_path
         if "CODEGATE_EMBEDDING_MODEL" in os.environ:
             config.embedding_model = env_config.embedding_model
+        if "CODEGATE_CERTS_DIR" in os.environ:
+            config.certs_dir = env_config.certs_dir
+        if "CODEGATE_CA_CERT" in os.environ:
+            config.ca_cert = env_config.ca_cert
+        if "CODEGATE_CA_KEY" in os.environ:
+            config.ca_key = env_config.ca_key
+        if "CODEGATE_SERVER_CERT" in os.environ:
+            config.server_cert = env_config.server_cert
+        if "CODEGATE_SERVER_KEY" in os.environ:
+            config.server_key = env_config.server_key
 
         # Override provider URLs from environment
         for provider, url in env_config.provider_urls.items():
@@ -242,6 +297,8 @@ class Config:
         # Override with CLI arguments
         if cli_port is not None:
             config.port = cli_port
+        if cli_proxy_port is not None:
+            config.proxy_port = cli_proxy_port
         if cli_host is not None:
             config.host = cli_host
         if cli_log_level is not None:
@@ -256,6 +313,16 @@ class Config:
             config.model_base_path = model_base_path
         if embedding_model is not None:
             config.embedding_model = embedding_model
+        if certs_dir is not None:
+            config.certs_dir = certs_dir
+        if ca_cert is not None:
+            config.ca_cert = ca_cert
+        if ca_key is not None:
+            config.ca_key = ca_key
+        if server_cert is not None:
+            config.server_cert = server_cert
+        if server_key is not None:
+            config.server_key = server_key
         if db_path is not None:
             config.db_path = db_path
 
