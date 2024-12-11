@@ -19,15 +19,8 @@ class CoPilotMappings(BaseSettings):
         ("/copilot/proxy", "https://copilot-proxy.githubusercontent.com"),
         ("/origin-tracker", "https://origin-tracker.githubusercontent.com"),
         ("/copilot/suggestions", "https://githubcopilot.com"),
-        ("/copilot/enterprise", "https://enterprise.githubcopilot.com"), # will need pr-proxy logic
-        ("/copilot/business", "https://business.githubcopilot.com"), # will need pr-proxy logic
-        ("/copilot/enterprise", "https://enterprise.githubcopilot.com"), # will need pr-proxy logic
-        ("/chat/completions", "https://api.enterprise.githubcopilot.com"), # will need pr-proxy logic
         ("/copilot_internal/user", "https://api.github.com"),
         ("/copilot_internal/v2/token", "https://api.github.com"),
-        ("/models", "https://api.enterprise.githubcopilot.com"),
-        ("/agents", "https://api.enterprise.githubcopilot.com"), # will need pr-proxy logic
-        ("/_ping", "https://api.enterprise.githubcopilot.com"), # will need pr-proxy logic
         ("/telemety", "https://copilot-telemetry.githubusercontent.com"),
         ("/", "https://github.com"),
         ("/login/oauth/access_token", "https://github.com/login/oauth/access_token"),
@@ -35,7 +28,6 @@ class CoPilotMappings(BaseSettings):
         ("/api/copilot_internal", "https://api.github.com/copilot_internal"),
         ("/v1/completions", "https://copilot-proxy.githubusercontent.com/v1/completions"),
         ("/v1", "https://copilot-proxy.githubusercontent.com/v1"),
-        ("v1/engines/copilot-codex/completions", "https://proxy.enterprise.githubcopilot.com/v1/engines/copilot-codex/completions"), # will need pr-proxy logic
     ]
 
     # Headers configuration
