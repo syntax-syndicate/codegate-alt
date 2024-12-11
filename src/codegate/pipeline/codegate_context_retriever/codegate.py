@@ -69,6 +69,19 @@ class CodegateContextRetriever(PipelineStep):
         logger.info(f"Packages in user query: {packages}")
         return packages
 
+    async def __lookup_ecosystem(self, user_query: str, context: PipelineContext):
+        # Use PackageExtractor to extract ecosystem from the user query
+        ecosystem = await PackageExtractor.extract_ecosystem(
+            content=user_query,
+            provider=context.sensitive.provider,
+            model=context.sensitive.model,
+            api_key=context.sensitive.api_key,
+            base_url=context.sensitive.api_base,
+        )
+
+        logger.info(f"Ecosystem in user query: {ecosystem}")
+        return ecosystem
+
     async def process(
         self, request: ChatCompletionRequest, context: PipelineContext
     ) -> PipelineResult:
@@ -84,7 +97,9 @@ class CodegateContextRetriever(PipelineStep):
             return PipelineResult(request=request)
 
         # Extract packages from the user message
+        print("in context retriefver")
         last_user_message_str, last_user_idx = last_user_message
+        ecosystem = await self.__lookup_ecosystem(last_user_message_str, context)
         packages = await self.__lookup_packages(last_user_message_str, context)
         packages = [pkg.lower() for pkg in packages]
 
