@@ -34,8 +34,7 @@ jobs:
       id: download-json-data
       uses: dawidd6/action-download-artifact@v7
       with:
-        github_token: ${{ github.token }}
-        repo: codegate-data
+        repo: stacklok/codegate-data
         workflow: ".github/workflows/generate-artifact.yml"
         workflow_conclusion: success
         name: jsonl-files
