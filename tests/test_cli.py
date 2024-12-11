@@ -1,7 +1,5 @@
 """Tests for the CLI module."""
 
-import asyncio
-import signal
 from pathlib import Path
 from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -11,8 +9,6 @@ from click.testing import CliRunner
 from uvicorn.config import Config as UvicornConfig
 
 from codegate.cli import UvicornServer, cli
-from codegate.codegate_logging import LogFormat, LogLevel
-from codegate.config import DEFAULT_PROVIDER_URLS
 
 
 @pytest.fixture
@@ -73,8 +69,8 @@ def test_cli_version(cli_runner: CliRunner) -> None:
     assert result.exit_code == 0
 
 
-#@pytest.mark.asyncio
-#async def test_uvicorn_server_serve(mock_uvicorn_server: UvicornServer) -> None:
+# @pytest.mark.asyncio
+# async def test_uvicorn_server_serve(mock_uvicorn_server: UvicornServer) -> None:
 #    """Test UvicornServer serve method."""
 #    # Start server in background task
 #    server_task = asyncio.create_task(mock_uvicorn_server.serve())
@@ -90,8 +86,8 @@ def test_cli_version(cli_runner: CliRunner) -> None:
 #    await server_task
 
 
-#@pytest.mark.asyncio
-#async def test_uvicorn_server_cleanup(mock_uvicorn_server: UvicornServer) -> None:
+# @pytest.mark.asyncio
+# async def test_uvicorn_server_cleanup(mock_uvicorn_server: UvicornServer) -> None:
 #    """Test UvicornServer cleanup method."""
 #    # Start server
 #    server_task = asyncio.create_task(mock_uvicorn_server.serve())
@@ -107,8 +103,8 @@ def test_cli_version(cli_runner: CliRunner) -> None:
 #    await server_task
 
 
-#@pytest.mark.asyncio
-#async def test_uvicorn_server_signal_handling(mock_uvicorn_server: UvicornServer) -> None:
+# @pytest.mark.asyncio
+# async def test_uvicorn_server_signal_handling(mock_uvicorn_server: UvicornServer) -> None:
 #    """Test signal handling in UvicornServer."""
 #    # Mock signal handlers
 #    with patch("asyncio.get_running_loop") as mock_loop:
@@ -143,11 +139,11 @@ def test_serve_default_options(
         result = cli_runner.invoke(cli, ["serve"])
 
         assert result.exit_code == 0
-        #mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
-        #mock_logging.assert_called_with("codegate")
+        # mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
+        # mock_logging.assert_called_with("codegate")
 
         # validate only a subset of the expected extra arguments
-        #expected_extra = {
+        # expected_extra = {
         #    "host": "localhost",
         #    "port": 8989,
         #    "log_level": "INFO",
@@ -155,16 +151,16 @@ def test_serve_default_options(
         #    "prompts_loaded": 7,
         #    "provider_urls": DEFAULT_PROVIDER_URLS,
         #    "certs_dir": "./certs",  # Default certificate directory
-        #}
+        # }
 
         # Retrieve the actual call arguments
-        #calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
+        # calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
         # Check if one of the calls matches the expected subset
-        #assert any(
+        # assert any(
         #    all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
         #    for actual_extra in calls
-        #)
+        # )
         mock_run.assert_called_once()
 
 
@@ -201,13 +197,13 @@ def test_serve_custom_options(
         )
 
         assert result.exit_code == 0
-        #mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.TEXT)
-        #mock_logging.assert_called_with("codegate")
+        # mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.TEXT)
+        # mock_logging.assert_called_with("codegate")
 
         # Retrieve the actual call arguments
-        #calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
+        # calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
-        #expected_extra = {
+        # expected_extra = {
         #    "host": "localhost",
         #    "port": 8989,
         #    "log_level": "DEBUG",
@@ -215,13 +211,13 @@ def test_serve_custom_options(
         #    "prompts_loaded": 7,  # Default prompts are loaded
         #    "provider_urls": DEFAULT_PROVIDER_URLS,
         #    "certs_dir": "./custom-certs",
-        #}
+        # }
 
         # Check if one of the calls matches the expected subset
-        #assert any(
+        # assert any(
         #    all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
         #    for actual_extra in calls
-        #)
+        # )
         mock_run.assert_called_once()
 
 
@@ -249,13 +245,13 @@ def test_serve_with_config_file(
         result = cli_runner.invoke(cli, ["serve", "--config", str(temp_config_file)])
 
         assert result.exit_code == 0
-        #mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.JSON)
-        #mock_logging.assert_called_with("codegate")
+        # mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.JSON)
+        # mock_logging.assert_called_with("codegate")
 
         # Retrieve the actual call arguments
-        #calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
+        # calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
-        #expected_extra = {
+        # expected_extra = {
         #    "host": "localhost",
         #    "port": 8989,
         #    "log_level": "DEBUG",
@@ -263,13 +259,13 @@ def test_serve_with_config_file(
         #    "prompts_loaded": 7,  # Default prompts are loaded
         #    "provider_urls": DEFAULT_PROVIDER_URLS,
         #    "certs_dir": "./test-certs",  # From config file
-        #}
+        # }
 
         # Check if one of the calls matches the expected subset
-        #assert any(
+        # assert any(
         #    all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
         #    for actual_extra in calls
-        #)
+        # )
         mock_run.assert_called_once()
 
 
@@ -319,13 +315,13 @@ def test_serve_priority_resolution(
         )
 
         assert result.exit_code == 0
-        #mock_setup_logging.assert_called_once_with(LogLevel.ERROR, LogFormat.TEXT)
-        #mock_logging.assert_called_with("codegate")
+        # mock_setup_logging.assert_called_once_with(LogLevel.ERROR, LogFormat.TEXT)
+        # mock_logging.assert_called_with("codegate")
 
         # Retrieve the actual call arguments
-        #calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
+        # calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
-        #expected_extra = {
+        # expected_extra = {
         #    "host": "example.com",
         #    "port": 8080,
         #    "log_level": "ERROR",
@@ -333,13 +329,13 @@ def test_serve_priority_resolution(
         #    "prompts_loaded": 7,  # Default prompts are loaded
         #    "provider_urls": DEFAULT_PROVIDER_URLS,
         #    "certs_dir": "./cli-certs",  # CLI args override config file
-        #}
+        # }
 
         # Check if one of the calls matches the expected subset
-        #assert any(
+        # assert any(
         #    all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
         #    for actual_extra in calls
-        #)
+        # )
         mock_run.assert_called_once()
 
 
@@ -368,13 +364,13 @@ def test_serve_certificate_options(
         )
 
         assert result.exit_code == 0
-        #mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
-        #mock_logging.assert_called_with("codegate")
+        # mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
+        # mock_logging.assert_called_with("codegate")
 
         # Retrieve the actual call arguments
-        #calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
+        # calls = [call[1]["extra"] for call in logger_instance.info.call_args_list]
 
-        #expected_extra = {
+        # expected_extra = {
         #    "host": "localhost",
         #    "port": 8989,
         #    "log_level": "INFO",
@@ -382,13 +378,13 @@ def test_serve_certificate_options(
         #    "prompts_loaded": 6,
         #    "provider_urls": DEFAULT_PROVIDER_URLS,
         #    "certs_dir": "./custom-certs",
-        #}
+        # }
 
         # Check if one of the calls matches the expected subset
-        #assert any(
+        # assert any(
         #    all(expected_extra[k] == actual_extra.get(k) for k in expected_extra)
         #    for actual_extra in calls
-        #)
+        # )
         mock_run.assert_called_once()
 
 

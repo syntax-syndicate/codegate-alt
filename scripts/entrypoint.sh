@@ -7,6 +7,7 @@ BACKUP_PATH="/tmp/weaviate_backup"
 BACKUP_NAME="backup"
 MODEL_BASE_PATH="/app/codegate_volume/models"
 CODEGATE_DB_FILE="/app/codegate_volume/db/codegate.db"
+CODEGATE_CERTS="/app/codegate_volume/certs"
 
 # Function to restore backup if paths are provided
 restore_backup() {
@@ -20,6 +21,11 @@ restore_backup() {
     else
         echo "Backup path or mode not provided. Skipping restore."
     fi
+}
+
+genrerate_certs() {
+    echo "Generating certificates..."
+    python -m src.codegate.cli generate-certs --certs-out-dir "$CODEGATE_CERTS"
 }
 
 # Function to start Nginx server for the dashboard
@@ -54,8 +60,11 @@ echo "Initializing entrypoint script..."
 # Step 1: Restore backup if applicable
 restore_backup
 
-# Step 2: Start the dashboard
+# Step 2: Generate certificates
+genrerate_certs
+
+# Step 3: Start the dashboard
 start_dashboard
 
-# Step 3: Start the main application
+# Step 4: Start the main application
 start_application

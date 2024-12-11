@@ -47,4 +47,4 @@ weaviate_data/
 codegate.db
 
 # certificate directory
-certs/
+*certs/

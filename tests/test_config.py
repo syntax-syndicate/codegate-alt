@@ -17,7 +17,7 @@ def test_default_config(default_config: Config) -> None:
     assert default_config.log_format == LogFormat.JSON
     assert default_config.provider_urls == DEFAULT_PROVIDER_URLS
     # Test default certificate configuration
-    assert default_config.certs_dir == "./certs"
+    assert default_config.certs_dir == "./codegate_volume/certs"
     assert default_config.ca_cert == "ca.crt"
     assert default_config.ca_key == "ca.key"
     assert default_config.server_cert == "server.crt"
