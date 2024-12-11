@@ -84,7 +84,7 @@ def generate_certificates(cert_dir="certs"):
     # CA END
 
     # SERVER BEGIN
-    
+
     # Generate new certificate for domain
     server_key = rsa.generate_private_key(
         public_exponent=65537,
@@ -150,11 +150,13 @@ def generate_certificates(cert_dir="certs"):
     print("\nTo trust these certificates:")
     print("\nOn macOS:")
     print(
-        "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/server.crt"
+        "sudo security add-trusted-cert -d -r trustRoot "
+        "-k /Library/Keychains/System.keychain certs/server.crt"
     )
     print("\nOn Windows (PowerShell as Admin):")
     print(
-        'Import-Certificate -FilePath "certs\\server.crt" -CertStoreLocation Cert:\\LocalMachine\\Root'
+        'Import-Certificate -FilePath "certs\\server.crt" '
+        '-CertStoreLocation Cert:\\LocalMachine\\Root'
     )
     print("\nOn Linux:")
     print("sudo cp certs/server.crt /usr/local/share/ca-certificates/proxy-pilot.crt")

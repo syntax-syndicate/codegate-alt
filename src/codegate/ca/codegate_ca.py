@@ -297,7 +297,7 @@ class CertificateAuthority:
 
         # CA generated, now generate server certificate
 
-        ## Generate new certificate for domain
+        # Generate new certificate for domain
         logger.debug("Generating private key for server")
         server_key = rsa.generate_private_key(
             public_exponent=65537,
@@ -373,11 +373,13 @@ class CertificateAuthority:
         print("\nTo trust these certificates:")
         print("\nOn macOS:")
         print(
-            "`sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt"
+            "`sudo security add-trusted-cert -d -r trustRoot "
+            "-k /Library/Keychains/System.keychain certs/ca.crt"
         )
         print("\nOn Windows (PowerShell as Admin):")
         print(
-            'Import-Certificate -FilePath "certs\\ca.crt" -CertStoreLocation Cert:\\LocalMachine\\Root'
+            'Import-Certificate -FilePath "certs\\ca.crt" '
+            '-CertStoreLocation Cert:\\LocalMachine\\Root'
         )
         print("\nOn Linux:")
         print("sudo cp certs/ca.crt /usr/local/share/ca-certificates/codegate.crt")
@@ -433,7 +435,8 @@ class CertificateAuthority:
             self.generate_certificates()
         else:
             logger.debug(
-                f"Certificates found at: {Config.get_config().server_cert} and {Config.get_config().server_key}"
+                f"Certificates found at: {Config.get_config().server_cert} "
+                "and {Config.get_config().server_key}"
             )
 
     def get_ssl_context(self) -> ssl.SSLContext:
