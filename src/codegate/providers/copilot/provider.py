@@ -7,8 +7,6 @@ from urllib.parse import unquote, urljoin, urlparse
 import structlog
 
 from codegate.config import Config
-
-# from codegate.codegate_logging import log_error, log_proxy_forward, logger
 from codegate.ca.codegate_ca import CertificateAuthority
 from codegate.providers.copilot.mapping import VALIDATED_ROUTES 
 
@@ -39,6 +37,7 @@ class CopilotProvider(asyncio.Protocol):
         self.target = None
         self.original_path = None
         self.ssl_context = None
+        self.proxy_ep = None
         self.decrypted_data = bytearray()
         # Get the singleton instance of CertificateAuthority
         self.ca = CertificateAuthority.get_instance()
@@ -60,6 +59,30 @@ class CopilotProvider(asyncio.Protocol):
         elif full_path.startswith('/'):
             return full_path.lstrip('/')
         return full_path
+    
+    def get_headers(self) -> Dict[str, str]:
+        """Get request headers as a dictionary"""
+        logger.debug("Getting headers as dictionary fn: get_headers")
+        headers_dict = {}
+
+        try:
+            if b'\r\n\r\n' not in self.buffer:
+                return {}
+
+            headers_end = self.buffer.index(b'\r\n\r\n')
+            headers = self.buffer[:headers_end].split(b'\r\n')[1:]  # Skip request line
+
+            for header in headers:
+                try:
+                    name, value = header.decode('utf-8').split(':', 1)
+                    headers_dict[name.strip().lower()] = value.strip()
+                except ValueError:
+                    continue
+                    
+            return headers_dict
+        except Exception as e:
+            logger.error(f"Error getting headers: {e}")
+            return {}
 
     def parse_headers(self) -> bool:
         logger.debug("Parsing headers fn: parse_headers")
@@ -84,48 +107,27 @@ class CopilotProvider(asyncio.Protocol):
                 self.path = self.extract_path(full_path)
 
             self.headers = [header.decode('utf-8') for header in headers[1:]]
-
-            logger.debug("=" * 40)
-            logger.debug("=== Inbound Request ===")
-            logger.debug(f"Method: {self.method}")
-            logger.debug(f"Original Path: {self.original_path}")
-            logger.debug(f"Extracted Path: {self.path}")
-            logger.debug(f"Version: {self.version}")
-            logger.debug("Headers:")
-
-            logger.debug("=" * 40)
-
-            logger.debug("Searching for proxy-ep header value")
-            proxy_ep_value = None
-
-            for header in self.headers:
-                logger.debug(f"  {header}")
-                if header.lower().startswith("authorization:"):
-                    match = re.search(r"proxy-ep=([^;]+)", header)
-                    if match:
-                        proxy_ep_value = match.group(1)
-
-            if proxy_ep_value:
-                logger.debug(f"Extracted proxy-ep value: {proxy_ep_value}")
-            else:
-                logger.debug("proxy-ep value not found.")
-            logger.debug("=" * 40)
-
             return True
         except Exception as e:
             logger.error(f"Error parsing headers: {e}")
             return False
 
     def log_decrypted_data(self, data: bytes, direction: str):
+        '''
+        Uncomment to log data from payload
+        '''
         try:
-            decoded = data.decode('utf-8')
-            logger.debug(f"=== Decrypted {direction} Data ===")
-            logger.debug(decoded)
-            logger.debug("=" * 40)
+            # decoded = data.decode('utf-8')
+            # logger.debug(f"=== Decrypted {direction} Data ===")
+            # logger.debug(decoded)
+            # logger.debug("=" * 40)
+            pass
         except UnicodeDecodeError:
-            logger.debug(f"=== Decrypted {direction} Data (hex) ===")
-            logger.debug(data.hex())
-            logger.debug("=" * 40)
+            # pass
+            # logger.debug(f"=== Decrypted {direction} Data (hex) ===")
+            # logger.debug(data.hex())
+            # logger.debug("=" * 40)
+            pass
 
     async def handle_http_request(self):
         logger.debug("Handling HTTP request fn: handle_http_request")
@@ -133,18 +135,41 @@ class CopilotProvider(asyncio.Protocol):
         logger.debug(f"Method: {self.method}")
         logger.debug(f"Searched Path: {self.path} in target URL")
         try:
-            target_url = await self.get_target_url(self.path)
-            logger.debug(f"Target URL: {target_url}")
+            # Extract proxy endpoint from authorization header if present
+            headers_dict = self.get_headers()
+            auth_header = headers_dict.get('authorization', '')
+            if auth_header:
+                match = re.search(r"proxy-ep=([^;]+)", auth_header)
+                if match:
+                    self.proxy_ep = match.group(1)
+                    logger.debug(f"Extracted proxy-ep value: {self.proxy_ep}")
+
+                    # Check if the proxy_ep includes a scheme
+                    parsed_proxy_ep = urlparse(self.proxy_ep)
+                    if not parsed_proxy_ep.scheme:
+                        # Default to https if no scheme is provided
+                        self.proxy_ep = f"https://{self.proxy_ep}"
+                        logger.debug(f"Added default scheme to proxy-ep: {self.proxy_ep}")
+
+                    target_url = f"{self.proxy_ep}/{self.path}"
+                else:
+                    target_url = await self.get_target_url(self.path)
+            else:
+                target_url = await self.get_target_url(self.path)
+
             if not target_url:
                 self.send_error_response(404, b"Not Found")
                 return
-            logger.debug(f"target URL {target_url}")
+            logger.debug(f"Target URL: {target_url}")
+
+            logger.debug(f"Target URL: {target_url}")
 
             parsed_url = urlparse(target_url)
             logger.debug(f"Parsed URL {parsed_url}")
+
             self.target_host = parsed_url.hostname
             self.target_port = parsed_url.port or (443 if parsed_url.scheme == 'https' else 80)
-            logger.debug("=" * 40)
+
             target_protocol = CopilotProxyTargetProtocol(self)
             logger.debug(f"Connecting to {self.target_host}:{self.target_port}")
             await self.loop.create_connection(
@@ -227,7 +252,16 @@ class CopilotProvider(asyncio.Protocol):
             logger.error(f"Error in data_received: {e}")
             self.send_error_response(502, str(e).encode())
 
+ 
     def handle_connect(self):
+        '''
+        This where requests are sent directly via the tunnel created during
+        a CONNECT request. This is where the SSL context is created and the
+        internal connection is made to the target host.
+
+        We do not need to do a URL to mapping, as this passes through the
+        tunnel with a FQDN already set by the source (client) request.
+        '''
         try:
             path = unquote(self.target)
             if ':' in path:
@@ -260,7 +294,7 @@ class CopilotProvider(asyncio.Protocol):
         except Exception as e:
             logger.error(f"Error handling CONNECT: {e}")
             self.send_error_response(502, str(e).encode())
-
+    
     def send_error_response(self, status: int, message: bytes):
         logger.debug(f"Sending error response: {status} {message} fn: send_error_response")
         response = (
@@ -397,16 +431,15 @@ class CopilotProvider(asyncio.Protocol):
 
         # Then check for prefix match
         for route in VALIDATED_ROUTES:
-            if path.startswith(route.path):
-                # For prefix matches, keep the rest of the path
-                remaining_path = path[len(route.path):]
-                logger.debug(f"Remaining path: {remaining_path}")
-                # Make sure we don't end up with double slashes
-                if remaining_path and remaining_path.startswith('/'):
-                    remaining_path = remaining_path[1:]
-                target = urljoin(str(route.target), remaining_path)
-                logger.debug(f"Found prefix match: {path} -> {target} (using route {route.path} -> {route.target})")
-                return target
+            # For prefix matches, keep the rest of the path
+            remaining_path = path[len(route.path):]
+            logger.debug(f"Remaining path: {remaining_path}")
+            # Make sure we don't end up with double slashes
+            if remaining_path and remaining_path.startswith('/'):
+                remaining_path = remaining_path[1:]
+            target = urljoin(str(route.target), remaining_path)
+            logger.debug(f"Found prefix match: {path} -> {target} (using route {route.path} -> {route.target})")
+            return target
 
         logger.warning(f"No route found for path: {path}")
         return None
