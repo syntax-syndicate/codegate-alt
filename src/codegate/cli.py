@@ -226,6 +226,7 @@ def show_prompts(prompts: Optional[Path]) -> None:
     type=str,
     default=None,
     help="Server key file name (default: server.key)",
+)
 @click.option(
     "--db-path",
     type=str,
