@@ -162,8 +162,6 @@ class CopilotProvider(asyncio.Protocol):
                 return
             logger.debug(f"Target URL: {target_url}")
 
-            logger.debug(f"Target URL: {target_url}")
-
             parsed_url = urlparse(target_url)
             logger.debug(f"Parsed URL {parsed_url}")
 
