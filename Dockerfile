@@ -117,7 +117,7 @@ VOLUME ["/app/codegate_volume/"]
 USER root
 RUN mkdir -p /app/codegate_volume/db
 # Make codegate user the owner of codegate_volume directory to allow writing to it
-RUN chown -R codegate /app/codegate_volume/db
+RUN chown -R codegate /app/codegate_volume
 USER codegate
 
 # Set the container's default entrypoint
