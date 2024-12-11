@@ -11,6 +11,7 @@ from codegate.config import Config
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
 
 logger = structlog.get_logger("codegate")
+VALID_ECOSYSTEMS = ["npm", "pypi", "crates", "maven", "go"]
 
 schema_config = [
     {
@@ -120,6 +121,7 @@ class StorageEngine:
             return []
 
         try:
+
             packages = self.weaviate_client.collections.get("Package")
             response = packages.query.fetch_objects(
                 filters=Filter.by_property(name).contains_any(properties),
@@ -142,13 +144,16 @@ class StorageEngine:
             logger.error(f"An error occurred: {str(e)}")
             return []
 
-    async def search(self, query: str, limit=5, distance=0.3, packages=None) -> list[object]:
+    async def search(self, query: str, limit=5, distance=0.3, ecosystem=None, packages=None) -> list[object]:
         """
         Search the 'Package' collection based on a query string.
 
         Args:
             query (str): The text query for which to search.
             limit (int): The number of results to return.
+            distance (float): The distance threshold for the search.
+            ecosystem (str): The ecosystem to search in.
+            packages (list): The list of packages to filter the search.
 
         Returns:
             list: A list of matching results with their properties and distances.
@@ -160,11 +165,18 @@ class StorageEngine:
         try:
             collection = self.weaviate_client.collections.get("Package")
             if packages:
+                # filter by packages and ecosystem if present
+                filters = []
+                if ecosystem and ecosystem in VALID_ECOSYSTEMS:
+                    filters.append(wvc.query.Filter.by_property("type").equal(ecosystem))
+                filters.append(wvc.query.Filter.by_property("name").contains_any(packages))
+                print("filters are")
+                print(filters)
                 response = collection.query.near_vector(
                     query_vector[0],
                     limit=limit,
                     distance=distance,
-                    filters=wvc.query.Filter.by_property("name").contains_any(packages),
+                    filters=wvc.query.Filter.all_of(filters),
                     return_metadata=MetadataQuery(distance=True),
                 )
             else:

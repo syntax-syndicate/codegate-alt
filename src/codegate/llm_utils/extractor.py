@@ -63,5 +63,7 @@ class PackageExtractor:
         )
 
         ecosystem = result if isinstance(result, str) else result.get("ecosystem")
+        if ecosystem:
+            ecosystem = ecosystem.lower()
         logger.info(f"Extracted ecosystem: {ecosystem}")
         return ecosystem

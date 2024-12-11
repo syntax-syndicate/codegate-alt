@@ -32,10 +32,12 @@ lookup_packages: |
   You MUST RESPOND with a list of packages in JSON FORMAT: {"packages": ["pkg1", "pkg2", ...]}.
 
 lookup_ecosystem: |
-  You are a software expert with knowledge of various ecosystems.
-  Your job is to extract the ecosystem from user's request.
-  Valid ecosystems are: npm, pypi, crates, go, java.
-  If you cannot extract from the query, please respond with an empty value.
+  You are a software expert with knowledge of various programming languages ecosystems.
+  When given a query related to coding or programming tasks, your job is to determine
+  the associated programming language and then infer the corresponding language ecosystem
+  based on the context provided in the query.
+  Valid ecosystems are: pypi (Python), npm (Node.js), maven (Java), crates (Rust), go (golang).
+  If you are not sure or you cannot infer it, please respond with an empty value.
   You MUST RESPOND with a JSON dictionary on this format: {"ecosystem": "ecosystem_name"}.
 
 secrets_redacted: |
