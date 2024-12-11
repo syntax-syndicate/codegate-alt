@@ -4,15 +4,13 @@ import ssl
 from typing import Dict, Optional, Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse
 
-import httpx
 import structlog
-from fastapi import Request, Response, WebSocket
 
 from codegate.config import Config
 
 # from codegate.codegate_logging import log_error, log_proxy_forward, logger
 from codegate.ca.codegate_ca import CertificateAuthority
-from codegate.providers.copilot.mapping import VALIDATED_ROUTES
+from codegate.providers.copilot.mapping import VALIDATED_ROUTES 
 
 logger = structlog.get_logger("codegate")
 
@@ -412,177 +410,6 @@ class CopilotProvider(asyncio.Protocol):
 
         logger.warning(f"No route found for path: {path}")
         return None
-
-    @classmethod
-    def prepare_headers(cls, request: Union[Request, WebSocket], target_url: str) -> Dict[str, str]:
-        """Prepare headers for the proxy request"""
-        logger.debug(f"Preparing headers for {target_url}")
-        headers = {}
-
-        # Get headers from request
-        logger.debug("Request headers:")
-        if isinstance(request, Request):
-            request_headers = request.headers
-        else:  # WebSocket
-            request_headers = request.headers
-
-        # Copy preserved headers from the original request
-        logger.debug("=" * 40)
-        logger.debug("Preserved headers:")
-        for header, value in request_headers.items():
-            if header.lower() in [h.lower() for h in settings.PRESERVED_HEADERS]:
-                headers[header] = value
-        logger.debug("=" * 40)
-
-        # Add endpoint-specific headers
-        logger.debug("=" * 40)
-        logger.debug("Endpoint headers:")
-        if isinstance(request, Request):
-            path = urlparse(str(request.url)).path
-            if path in settings.ENDPOINT_HEADERS:
-                headers.update(settings.ENDPOINT_HEADERS[path])
-
-        # Set the Host header to match the target
-        target_parsed = urlparse(target_url)
-        headers['Host'] = target_parsed.netloc
-
-        # Remove any headers that shouldn't be forwarded
-        for header in settings.REMOVED_HEADERS:
-            headers.pop(header.lower(), None)
-
-        # Log headers for debugging
-        logger.debug(f"Prepared headers for {target_url}: {headers}")
-        logger.debug("=" * 40)
-
-        return headers
-
-    @classmethod
-    async def forward_request(
-        cls,
-        request: Request,
-        target_url: str,
-        client: httpx.AsyncClient
-    ) -> Tuple[Response, int]:
-        """Forward the request to the target URL"""
-        logger.debug(f"Forwarding request to {target_url} fn: forward_request")
-        try:
-            # Prepare headers
-            headers = cls.prepare_headers(request, target_url)
-
-            # Get request body
-            body = await request.body()
-
-            logger.debug(f"Forwarding {request.method} request to {target_url}")
-            logger.debug(f"Request headers: {headers}")
-            if body:
-                logger.debug(f"Request body length: {len(body)} bytes")
-
-            # Forward the request
-            logger.debug(f"Sending request to {target_url}")
-            response = await client.request(
-                method=request.method,
-                url=target_url,
-                headers=headers,
-                content=body,
-                follow_redirects=True
-            )
-
-            logger.debug(f"Received response from {target_url}: status={response.status_code}")
-            logger.debug(f"Response headers: {dict(response.headers)}")
-
-            # Log the forwarded request
-            logger.debug(f"Forwarded request to {target_url}: {response.status_code}")
-            log_proxy_forward(target_url, request.method, response.status_code)
-
-            # Create FastAPI response
-            logger.debug(f"Creating FastAPI response for {target_url}")
-            return Response(
-                content=response.content,
-                status_code=response.status_code,
-                headers=dict(response.headers)
-            ), response.status_code
-
-        except httpx.RequestError as e:
-            log_error("request_error", str(e), {"target_url": target_url})
-            logger.error(f"Request error for {target_url}: {str(e)}")
-            return Response(
-                content=str(e).encode(),
-                status_code=502,
-                media_type="text/plain"
-            ), 502
-
-        except Exception as e:
-            log_error("proxy_error", str(e), {"target_url": target_url})
-            logger.error(f"Proxy error for {target_url}: {str(e)}")
-            return Response(
-                content=str(e).encode(),
-                status_code=500,
-                media_type="text/plain"
-            ), 500
-
-    @classmethod
-    async def tunnel_websocket(cls, websocket: WebSocket, target_host: str, target_port: int):
-        """Create a tunnel between WebSocket and target server"""
-        logger.debug(f"Creating WebSocket tunnel to {target_host}:{target_port}")
-        try:
-            # Connect to target server
-            reader, writer = await asyncio.open_connection(target_host, target_port)
-
-            # Create bidirectional tunnel
-            logger.debug("Creating bidirectional tunnel")
-
-            async def forward_ws_to_target():
-                logger.debug("Forwarding WS to target")
-                try:
-                    while True:
-                        data = await websocket.receive_bytes()
-                        writer.write(data)
-                        await writer.drain()
-                except Exception as e:
-                    logger.error(f"WS to target error: {e}")
-
-            async def forward_target_to_ws():
-                try:
-                    while True:
-                        data = await reader.read(8192)
-                        if not data:
-                            break
-                        await websocket.send_bytes(data)
-                except Exception as e:
-                    logger.error(f"Target to WS error: {e}")
-
-            # Run both forwarding tasks
-            await asyncio.gather(
-                forward_ws_to_target(),
-                forward_target_to_ws(),
-                return_exceptions=True
-            )
-
-        except Exception as e:
-            log_error("tunnel_error", str(e))
-            await websocket.close(code=1011, reason=str(e))
-        finally:
-            writer.close()
-            try:
-                await writer.wait_closed()
-            except Exception:
-                pass
-
-    @classmethod
-    def create_error_response(cls, status_code: int, message: str) -> Response:
-        """Create an error response"""
-        content = {
-            "error": {
-                "message": message,
-                "type": "proxy_error",
-                "code": status_code
-            }
-        }
-        return Response(
-            content=str(content).encode(),
-            status_code=status_code,
-            media_type="application/json"
-        )
 
 class CopilotProxyTargetProtocol(asyncio.Protocol):
     def __init__(self, proxy: CopilotProvider):
