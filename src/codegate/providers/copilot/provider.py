@@ -8,7 +8,7 @@ import structlog
 
 from codegate.config import Config
 from codegate.ca.codegate_ca import CertificateAuthority
-from codegate.providers.copilot.mapping import VALIDATED_ROUTES 
+from codegate.providers.copilot.mapping import VALIDATED_ROUTES
 
 logger = structlog.get_logger("codegate")
 
@@ -59,7 +59,7 @@ class CopilotProvider(asyncio.Protocol):
         elif full_path.startswith('/'):
             return full_path.lstrip('/')
         return full_path
-    
+
     def get_headers(self) -> Dict[str, str]:
         """Get request headers as a dictionary"""
         logger.debug("Getting headers as dictionary fn: get_headers")
@@ -78,7 +78,7 @@ class CopilotProvider(asyncio.Protocol):
                     headers_dict[name.strip().lower()] = value.strip()
                 except ValueError:
                     continue
-                    
+
             return headers_dict
         except Exception as e:
             logger.error(f"Error getting headers: {e}")
@@ -222,37 +222,58 @@ class CopilotProvider(asyncio.Protocol):
             logger.error(f"Error handling HTTP request: {e}")
             self.send_error_response(502, str(e).encode())
 
-    def data_received(self, data: bytes):
+    def _check_buffer_size(self, new_data: bytes) -> bool:
+        """Check if adding new data would exceed the maximum buffer size"""
+        return len(self.buffer) + len(new_data) <= MAX_BUFFER_SIZE
+
+    def _handle_parsed_headers(self) -> None:
+        """Handle the request based on parsed headers"""
+        if self.method == 'CONNECT':
+            logger.debug("Handling CONNECT request")
+            self.handle_connect()
+        else:
+            logger.debug("Handling HTTP request")
+            asyncio.create_task(self.handle_http_request())
+
+    def _forward_data_to_target(self, data: bytes) -> None:
+        """Forward data to target if connection is established"""
+        if self.target_transport and not self.target_transport.is_closing():
+            self.log_decrypted_data(data, "Client to Server")
+            self.target_transport.write(data)
+
+    def data_received(self, data: bytes) -> None:
+        """Handle received data from the client"""
         logger.debug(f"Data received from {self.peername} fn: data_received")
 
         try:
-            if len(self.buffer) + len(data) > MAX_BUFFER_SIZE:
-                logger.error("Request too large")
+            # Check buffer size limit
+            if not self._check_buffer_size(data):
+                logger.error("Request exceeds maximum buffer size")
                 self.send_error_response(413, b"Request body too large")
                 return
 
+            # Append new data to buffer
             self.buffer.extend(data)
 
             if not self.headers_parsed:
+                # Try to parse headers
                 self.headers_parsed = self.parse_headers()
                 if not self.headers_parsed:
                     return
 
-                if self.method == 'CONNECT':
-                    logger.debug("Handling CONNECT request")
-                    self.handle_connect()
-                else:
-                    logger.debug("Handling HTTP request")
-                    asyncio.create_task(self.handle_http_request())
-            elif self.target_transport and not self.target_transport.is_closing():
-                self.log_decrypted_data(data, "Client to Server")
-                self.target_transport.write(data)
+                # Handle the request based on parsed headers
+                self._handle_parsed_headers()
+            else:
+                # Forward data to target if headers are already parsed
+                self._forward_data_to_target(data)
 
+        except asyncio.CancelledError:
+            logger.warning("Operation cancelled")
+            raise
         except Exception as e:
-            logger.error(f"Error in data_received: {e}")
+            logger.error(f"Error processing received data: {e}")
             self.send_error_response(502, str(e).encode())
 
- 
     def handle_connect(self):
         '''
         This where requests are sent directly via the tunnel created during
@@ -294,7 +315,7 @@ class CopilotProvider(asyncio.Protocol):
         except Exception as e:
             logger.error(f"Error handling CONNECT: {e}")
             self.send_error_response(502, str(e).encode())
-    
+
     def send_error_response(self, status: int, message: bytes):
         logger.debug(f"Sending error response: {status} {message} fn: send_error_response")
         response = (
