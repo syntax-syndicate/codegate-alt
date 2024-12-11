@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 import ssl
 from typing import Dict, Optional, Tuple, Union
@@ -8,13 +9,54 @@ import structlog
 
 from codegate.config import Config
 from codegate.ca.codegate_ca import CertificateAuthority
+from codegate.pipeline.base import PipelineContext
+from codegate.pipeline.factory import PipelineFactory
+from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.copilot.mapping import VALIDATED_ROUTES
+from codegate.providers.normalizer.completion import CompletionNormalizer
 
 logger = structlog.get_logger("codegate")
 
 # Increase buffer sizes
 MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 10MB
 CHUNK_SIZE = 64 * 1024  # 64KB
+
+
+class SSEProcessor:
+    def __init__(self):
+        self.buffer = ""
+
+    def process_chunk(self, chunk: bytes):
+        # Decode and add to buffer
+        self.buffer += chunk.decode('utf-8')
+
+        # Process complete records
+        records = []
+        while True:
+            # Find next complete record
+            record_end = self.buffer.find('\n\n')
+            if record_end == -1:
+                break
+
+            # Extract record
+            record = self.buffer[:record_end]
+            self.buffer = self.buffer[record_end + 2:]  # +2 for \n\n
+
+            # Process only data: lines
+            if record.startswith('data: '):
+                try:
+                    # Remove 'data: ' prefix and parse JSON
+                    json_str = record[6:]  # len('data: ') == 6
+                    data = json.loads(json_str)
+                    records.append(data)
+                except json.JSONDecodeError:
+                    print(f"Failed to parse JSON: {json_str}")
+
+        return records
+
+    def get_pending(self):
+        """Return any pending incomplete data in the buffer"""
+        return self.buffer
 
 class CopilotProvider(asyncio.Protocol):
     def __init__(self, loop):
@@ -41,6 +83,86 @@ class CopilotProvider(asyncio.Protocol):
         self.decrypted_data = bytearray()
         # Get the singleton instance of CertificateAuthority
         self.ca = CertificateAuthority.get_instance()
+        self.pipeline_factory = PipelineFactory(SecretsManager())
+        self.context_tracking: Dict[str, PipelineContext] = {}
+
+    def _select_pipeline(self, headers: list[str]):
+        for header in headers:
+            if header.lower().startswith("user-agent:") and "GithubCopilot/" in header:
+                logger.debug("Using FIM pipeline for Github Copilot")
+                return self.pipeline_factory.create_fim_pipeline
+            logger.debug("No pipeline selected")
+
+        return None
+
+    async def _body_through_pipeline(self, headers: list[str], body: bytes) -> bytes:
+        logger.debug(f"Processing body through pipeline: {len(body)} bytes")
+        pipeline_constructor = self._select_pipeline(headers)
+
+        if pipeline_constructor is None:
+            return body
+
+        normalizer = None
+        if pipeline_constructor == self.pipeline_factory.create_fim_pipeline:
+            normalizer = CompletionNormalizer()
+            json_body = json.loads(body)
+            normalized_json_body = normalizer.normalize(json_body)
+        else:
+            return body
+
+        pipeline = pipeline_constructor()
+        result = await pipeline.process_request(
+            request = normalized_json_body,
+            provider = "github-copilot",
+            prompt_id = "fake-prompt-id",
+            model = "model_name",   # Replace with actual model if needed
+            api_key = None,         # Extract from headers if needed
+        )
+
+        # Use the modified request body from the pipeline result
+        if result.request:
+            normalized_json_body = normalizer.denormalize(result.request)
+            body = json.dumps(normalized_json_body).encode()
+
+        logger.debug("Processing body through pipeline")
+        return body
+
+    async def _write_headers_to_target(self, headers: list[str]):
+        request_line = f"{self.method} /{self.path} {self.version}\r\n".encode()
+
+        logger.debug(f"Request Line: {request_line}")
+        header_block = '\r\n'.join(headers).encode()
+        header_payload = request_line + header_block + b'\r\n\r\n'
+        self.log_decrypted_data(header_block, "Request Headers")
+        self.target_transport.write(header_payload)
+
+    async def _write_body_to_target(self, headers: list[str], body: bytes):
+        logger.debug(f"Writing body to target: {len(body)} bytes fn: _write_body_to_target")
+        logger.debug(f"Using original {self.original_path} path: {self.path} method: {self.method}")
+        logger.debug(f"Using headers: {headers}")
+
+        print("------ ORIGINAL BODY")
+        print(body)
+        print("------ END ORIGINAL BODY")
+
+        body = await self._body_through_pipeline(headers, body)
+
+        for header in headers:
+            if header.lower().startswith("content-length:"):
+                print(f"------ original content-length header: {header}")
+                headers.remove(header)
+                break
+        headers.append(f"Content-Length: {len(body)}")
+        print(f"------ new content-length header: Content-Length: {len(body)}")
+
+        print("------ MODIFIED BODY")
+        print(body)
+        print("------ END MODIFIED BODY")
+
+        await self._write_headers_to_target(headers)
+        for i in range(0, len(body), CHUNK_SIZE):
+            chunk = body[i:i + CHUNK_SIZE]
+            self.target_transport.write(chunk)
 
     def connection_made(self, transport: asyncio.Transport):
         logger.debug("Client connected fn: connection_made")
@@ -60,17 +182,17 @@ class CopilotProvider(asyncio.Protocol):
             return full_path.lstrip('/')
         return full_path
 
-    def get_headers(self) -> Dict[str, str]:
+    def get_headers(self, buffer: bytes) -> Dict[str, str]:
         """Get request headers as a dictionary"""
         logger.debug("Getting headers as dictionary fn: get_headers")
         headers_dict = {}
 
         try:
-            if b'\r\n\r\n' not in self.buffer:
+            if b'\r\n\r\n' not in buffer:
                 return {}
 
-            headers_end = self.buffer.index(b'\r\n\r\n')
-            headers = self.buffer[:headers_end].split(b'\r\n')[1:]  # Skip request line
+            headers_end = buffer.index(b'\r\n\r\n')
+            headers = buffer[:headers_end].split(b'\r\n')[1:]  # Skip request line
 
             for header in headers:
                 try:
@@ -136,7 +258,7 @@ class CopilotProvider(asyncio.Protocol):
         logger.debug(f"Searched Path: {self.path} in target URL")
         try:
             # Extract proxy endpoint from authorization header if present
-            headers_dict = self.get_headers()
+            headers_dict = self.get_headers(self.buffer)
             auth_header = headers_dict.get('authorization', '')
             if auth_header:
                 match = re.search(r"proxy-ep=([^;]+)", auth_header)
@@ -190,26 +312,14 @@ class CopilotProvider(asyncio.Protocol):
             if not has_host:
                 new_headers.append(f"Host: {self.target_host}")
 
-            request_line = f"{self.method} /{self.path} {self.version}\r\n".encode()
-            logger.debug(f"Request Line: {request_line}")
-            header_block = '\r\n'.join(new_headers).encode()
-            headers = request_line + header_block + b'\r\n\r\n'
-
             if self.target_transport:
-                logger.debug("=" * 40)
-                self.log_decrypted_data(headers, "Request")
-                self.target_transport.write(headers)
-                logger.debug("=" * 40)
-
                 body_start = self.buffer.index(b'\r\n\r\n') + 4
                 body = self.buffer[body_start:]
 
                 if body:
                     self.log_decrypted_data(body, "Request Body")
 
-                for i in range(0, len(body), CHUNK_SIZE):
-                    chunk = body[i:i + CHUNK_SIZE]
-                    self.target_transport.write(chunk)
+                await self._write_body_to_target(new_headers, body)
             else:
                 logger.debug("=" * 40)
                 logger.error("Target transport not available")
@@ -233,10 +343,61 @@ class CopilotProvider(asyncio.Protocol):
             logger.debug("Handling HTTP request")
             asyncio.create_task(self.handle_http_request())
 
-    def _forward_data_to_target(self, data: bytes) -> None:
+    async def _forward_data_through_pipeline(self, data: bytes):
+        if b'\r\n\r\n' not in data:
+            # not HTTP, pass as-is
+            return data
+
+        headers_end = data.index(b'\r\n\r\n')
+        headers = data[:headers_end].split(b'\r\n')
+
+        request = headers[0].decode('utf-8')
+        method, full_path, version = request.split(' ')
+        body_start = data.index(b'\r\n\r\n') + 4
+        body = data[body_start:]
+
+        if method != 'POST' and full_path != "/chat/completions":
+            # not completion, forward as-is
+            return data
+
+        headers_dict = self.get_headers(data)
+        request_id = headers_dict.get("x-request-id", "fake-prompt-id")
+
+        pipeline = self.pipeline_factory.create_input_pipeline()
+        json_body = json.loads(body)
+        result = await pipeline.process_request(
+            request = json_body,
+            provider = "github-copilot",
+            prompt_id = request_id,
+            model = json_body.get("model", "model_name"),
+            api_key = None,
+        )
+
+        self.context_tracking[request_id] = result.context
+
+        # Use the modified request body from the pipeline result
+        if result.request:
+            body = json.dumps(result.request).encode()
+
+        # Modify headers to update content length
+        new_headers = []
+        for header in headers[1:]:  # Skip the request line
+            if not header.lower().startswith(b"content-length:"):
+                new_headers.append(header)
+        new_headers.append(f"Content-Length: {len(body)}".encode())
+
+        # Reconstruct the full request
+        request_line = headers[0]  # Original request line
+        header_block = b'\r\n'.join([request_line] + new_headers)
+        modified_request = header_block + b'\r\n\r\n' + body
+
+        return modified_request
+
+    async def _forward_data_to_target(self, data: bytes) -> None:
         """Forward data to target if connection is established"""
         if self.target_transport and not self.target_transport.is_closing():
             self.log_decrypted_data(data, "Client to Server")
+            data = await self._forward_data_through_pipeline(data)
             self.target_transport.write(data)
 
     def data_received(self, data: bytes) -> None:
@@ -263,7 +424,7 @@ class CopilotProvider(asyncio.Protocol):
                 self._handle_parsed_headers()
             else:
                 # Forward data to target if headers are already parsed
-                self._forward_data_to_target(data)
+                asyncio.create_task(self._forward_data_to_target(data))
 
         except asyncio.CancelledError:
             logger.warning("Operation cancelled")
@@ -468,16 +629,41 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         logger.debug("Initializing CopilotProxyTargetProtocol class: CopilotProxyTargetProtocol")
         self.proxy = proxy
         self.transport: Optional[asyncio.Transport] = None
+        self.sse_processor = None
+        self.buffer = b""
 
     def connection_made(self, transport: asyncio.Transport):
         logger.debug(f"Connection made to target {self.proxy.target_host}:{self.proxy.target_port}")
         self.transport = transport
         self.proxy.target_transport = transport
 
+    def _process_chunk(self, chunk: bytes):
+        if self.sse_processor is None:
+            self.buffer += chunk
+
+            # Check if we have complete headers (ends with \r\n\r\n)
+            header_end = self.buffer.find(b'\r\n\r\n')
+            if header_end != -1:
+                headers = self.buffer[:header_end].decode('utf-8')
+
+                # Check if this is an SSE response
+                if ('Content-Type: application/json' in headers and
+                        'Transfer-Encoding: chunked' in headers):
+                    print("THIS IS A SSE RESPONSE")
+                else:
+                    # Not SSE - pass through all buffered data
+                    data_to_send = self.buffer
+                    self.buffer = b""
+                    return data_to_send
+            return None  # Still collecting headers
+
     def data_received(self, data: bytes):
         logger.debug(f"Data received from target {self.proxy.target_host}:{self.proxy.target_port}")
         if self.proxy.transport and not self.proxy.transport.is_closing():
             self.proxy.log_decrypted_data(data, "Server to Client")
+            print("------ TARGET DATA START")
+            print(data)
+            print("------ TARGET DATA END")
             self.proxy.transport.write(data)
 
     def connection_lost(self, exc):
