@@ -155,13 +155,15 @@ def test_certificate_config_from_file(tmp_path: Path) -> None:
 
 def test_certificate_config_from_env() -> None:
     """Test loading certificate configuration from environment variables."""
-    os.environ.update({
-        "CODEGATE_CERTS_DIR": "./env-certs",
-        "CODEGATE_CA_CERT": "env-ca.crt",
-        "CODEGATE_CA_KEY": "env-ca.key",
-        "CODEGATE_SERVER_CERT": "env-server.crt",
-        "CODEGATE_SERVER_KEY": "env-server.key",
-    })
+    os.environ.update(
+        {
+            "CODEGATE_CERTS_DIR": "./env-certs",
+            "CODEGATE_CA_CERT": "env-ca.crt",
+            "CODEGATE_CA_KEY": "env-ca.key",
+            "CODEGATE_SERVER_CERT": "env-server.crt",
+            "CODEGATE_SERVER_KEY": "env-server.key",
+        }
+    )
     try:
         config = Config.from_env()
         assert config.certs_dir == "./env-certs"

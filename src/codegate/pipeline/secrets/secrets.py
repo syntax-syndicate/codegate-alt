@@ -239,7 +239,7 @@ class SecretUnredactionStep(OutputPipelineStep):
 
         # Get the first complete match
         match = matches[0]
-        return match, text[match.end() :]
+        return match, text[match.end():]
 
     async def process_chunk(
         self,

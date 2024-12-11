@@ -1,10 +1,9 @@
+import json
 import logging
 import sys
-import json
-from enum import Enum
-from typing import Optional
 from datetime import datetime
-from typing import Any, Dict
+from enum import Enum
+from typing import Any, Dict, Optional
 
 import structlog
 
@@ -153,7 +152,7 @@ def setup_logging(
 
 def serialize_for_logging(obj: Any) -> Any:
     """Serialize objects for logging, handling non-JSON serializable types"""
-    if hasattr(obj, '__dict__'):
+    if hasattr(obj, "__dict__"):
         return str(obj)
     elif isinstance(obj, (datetime, bytes)):
         return str(obj)
@@ -162,6 +161,7 @@ def serialize_for_logging(obj: Any) -> Any:
     elif isinstance(obj, (list, tuple)):
         return [serialize_for_logging(item) for item in obj]
     return obj
+
 
 def log_request(method: str, path: str, status_code: int, client: Any) -> None:
     """Log HTTP request details"""
@@ -172,9 +172,10 @@ def log_request(method: str, path: str, status_code: int, client: Any) -> None:
         "method": method,
         "path": path,
         "status_code": status_code,
-        "client": serialize_for_logging(client)
+        "client": serialize_for_logging(client),
     }
     logger.info(f"Request: {json.dumps(log_data, indent=2)}")
+
 
 def log_proxy_forward(target_url: str, method: str, status_code: int) -> None:
     """Log proxy forwarding details"""
@@ -184,9 +185,10 @@ def log_proxy_forward(target_url: str, method: str, status_code: int) -> None:
         "type": "proxy_forward",
         "target_url": target_url,
         "method": method,
-        "status_code": status_code
+        "status_code": status_code,
     }
     logger.info(f"Proxy Forward: {json.dumps(log_data, indent=2)}")
+
 
 def log_error(error_type: str, message: str, details: Dict = None) -> None:
     """Log error details"""
@@ -196,6 +198,6 @@ def log_error(error_type: str, message: str, details: Dict = None) -> None:
         "type": "error",
         "error_type": error_type,
         "message": message,
-        "details": serialize_for_logging(details or {})
+        "details": serialize_for_logging(details or {}),
     }
     logger.error(f"Error: {json.dumps(log_data, indent=2)}")

@@ -58,7 +58,7 @@ class Config:
         """Validate configuration after initialization."""
         if not isinstance(self.port, int) or not (1 <= self.port <= 65535):
             raise ConfigurationError("Port must be between 1 and 65535")
-            
+
         if not isinstance(self.proxy_port, int) or not (1 <= self.proxy_port <= 65535):
             raise ConfigurationError("Proxy port must be between 1 and 65535")
 

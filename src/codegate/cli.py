@@ -1,25 +1,25 @@
 """Command-line interface for codegate."""
 
-import sys
 import asyncio
-import signal
+import sys
 from pathlib import Path
 from typing import Dict, Optional
-from uvicorn.config import Config as UvicornConfig
-from uvicorn.server import Server
 
 import click
 import structlog
+from uvicorn.config import Config as UvicornConfig
+from uvicorn.server import Server
 
+from codegate.ca.codegate_ca import CertificateAuthority
 from codegate.codegate_logging import LogFormat, LogLevel, setup_logging
 from codegate.config import Config, ConfigurationError
 from codegate.db.connection import init_db_sync
+from codegate.providers.copilot.provider import CopilotProvider
 from codegate.server import init_app
 from codegate.storage.utils import restore_storage_backup
-from codegate.providers.copilot.provider import CopilotProvider
-from codegate.ca.codegate_ca import CertificateAuthority
 
 logger = structlog.get_logger("codegate")
+
 
 class UvicornServer:
     def __init__(self, config: UvicornConfig, server: Server):
@@ -63,7 +63,7 @@ class UvicornServer:
             logger.debug("Initiating server shutdown")
             self._shutdown_event.set()
 
-            if hasattr(self.server, 'shutdown'):
+            if hasattr(self.server, "shutdown"):
                 logger.debug("Shutting down server")
                 await self.server.shutdown()
 
@@ -73,6 +73,7 @@ class UvicornServer:
 
             await asyncio.gather(*tasks, return_exceptions=True)
             logger.debug("Server shutdown complete")
+
 
 def validate_port(ctx: click.Context, param: click.Parameter, value: int) -> int:
     logger.debug(f"Validating port number: {value}")
@@ -287,7 +288,6 @@ def serve(
 
         init_db_sync(cfg.db_path)
 
-
         # Check certificates and create CA if necessary
         logger.info("Checking certificates and creating CA our created")
         ca = CertificateAuthority.get_instance()
@@ -354,8 +354,8 @@ async def run_servers(cfg: Config, app) -> None:
         copilot_provider = CopilotProvider(cfg)
 
         tasks = [
-            asyncio.create_task(server.serve()), # Uvicorn server
-            asyncio.create_task(copilot_provider.run_proxy_server()) # Proxy server
+            asyncio.create_task(server.serve()),  # Uvicorn server
+            asyncio.create_task(copilot_provider.run_proxy_server()),  # Proxy server
         ]
 
         try:
@@ -379,6 +379,7 @@ async def run_servers(cfg: Config, app) -> None:
         logger.exception("Error running servers")
         raise e
 
+
 @cli.command()
 @click.option(
     "--backup-path",
@@ -401,9 +402,11 @@ def restore_backup(backup_path: Path, backup_name: str) -> None:
         click.echo(f"Error restoring backup: {e}", err=True)
         sys.exit(1)
 
+
 def main() -> None:
     """Main entry point for the CLI."""
     cli()
+
 
 if __name__ == "__main__":
     main()
