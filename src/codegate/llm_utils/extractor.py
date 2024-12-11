@@ -41,3 +41,29 @@ class PackageExtractor:
         packages = result if isinstance(result, list) else result.get("packages", [])
         logger.info(f"Extracted packages: {packages}")
         return packages
+
+    @staticmethod
+    async def extract_ecosystem(
+        content: str,
+        provider: str,
+        model: str = None,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+    ) -> List[str]:
+        """Extract ecosystem from the given content."""
+        system_prompt = Config.get_config().prompts.lookup_ecosystem
+
+        result = await LLMClient.complete(
+            content=content,
+            system_prompt=system_prompt,
+            provider=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+        )
+
+        ecosystem = result if isinstance(result, str) else result.get("ecosystem")
+        if ecosystem:
+            ecosystem = ecosystem.lower()
+        logger.info(f"Extracted ecosystem: {ecosystem}")
+        return ecosystem

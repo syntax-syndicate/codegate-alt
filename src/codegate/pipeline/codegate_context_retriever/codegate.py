@@ -30,10 +30,11 @@ class CodegateContextRetriever(PipelineStep):
         return "codegate-context-retriever"
 
     async def get_objects_from_search(
-        self, search: str, packages: list[str] = None
+        self, search: str, ecosystem, packages: list[str] = None
     ) -> list[object]:
         storage_engine = StorageEngine()
-        objects = await storage_engine.search(search, distance=0.8, packages=packages)
+        objects = await storage_engine.search(
+            search, distance=0.8, ecosystem=ecosystem, packages=packages)
         return objects
 
     def generate_context_str(self, objects: list[object], context: PipelineContext) -> str:
@@ -69,6 +70,19 @@ class CodegateContextRetriever(PipelineStep):
         logger.info(f"Packages in user query: {packages}")
         return packages
 
+    async def __lookup_ecosystem(self, user_query: str, context: PipelineContext):
+        # Use PackageExtractor to extract ecosystem from the user query
+        ecosystem = await PackageExtractor.extract_ecosystem(
+            content=user_query,
+            provider=context.sensitive.provider,
+            model=context.sensitive.model,
+            api_key=context.sensitive.api_key,
+            base_url=context.sensitive.api_base,
+        )
+
+        logger.info(f"Ecosystem in user query: {ecosystem}")
+        return ecosystem
+
     async def process(
         self, request: ChatCompletionRequest, context: PipelineContext
     ) -> PipelineResult:
@@ -85,6 +99,7 @@ class CodegateContextRetriever(PipelineStep):
 
         # Extract packages from the user message
         last_user_message_str, last_user_idx = last_user_message
+        ecosystem = await self.__lookup_ecosystem(last_user_message_str, context)
         packages = await self.__lookup_packages(last_user_message_str, context)
         packages = [pkg.lower() for pkg in packages]
 
@@ -93,7 +108,8 @@ class CodegateContextRetriever(PipelineStep):
             return PipelineResult(request=request)
 
         # Look for matches in vector DB using list of packages as filter
-        searched_objects = await self.get_objects_from_search(last_user_message_str, packages)
+        searched_objects = await self.get_objects_from_search(
+            last_user_message_str, ecosystem, packages)
 
         logger.info(
             f"Found {len(searched_objects)} matches in the database",
