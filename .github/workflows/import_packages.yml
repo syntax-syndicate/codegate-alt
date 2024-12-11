@@ -59,7 +59,7 @@ jobs:
         if [ "${{ github.event.inputs.enable_artifact_download }}" == "true" ]; then
           python scripts/import_packages.py
         else
-          python scripts/import_packages.py --restore_backup False
+          python scripts/import_packages.py --restore-backup False
         fi
 
     - name: 'Upload Backup Files'
