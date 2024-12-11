@@ -78,6 +78,7 @@ def setup_logging(
         structlog.processors.CallsiteParameterAdder(
             [
                 structlog.processors.CallsiteParameter.MODULE,
+                structlog.processors.CallsiteParameter.PATHNAME,
             ]
         ),
     ]

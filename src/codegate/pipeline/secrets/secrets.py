@@ -349,7 +349,9 @@ class SecretRedactionNotifier(OutputPipelineStep):
             # Create notification chunk
             notification_chunk = self._create_chunk(
                 chunk,
-                f"\n🛡️ Codegate prevented {redacted_count} {secret_text} from being leaked by redacting them.\n\n",  # noqa
+                f"\n🛡️ [Codegate prevented {redacted_count} {secret_text}]"
+                f"(http://localhost:8990/?search=codegate-secrets) from being leaked "
+                f"by redacting them.\n\n",
             )
 
             # Reset the counter

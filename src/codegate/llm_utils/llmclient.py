@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 import structlog
 from litellm import acompletion
+from ollama import Client as OllamaClient
 
 from codegate.config import Config
 from codegate.inference import LlamaCppInferenceEngine
@@ -112,19 +113,29 @@ class LLMClient:
             if not base_url.endswith("/v1"):
                 base_url = f"{base_url}/v1"
         else:
-            model = f"{provider}/{model}"
+            if not model.startswith(f"{provider}/"):
+                model = f"{provider}/{model}"
 
         try:
-            response = await acompletion(
-                model=model,
-                messages=request["messages"],
-                api_key=api_key,
-                temperature=request["temperature"],
-                base_url=base_url,
-                response_format=request["response_format"],
-            )
-
-            content = response["choices"][0]["message"]["content"]
+            if provider == "ollama":
+                model = model.split("/")[-1]
+                response = OllamaClient(host=base_url).chat(
+                    model=model,
+                    messages=request["messages"],
+                    format="json",
+                    options={"temperature": request["temperature"]},
+                )
+                content = response.message.content
+            else:
+                response = await acompletion(
+                    model=model,
+                    messages=request["messages"],
+                    api_key=api_key,
+                    temperature=request["temperature"],
+                    base_url=base_url,
+                    response_format=request["response_format"],
+                )
+                content = response["choices"][0]["message"]["content"]
 
             # Clean up code blocks if present
             if content.startswith("```"):
@@ -133,5 +144,5 @@ class LLMClient:
             return json.loads(content)
 
         except Exception as e:
-            logger.error(f"LiteLLM completion failed: {e}")
+            logger.error(f"LiteLLM completion failed {model} ({content}): {e}")
             return {}

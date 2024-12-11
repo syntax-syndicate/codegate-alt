@@ -2,10 +2,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import AsyncIterator, List, Optional
 
+import structlog
 from litellm import ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
 from codegate.pipeline.base import CodeSnippet, PipelineContext
+
+logger = structlog.get_logger("codegate")
 
 
 @dataclass
@@ -137,6 +140,7 @@ class OutputPipelineInstance:
 
         except Exception as e:
             # Log exception and stop processing
+            logger.error(f"Error processing stream: {e}")
             raise e
         finally:
             # Process any remaining content in buffer when stream ends

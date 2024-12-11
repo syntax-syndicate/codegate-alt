@@ -48,7 +48,6 @@ class CodeCommentStep(OutputPipelineStep):
             api_key=secrets.api_key,
             base_url=secrets.api_base,
         )
-
         # Check if any of the snippet libraries is a bad package
         storage_engine = StorageEngine()
         libobjects = await storage_engine.search_by_property("name", snippet.libraries)

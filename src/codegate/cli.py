@@ -188,7 +188,7 @@ def show_prompts(prompts: Optional[Path]) -> None:
 @click.option(
     "--model-base-path",
     type=str,
-    default="./models",
+    default="./codegate_volume/models",
     help="Path to the model base directory",
 )
 @click.option(
@@ -226,6 +226,11 @@ def show_prompts(prompts: Optional[Path]) -> None:
     type=str,
     default=None,
     help="Server key file name (default: server.key)",
+@click.option(
+    "--db-path",
+    type=str,
+    default=None,
+    help="Path to the SQLite database file",
 )
 def serve(
     port: Optional[int],
@@ -246,6 +251,7 @@ def serve(
     ca_key: Optional[str],
     server_cert: Optional[str],
     server_key: Optional[str],
+    db_path: Optional[str],
 ) -> None:
     """Start the codegate server."""
     try:
@@ -277,6 +283,7 @@ def serve(
             ca_key=ca_key,
             server_cert=server_cert,
             server_key=server_key,
+            db_path=db_path,
         )
 
         init_db_sync()
@@ -329,11 +336,14 @@ async def run_servers(cfg: Config, app) -> None:
                 "model_base_path": cfg.model_base_path,
                 "embedding_model": cfg.embedding_model,
                 "certs_dir": cfg.certs_dir,
+                "db_path": cfg.db_path,
             },
         )
 
-        # init_db_sync()
-        # app = init_app()
+        init_db_sync(cfg.db_path)
+        app = init_app()
+
+        import uvicorn
 
         # Create Uvicorn configuration
         uvicorn_config = UvicornConfig(

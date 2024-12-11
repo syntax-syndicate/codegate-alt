@@ -1,9 +1,8 @@
+import argparse
 import asyncio
 import json
 import os
 import shutil
-import argparse
-
 
 import weaviate
 from weaviate.classes.config import DataType, Property
@@ -15,7 +14,7 @@ from codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
-    def __init__(self, take_backup=True, restore_backup=True):
+    def __init__(self, jsonl_dir='data', take_backup=True, restore_backup=True):
         self.take_backup_flag = take_backup
         self.restore_backup_flag = restore_backup
 
@@ -30,13 +29,13 @@ class PackageImporter:
             )
         )
         self.json_files = [
-            "data/archived.jsonl",
-            "data/deprecated.jsonl",
-            "data/malicious.jsonl",
+            os.path.join(jsonl_dir, "archived.jsonl"),
+            os.path.join(jsonl_dir, "deprecated.jsonl"),
+            os.path.join(jsonl_dir, "malicious.jsonl"),
         ]
         self.client.connect()
         self.inference_engine = LlamaCppInferenceEngine()
-        self.model_path = "./models/all-minilm-L6-v2-q5_k_m.gguf"
+        self.model_path = "./codegate_volume/models/all-minilm-L6-v2-q5_k_m.gguf"
 
     def restore_backup(self):
         if os.getenv("BACKUP_FOLDER"):
@@ -134,7 +133,8 @@ class PackageImporter:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run the package importer with optional backup flags.")
+        description="Run the package importer with optional backup flags."
+    )
     parser.add_argument(
         "--take-backup",
         type=lambda x: x.lower() == "true",
@@ -149,9 +149,16 @@ if __name__ == "__main__":
         help="Specify whether to restore a backup before "
         "data import (True or False). Default is True.",
     )
+    parser.add_argument(
+        "--jsonl-dir",
+        type=str,
+        default="data",
+        help="Directory containing JSONL files. Default is 'data'."
+    )
     args = parser.parse_args()
 
-    importer = PackageImporter(take_backup=args.take_backup, restore_backup=args.restore_backup)
+    importer = PackageImporter(jsonl_dir=args.jsonl_dir, take_backup=args.take_backup,
+                               restore_backup=args.restore_backup)
     asyncio.run(importer.run_import())
     try:
         assert importer.client.is_live()

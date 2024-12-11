@@ -19,7 +19,7 @@ DEFAULT_PROVIDER_URLS = {
     "openai": "https://api.openai.com/v1",
     "anthropic": "https://api.anthropic.com/v1",
     "vllm": "http://localhost:8000",  # Base URL without /v1 path
-    "ollama": "http://localhost:11434/api",  # Default Ollama server URL
+    "ollama": "http://localhost:11434",  # Default Ollama server URL
 }
 
 
@@ -38,10 +38,11 @@ class Config:
     log_format: LogFormat = LogFormat.JSON
     prompts: PromptConfig = field(default_factory=PromptConfig)
 
-    model_base_path: str = "./models"
+    model_base_path: str = "./codegate_volume/models"
     chat_model_n_ctx: int = 32768
     chat_model_n_gpu_layers: int = -1
     embedding_model: str = "all-minilm-L6-v2-q5_k_m.gguf"
+    db_path: Optional[str] = None
 
     # Certificate configuration
     certs_dir: str = "./certs"
@@ -215,6 +216,7 @@ class Config:
         ca_key: Optional[str] = None,
         server_cert: Optional[str] = None,
         server_key: Optional[str] = None,
+        db_path: Optional[str] = None,
     ) -> "Config":
         """Load configuration with priority resolution.
 
@@ -240,6 +242,7 @@ class Config:
             ca_key: Optional path to CA key
             server_cert: Optional path to server certificate
             server_key: Optional path to server key
+            db_path: Optional path to the SQLite database file
 
         Returns:
             Config: Resolved configuration
@@ -320,6 +323,8 @@ class Config:
             config.server_cert = server_cert
         if server_key is not None:
             config.server_key = server_key
+        if db_path is not None:
+            config.db_path = db_path
 
         # Set the __config class attribute
         Config.__config = config

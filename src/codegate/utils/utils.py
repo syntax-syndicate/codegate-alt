@@ -1,3 +1,6 @@
+from urllib.parse import quote
+
+
 def generate_vector_string(package) -> str:
     vector_str = f"{package['name']}"
     package_url = ""
@@ -15,7 +18,8 @@ def generate_vector_string(package) -> str:
         "malicious": "However, this package is found to be malicious and must not be used.",
     }
     vector_str += f" is a {type_map.get(package['type'], 'package of unknown type')}. "
-    package_url = f"https://trustypkg.dev/{package['type']}/{package['name']}"
+    package_name = quote(package["name"], safe="")
+    package_url = f"https://www.insight.stacklok.com/report/{package['type']}/{package_name}"
 
     # Add extra status
     status_suffix = status_messages.get(package["status"], "")

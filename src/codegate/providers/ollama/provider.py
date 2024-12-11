@@ -4,24 +4,29 @@ from typing import Optional
 from fastapi import Request
 
 from codegate.config import Config
+from codegate.pipeline.base import SequentialPipelineProcessor
 from codegate.pipeline.output import OutputPipelineProcessor
-from codegate.pipeline.secrets.manager import SecretsManager
-from codegate.providers.base import BaseProvider, SequentialPipelineProcessor
+from codegate.providers.base import BaseProvider
 from codegate.providers.ollama.adapter import OllamaInputNormalizer, OllamaOutputNormalizer
-from codegate.providers.ollama.completion_handler import OllamaCompletionHandler
+from codegate.providers.ollama.completion_handler import OllamaShim
 
 
 class OllamaProvider(BaseProvider):
     def __init__(
         self,
-        secrets_manager: Optional[SecretsManager],
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
         fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
         output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
+        fim_output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
     ):
-        completion_handler = OllamaCompletionHandler()
+        config = Config.get_config()
+        if config is None:
+            provided_urls = {}
+        else:
+            provided_urls = config.provider_urls
+        self.base_url = provided_urls.get("ollama", "http://localhost:11434/")
+        completion_handler = OllamaShim(self.base_url)
         super().__init__(
-            secrets_manager,
             OllamaInputNormalizer(),
             OllamaOutputNormalizer(),
             completion_handler,
@@ -29,13 +34,6 @@ class OllamaProvider(BaseProvider):
             fim_pipeline_processor,
             output_pipeline_processor,
         )
-        # Get the Ollama base URL
-        config = Config.get_config()
-        if config is None:
-            provided_urls = {}
-        else:
-            provided_urls = config.provider_urls
-        self.base_url = provided_urls.get("ollama", "http://localhost:11434/api")
 
     @property
     def provider_route_name(self) -> str:
@@ -55,9 +53,10 @@ class OllamaProvider(BaseProvider):
         async def create_completion(request: Request):
             body = await request.body()
             data = json.loads(body)
-            if "base_url" not in data or not data["base_url"]:
-                data["base_url"] = self.base_url
+            # `base_url` is used in the providers pipeline to do the packages lookup.
+            # Force it to be the one that comes in the configuration.
+            data["base_url"] = self.base_url
 
             is_fim_request = self._is_fim_request(request, data)
-            stream = await self.complete(data, None, is_fim_request=is_fim_request)
+            stream = await self.complete(data, api_key=None, is_fim_request=is_fim_request)
             return self._completion_handler.create_response(stream)

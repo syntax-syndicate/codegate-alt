@@ -22,7 +22,7 @@ RUN poetry config virtualenvs.create false && \
 COPY . /app
 
 # Build the webapp
-FROM node:23.3-slim AS webbuilder
+FROM node:22-slim AS webbuilder
 
 # Install curl for downloading the webapp from GH and unzip to extract it
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -98,9 +98,28 @@ EXPOSE 80
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src
 
-# Define an argument for vlm_url with a default value
-ENV VLLM_URL=https://inference.codegate.ai
+# Expose additional env vars
+ENV CODEGATE_VLLM_URL=https://inference.codegate.ai
+ENV CODEGATE_OPENAI_URL=
+ENV CODEGATE_ANTHROPIC_URL=
+ENV CODEGATE_OLLAMA_URL=http://host.docker.internal:11434
+ENV CODEGATE_APP_LOG_LEVEL=WARNING
+ENV CODEGATE_LOG_FORMAT=TEXT
+
+# Copy the initial models in the image to default models
+RUN mkdir -p /app/default_models && cp /app/codegate_volume/models/* /app/default_models/
+
+# Define volume for persistent data
+VOLUME ["/app/codegate_volume/"]
+
+# This has to be performed after copying from the builder stages.
+# Otherwise, the permissions will be reset to root.
+USER root
+RUN mkdir -p /app/codegate_volume/db
+# Make codegate user the owner of codegate_volume directory to allow writing to it
+RUN chown -R codegate /app/codegate_volume
+USER codegate
 
 # Set the container's default entrypoint
 EXPOSE 8989
-ENTRYPOINT ["/app/scripts/entrypoint.sh", "/tmp/weaviate_backup", "backup"]
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]

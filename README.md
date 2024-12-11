@@ -51,7 +51,6 @@ Unlike E.T., your code never phones home! 🛸 Codegate is designed with privacy
 Make sure you have these tools installed:
 
 - 🐳 [Docker](https://docs.docker.com/get-docker/)
-- 🔧 [Docker Compose](https://docs.docker.com/compose/install/)
 - 🛠️ [jq](https://stedolan.github.io/jq/download/)
 - 💻 [VSCode](https://code.visualstudio.com/download)
 
@@ -150,11 +149,29 @@ make image-build
 
 ### Run the Container
 ```bash
-# Basic usage
-docker run -p 8989:8989 codegate:latest
+# Basic usage with local image
+docker run -p 8989:8989 -p 8990:80 codegate:latest
 
-# With persistent data
-docker run -p 8989:8989 -v /path/to/volume:/app/weaviate_data codegate:latest
+# With pre-built pulled image
+docker pull ghcr.io/stacklok/codegate/codegate:latest
+docker run --name codegate -d -p 8989:8989 -p 8990:80 ghcr.io/stacklok/codegate/codegate:latest
+
+# It will mount a volume to /app/codegate_volume
+# The directory supports storing Llama CPP models under subidrectoy /models
+# A sqlite DB with the messages and alerts is stored under the subdirectory /db
+docker run --name codegate -d -v /path/to/volume:/app/codegate_volume -p 8989:8989 -p 8990:80 ghcr.io/stacklok/codegate/codegate:latest
+```
+
+### Exposed parameters
+- CODEGATE_VLLM_URL: URL for the inference engine (defaults to [https://inference.codegate.ai](https://inference.codegate.ai))
+- CODEGATE_OPENAI_URL: URL for OpenAI inference engine (defaults to [https://api.openai.com/v1](https://api.openai.com/v1))
+- CODEGATE_ANTHROPIC_URL: URL for Anthropic inference engine (defaults to [https://api.anthropic.com/v1](https://api.anthropic.com/v1))
+- CODEGATE_OLLAMA_URL: URL for OLlama inference engine (defaults to [http://localhost:11434/api](http://localhost:11434/api))
+- CODEGATE_APP_LOG_LEVEL: Level of debug desired when running the codegate server (defaults to WARNING, can be ERROR/WARNING/INFO/DEBUG)
+- CODEGATE_LOG_FORMAT: Type of log formatting desired when running the codegate server (default to TEXT, can be JSON/TEXT)
+
+```bash
+docker run -p 8989:8989 -p 8990:80 -e CODEGATE_OLLAMA_URL=http://1.2.3.4:11434/api ghcr.io/stacklok/codegate/codegate:latest
 ```
 
 ## 🤝 Contributing

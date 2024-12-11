@@ -49,24 +49,37 @@ def init_app() -> FastAPI:
     # this was done in the pipeline step but I just removed it for now
     secrets_manager = SecretsManager()
 
-    steps: List[PipelineStep] = [
+    # Define input pipeline steps
+    input_steps: List[PipelineStep] = [
+        CodegateSecrets(),
         CodegateVersion(),
         CodeSnippetExtractor(),
         SystemPrompt(Config.get_config().prompts.default_chat),
         CodegateContextRetriever(),
+    ]
+
+    # Define FIM pipeline steps
+    fim_steps: List[PipelineStep] = [
         CodegateSecrets(),
     ]
-    # Leaving the pipeline empty for now
-    fim_steps: List[PipelineStep] = []
-    pipeline = SequentialPipelineProcessor(steps)
-    fim_pipeline = SequentialPipelineProcessor(fim_steps)
 
+    # Initialize input pipeline processors
+    input_pipeline_processor = SequentialPipelineProcessor(input_steps, secrets_manager)
+    fim_pipeline_processor = SequentialPipelineProcessor(fim_steps, secrets_manager)
+
+    # Define output pipeline steps
     output_steps: List[OutputPipelineStep] = [
         SecretRedactionNotifier(),
         SecretUnredactionStep(),
         CodeCommentStep(),
     ]
-    output_pipeline = OutputPipelineProcessor(output_steps)
+    fim_output_steps: List[OutputPipelineStep] = [
+        # temporarily disabled
+        # SecretUnredactionStep(),
+    ]
+
+    output_pipeline_processor = OutputPipelineProcessor(output_steps)
+    fim_output_pipeline_processor = OutputPipelineProcessor(fim_output_steps)
 
     # Create provider registry
     registry = ProviderRegistry(app)
@@ -78,46 +91,46 @@ def init_app() -> FastAPI:
     registry.add_provider(
         "openai",
         OpenAIProvider(
-            secrets_manager=secrets_manager,
-            pipeline_processor=pipeline,
-            fim_pipeline_processor=fim_pipeline,
-            output_pipeline_processor=output_pipeline,
+            pipeline_processor=input_pipeline_processor,
+            fim_pipeline_processor=fim_pipeline_processor,
+            output_pipeline_processor=output_pipeline_processor,
+            fim_output_pipeline_processor=fim_output_pipeline_processor,
         ),
     )
     registry.add_provider(
         "anthropic",
         AnthropicProvider(
-            secrets_manager=secrets_manager,
-            pipeline_processor=pipeline,
-            fim_pipeline_processor=fim_pipeline,
-            output_pipeline_processor=output_pipeline,
+            pipeline_processor=input_pipeline_processor,
+            fim_pipeline_processor=fim_pipeline_processor,
+            output_pipeline_processor=output_pipeline_processor,
+            fim_output_pipeline_processor=fim_output_pipeline_processor,
         ),
     )
     registry.add_provider(
         "llamacpp",
         LlamaCppProvider(
-            secrets_manager=secrets_manager,
-            pipeline_processor=pipeline,
-            fim_pipeline_processor=fim_pipeline,
-            output_pipeline_processor=output_pipeline,
+            pipeline_processor=input_pipeline_processor,
+            fim_pipeline_processor=fim_pipeline_processor,
+            output_pipeline_processor=output_pipeline_processor,
+            fim_output_pipeline_processor=fim_output_pipeline_processor,
         ),
     )
     registry.add_provider(
         "vllm",
         VLLMProvider(
-            secrets_manager=secrets_manager,
-            pipeline_processor=pipeline,
-            fim_pipeline_processor=fim_pipeline,
-            output_pipeline_processor=output_pipeline,
+            pipeline_processor=input_pipeline_processor,
+            fim_pipeline_processor=fim_pipeline_processor,
+            output_pipeline_processor=output_pipeline_processor,
+            fim_output_pipeline_processor=fim_output_pipeline_processor,
         ),
     )
     registry.add_provider(
         "ollama",
         OllamaProvider(
-            secrets_manager=secrets_manager,
-            pipeline_processor=pipeline,
-            fim_pipeline_processor=fim_pipeline,
-            output_pipeline_processor=output_pipeline,
+            pipeline_processor=input_pipeline_processor,
+            fim_pipeline_processor=fim_pipeline_processor,
+            output_pipeline_processor=output_pipeline_processor,
+            fim_output_pipeline_processor=fim_output_pipeline_processor,
         ),
     )
 

@@ -30,10 +30,12 @@ class CodegateContextRetriever(PipelineStep):
         return "codegate-context-retriever"
 
     async def get_objects_from_search(
-        self, search: str, packages: list[str] = None
+        self, search: str, ecosystem, packages: list[str] = None
     ) -> list[object]:
         storage_engine = StorageEngine()
-        objects = await storage_engine.search(search, distance=0.8, packages=packages)
+        objects = await storage_engine.search(
+            search, distance=0.8, ecosystem=ecosystem, packages=packages
+        )
         return objects
 
     def generate_context_str(self, objects: list[object], context: PipelineContext) -> str:
@@ -69,6 +71,19 @@ class CodegateContextRetriever(PipelineStep):
         logger.info(f"Packages in user query: {packages}")
         return packages
 
+    async def __lookup_ecosystem(self, user_query: str, context: PipelineContext):
+        # Use PackageExtractor to extract ecosystem from the user query
+        ecosystem = await PackageExtractor.extract_ecosystem(
+            content=user_query,
+            provider=context.sensitive.provider,
+            model=context.sensitive.model,
+            api_key=context.sensitive.api_key,
+            base_url=context.sensitive.api_base,
+        )
+
+        logger.info(f"Ecosystem in user query: {ecosystem}")
+        return ecosystem
+
     async def process(
         self, request: ChatCompletionRequest, context: PipelineContext
     ) -> PipelineResult:
@@ -85,51 +100,58 @@ class CodegateContextRetriever(PipelineStep):
 
         # Extract packages from the user message
         last_user_message_str, last_user_idx = last_user_message
+        ecosystem = await self.__lookup_ecosystem(last_user_message_str, context)
         packages = await self.__lookup_packages(last_user_message_str, context)
+        packages = [pkg.lower() for pkg in packages]
 
         # If user message does not reference any packages, then just return
         if len(packages) == 0:
             return PipelineResult(request=request)
 
         # Look for matches in vector DB using list of packages as filter
-        searched_objects = await self.get_objects_from_search(last_user_message_str, packages)
+        searched_objects = await self.get_objects_from_search(
+            last_user_message_str, ecosystem, packages
+        )
 
         logger.info(
             f"Found {len(searched_objects)} matches in the database",
             searched_objects=searched_objects,
         )
-        # If matches are found, add the matched content to context
+
+        # Remove searched objects that are not in packages. This is needed
+        # since Weaviate performs substring match in the filter.
+        updated_searched_objects = []
+        for searched_object in searched_objects:
+            if searched_object.properties["name"].lower() in packages:
+                updated_searched_objects.append(searched_object)
+        searched_objects = updated_searched_objects
+
+        # Generate context string using the searched objects
+        logger.info(f"Adding {len(searched_objects)} packages to the context")
+
         if len(searched_objects) > 0:
-            # Remove searched objects that are not in packages. This is needed
-            # since Weaviate performs substring match in the filter.
-            updated_searched_objects = []
-            for searched_object in searched_objects:
-                if searched_object.properties["name"] in packages:
-                    updated_searched_objects.append(searched_object)
-            searched_objects = updated_searched_objects
+            context_str = self.generate_context_str(searched_objects, context)
+        else:
+            context_str = "Codegate did not find any malicious or archived packages."
 
-            # Generate context string using the searched objects
-            logger.info(f"Adding {len(updated_searched_objects)} packages to the context")
-            context_str = self.generate_context_str(updated_searched_objects, context)
+        # Make a copy of the request
+        new_request = request.copy()
 
-            # Make a copy of the request
-            new_request = request.copy()
+        # Add the context to the last user message
+        # Format: "Context: {context_str} \n Query: {last user message conent}"
+        # Handle the two cases: (a) message content is str, (b)message content
+        # is list
+        message = new_request["messages"][last_user_idx]
+        if isinstance(message["content"], str):
+            context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
+            message["content"] = context_msg
+        elif isinstance(message["content"], (list, tuple)):
+            for item in message["content"]:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    context_msg = f'Context: {context_str} \n\n Query: {item["text"]}'
+                    item["text"] = context_msg
 
-            # Add the context to the last user message
-            # Format: "Context: {context_str} \n Query: {last user message conent}"
-            # Handle the two cases: (a) message content is str, (b)message content
-            # is list
-            message = new_request["messages"][last_user_idx]
-            if isinstance(message["content"], str):
-                context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
-                message["content"] = context_msg
-            elif isinstance(message["content"], (list, tuple)):
-                for item in message["content"]:
-                    if isinstance(item, dict) and item.get("type") == "text":
-                        context_msg = f'Context: {context_str} \n\n Query: {item["text"]}'
-                        item["text"] = context_msg
-
-                    return PipelineResult(request=new_request, context=context)
+                return PipelineResult(request=new_request, context=context)
 
         # Fall through
         return PipelineResult(request=request, context=context)

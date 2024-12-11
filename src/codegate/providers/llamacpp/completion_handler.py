@@ -91,4 +91,4 @@ class LlamaCppCompletionHandler(BaseCompletionHandler):
         )
 
     def _create_json_response(self, response: Any) -> JSONResponse:
-        raise NotImplementedError("JSON Reponse in LlamaCPP not implemented yet.")
+        return JSONResponse(status_code=200, content=response)
