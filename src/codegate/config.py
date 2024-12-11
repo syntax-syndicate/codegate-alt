@@ -45,7 +45,7 @@ class Config:
     db_path: Optional[str] = None
 
     # Certificate configuration
-    certs_dir: str = "./certs"
+    certs_dir: str = "./codegate_volume/certs"
     ca_cert: str = "ca.crt"
     ca_key: str = "ca.key"
     server_cert: str = "server.crt"
@@ -325,6 +325,16 @@ class Config:
             config.server_key = server_key
         if db_path is not None:
             config.db_path = db_path
+        if certs_dir is not None:
+            config.certs_dir = certs_dir
+        if ca_cert is not None:
+            config.ca_cert = ca_cert
+        if ca_key is not None:
+            config.ca_key = ca_key
+        if server_cert is not None:
+            config.server_cert = server_cert
+        if server_key is not None:
+            config.server_key = server_key
 
         # Set the __config class attribute
         Config.__config = config

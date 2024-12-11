@@ -209,7 +209,7 @@ class CopilotProvider(asyncio.Protocol):
                     self.log_decrypted_data(body, "Request Body")
 
                 for i in range(0, len(body), CHUNK_SIZE):
-                    chunk = body[i: i + CHUNK_SIZE]
+                    chunk = body[i : i + CHUNK_SIZE]
                     self.target_transport.write(chunk)
             else:
                 logger.debug("=" * 40)
@@ -443,7 +443,7 @@ class CopilotProvider(asyncio.Protocol):
         # Then check for prefix match
         for route in VALIDATED_ROUTES:
             # For prefix matches, keep the rest of the path
-            remaining_path = path[len(route.path):]
+            remaining_path = path[len(route.path) :]
             logger.debug(f"Remaining path: {remaining_path}")
             # Make sure we don't end up with double slashes
             if remaining_path and remaining_path.startswith("/"):
