@@ -327,7 +327,7 @@ class CopilotProvider(asyncio.Protocol):
             if self.transport and not self.transport.is_closing():
                 self.transport.write(
                     b"HTTP/1.1 200 Connection Established\r\n"
-                    b"Proxy-Agent: ProxyPilot\r\n"
+                    b"Proxy-Agent: Proxy\r\n"
                     b"Connection: keep-alive\r\n\r\n"
                 )
 
