@@ -1,7 +1,8 @@
 import asyncio
 import re
 import ssl
-from typing import Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import unquote, urljoin, urlparse
 
 import structlog
@@ -12,14 +13,34 @@ from codegate.providers.copilot.mapping import VALIDATED_ROUTES
 
 logger = structlog.get_logger("codegate")
 
-# Increase buffer sizes
+# Constants
 MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 10MB
 CHUNK_SIZE = 64 * 1024  # 64KB
+HTTP_STATUS_MESSAGES = {
+    400: "Bad Request",
+    404: "Not Found",
+    413: "Request Entity Too Large",
+    502: "Bad Gateway",
+}
+
+
+@dataclass
+class HttpRequest:
+    """Data class to store HTTP request details"""
+
+    method: str
+    path: str
+    version: str
+    headers: List[str]
+    original_path: str
+    target: Optional[str] = None
 
 
 class CopilotProvider(asyncio.Protocol):
-    def __init__(self, loop):
-        logger.debug("Initializing CopilotProvider class: CopilotProvider")
+    """Protocol implementation for the Copilot proxy server"""
+
+    def __init__(self, loop: asyncio.AbstractEventLoop):
+        logger.debug("Initializing CopilotProvider")
         self.loop = loop
         self.transport: Optional[asyncio.Transport] = None
         self.target_transport: Optional[asyncio.Transport] = None
@@ -29,49 +50,40 @@ class CopilotProvider(asyncio.Protocol):
         self.target_port: Optional[int] = None
         self.handshake_done = False
         self.is_connect = False
-        self.content_length = 0
         self.headers_parsed = False
-        self.method = None
-        self.path = None
-        self.version = None
-        self.headers = []
-        self.target = None
-        self.original_path = None
-        self.ssl_context = None
-        self.proxy_ep = None
-        self.decrypted_data = bytearray()
-        # Get the singleton instance of CertificateAuthority
+        self.request: Optional[HttpRequest] = None
+        self.ssl_context: Optional[ssl.SSLContext] = None
+        self.proxy_ep: Optional[str] = None
         self.ca = CertificateAuthority.get_instance()
+        self._closing = False
 
-    def connection_made(self, transport: asyncio.Transport):
-        logger.debug("Client connected fn: connection_made")
+    def connection_made(self, transport: asyncio.Transport) -> None:
+        """Handle new client connection"""
         self.transport = transport
         self.peername = transport.get_extra_info("peername")
         logger.debug(f"Client connected from {self.peername}")
 
-    def extract_path(self, full_path: str) -> str:
-        logger.debug(f"Extracting path from {full_path} fn: extract_path")
-        if full_path.startswith("http://") or full_path.startswith("https://"):
+    @staticmethod
+    def extract_path(full_path: str) -> str:
+        """Extract clean path from full URL or path string"""
+        logger.debug(f"Extracting path from {full_path}")
+        if full_path.startswith(("http://", "https://")):
             parsed = urlparse(full_path)
             path = parsed.path
             if parsed.query:
                 path = f"{path}?{parsed.query}"
             return path.lstrip("/")
-        elif full_path.startswith("/"):
-            return full_path.lstrip("/")
-        return full_path
+        return full_path.lstrip("/")
 
-    def get_headers(self) -> Dict[str, str]:
-        """Get request headers as a dictionary"""
-        logger.debug("Getting headers as dictionary fn: get_headers")
+    def get_headers_dict(self) -> Dict[str, str]:
+        """Convert raw headers to dictionary format"""
         headers_dict = {}
-
         try:
             if b"\r\n\r\n" not in self.buffer:
                 return {}
 
             headers_end = self.buffer.index(b"\r\n\r\n")
-            headers = self.buffer[:headers_end].split(b"\r\n")[1:]  # Skip request line
+            headers = self.buffer[:headers_end].split(b"\r\n")[1:]
 
             for header in headers:
                 try:
@@ -82,11 +94,11 @@ class CopilotProvider(asyncio.Protocol):
 
             return headers_dict
         except Exception as e:
-            logger.error(f"Error getting headers: {e}")
+            logger.error(f"Error parsing headers: {e}")
             return {}
 
     def parse_headers(self) -> bool:
-        logger.debug("Parsing headers fn: parse_headers")
+        """Parse HTTP headers from buffer"""
         try:
             if b"\r\n\r\n" not in self.buffer:
                 return False
@@ -95,77 +107,66 @@ class CopilotProvider(asyncio.Protocol):
             headers = self.buffer[:headers_end].split(b"\r\n")
 
             request = headers[0].decode("utf-8")
-            self.method, full_path, self.version = request.split(" ")
+            method, full_path, version = request.split(" ")
 
-            self.original_path = full_path
+            self.request = HttpRequest(
+                method=method,
+                path=self.extract_path(full_path),
+                version=version,
+                headers=[header.decode("utf-8") for header in headers[1:]],
+                original_path=full_path,
+                target=full_path if method == "CONNECT" else None,
+            )
 
-            if self.method == "CONNECT":
-                logger.debug(f"CONNECT request to {full_path}")
-                self.target = full_path
-                self.path = ""
-            else:
-                logger.debug(f"Request: {self.method} {full_path} {self.version}")
-                self.path = self.extract_path(full_path)
-
-            self.headers = [header.decode("utf-8") for header in headers[1:]]
+            logger.debug(f"Request: {method} {full_path} {version}")
             return True
+
         except Exception as e:
             logger.error(f"Error parsing headers: {e}")
             return False
 
-    def log_decrypted_data(self, data: bytes, direction: str):
-        """
-        Uncomment to log data from payload
-        """
+    def _check_buffer_size(self, new_data: bytes) -> bool:
+        """Check if adding new data would exceed buffer size limit"""
+        return len(self.buffer) + len(new_data) <= MAX_BUFFER_SIZE
+
+    def _forward_data_to_target(self, data: bytes) -> None:
+        """Forward data to target if connection is established"""
+        if self.target_transport and not self.target_transport.is_closing():
+            self._log_decrypted_data(data, "Client to Server")
+            self.target_transport.write(data)
+
+    def data_received(self, data: bytes) -> None:
+        """Handle received data from client"""
         try:
-            # decoded = data.decode('utf-8')
-            # logger.debug(f"=== Decrypted {direction} Data ===")
-            # logger.debug(decoded)
-            # logger.debug("=" * 40)
-            pass
-        except UnicodeDecodeError:
-            # pass
-            # logger.debug(f"=== Decrypted {direction} Data (hex) ===")
-            # logger.debug(data.hex())
-            # logger.debug("=" * 40)
-            pass
+            if not self._check_buffer_size(data):
+                self.send_error_response(413, b"Request body too large")
+                return
 
-    async def handle_http_request(self):
-        logger.debug("Handling HTTP request fn: handle_http_request")
-        logger.debug("=" * 40)
-        logger.debug(f"Method: {self.method}")
-        logger.debug(f"Searched Path: {self.path} in target URL")
-        try:
-            # Extract proxy endpoint from authorization header if present
-            headers_dict = self.get_headers()
-            auth_header = headers_dict.get("authorization", "")
-            if auth_header:
-                match = re.search(r"proxy-ep=([^;]+)", auth_header)
-                if match:
-                    self.proxy_ep = match.group(1)
-                    logger.debug(f"Extracted proxy-ep value: {self.proxy_ep}")
+            self.buffer.extend(data)
 
-                    # Check if the proxy_ep includes a scheme
-                    parsed_proxy_ep = urlparse(self.proxy_ep)
-                    if not parsed_proxy_ep.scheme:
-                        # Default to https if no scheme is provided
-                        self.proxy_ep = f"https://{self.proxy_ep}"
-                        logger.debug(f"Added default scheme to proxy-ep: {self.proxy_ep}")
-
-                    target_url = f"{self.proxy_ep}/{self.path}"
-                else:
-                    target_url = await self.get_target_url(self.path)
+            if not self.headers_parsed:
+                self.headers_parsed = self.parse_headers()
+                if self.headers_parsed:
+                    if self.request.method == "CONNECT":
+                        self.handle_connect()
+                    else:
+                        asyncio.create_task(self.handle_http_request())
             else:
-                target_url = await self.get_target_url(self.path)
+                self._forward_data_to_target(data)
 
+        except Exception as e:
+            logger.error(f"Error processing received data: {e}")
+            self.send_error_response(502, str(e).encode())
+
+    async def handle_http_request(self) -> None:
+        """Handle standard HTTP request"""
+        try:
+            target_url = await self._get_target_url()
             if not target_url:
                 self.send_error_response(404, b"Not Found")
                 return
-            logger.debug(f"Target URL: {target_url}")
 
             parsed_url = urlparse(target_url)
-            logger.debug(f"Parsed URL {parsed_url}")
-
             self.target_host = parsed_url.hostname
             self.target_port = parsed_url.port or (443 if parsed_url.scheme == "https" else 80)
 
@@ -221,226 +222,201 @@ class CopilotProvider(asyncio.Protocol):
             logger.error(f"Error handling HTTP request: {e}")
             self.send_error_response(502, str(e).encode())
 
-    def _check_buffer_size(self, new_data: bytes) -> bool:
-        """Check if adding new data would exceed the maximum buffer size"""
-        return len(self.buffer) + len(new_data) <= MAX_BUFFER_SIZE
+    async def _get_target_url(self) -> Optional[str]:
+        """Determine target URL based on request path and headers"""
+        headers_dict = self.get_headers_dict()
+        auth_header = headers_dict.get("authorization", "")
 
-    def _handle_parsed_headers(self) -> None:
-        """Handle the request based on parsed headers"""
-        if self.method == "CONNECT":
-            logger.debug("Handling CONNECT request")
-            self.handle_connect()
-        else:
-            logger.debug("Handling HTTP request")
-            asyncio.create_task(self.handle_http_request())
+        if auth_header:
+            match = re.search(r"proxy-ep=([^;]+)", auth_header)
+            if match:
+                self.proxy_ep = match.group(1)
+                if not urlparse(self.proxy_ep).scheme:
+                    self.proxy_ep = f"https://{self.proxy_ep}"
+                return f"{self.proxy_ep}/{self.request.path}"
 
-    def _forward_data_to_target(self, data: bytes) -> None:
-        """Forward data to target if connection is established"""
-        if self.target_transport and not self.target_transport.is_closing():
-            self.log_decrypted_data(data, "Client to Server")
-            self.target_transport.write(data)
+        return await self.get_target_url(self.request.path)
 
-    def data_received(self, data: bytes) -> None:
-        """Handle received data from the client"""
-        logger.debug(f"Data received from {self.peername} fn: data_received")
+    async def _establish_target_connection(self, use_ssl: bool) -> None:
+        """Establish connection to target server"""
+        target_protocol = CopilotProxyTargetProtocol(self)
+        await self.loop.create_connection(
+            lambda: target_protocol, self.target_host, self.target_port, ssl=use_ssl
+        )
 
-        try:
-            # Check buffer size limit
-            if not self._check_buffer_size(data):
-                logger.error("Request exceeds maximum buffer size")
-                self.send_error_response(413, b"Request body too large")
-                return
+    def _send_request_to_target(self) -> None:
+        """Send modified request to target server"""
+        if not self.target_transport:
+            logger.error("Target transport not available")
+            self.send_error_response(502, b"Failed to establish target connection")
+            return
 
-            # Append new data to buffer
-            self.buffer.extend(data)
+        headers = self._prepare_request_headers()
+        self.target_transport.write(headers)
 
-            if not self.headers_parsed:
-                # Try to parse headers
-                self.headers_parsed = self.parse_headers()
-                if not self.headers_parsed:
-                    return
+        body_start = self.buffer.index(b"\r\n\r\n") + 4
+        body = self.buffer[body_start:]
 
-                # Handle the request based on parsed headers
-                self._handle_parsed_headers()
+        if body:
+            self._log_decrypted_data(body, "Request Body")
+            for i in range(0, len(body), CHUNK_SIZE):
+                self.target_transport.write(body[i : i + CHUNK_SIZE])
+
+    def _prepare_request_headers(self) -> bytes:
+        """Prepare modified request headers"""
+        new_headers = []
+        has_host = False
+
+        for header in self.request.headers:
+            if header.lower().startswith("host:"):
+                has_host = True
+                new_headers.append(f"Host: {self.target_host}")
             else:
-                # Forward data to target if headers are already parsed
-                self._forward_data_to_target(data)
+                new_headers.append(header)
 
-        except asyncio.CancelledError:
-            logger.warning("Operation cancelled")
-            raise
-        except Exception as e:
-            logger.error(f"Error processing received data: {e}")
-            self.send_error_response(502, str(e).encode())
+        if not has_host:
+            new_headers.append(f"Host: {self.target_host}")
 
-    def handle_connect(self):
-        """
-        This where requests are sent directly via the tunnel created during
-        a CONNECT request. This is where the SSL context is created and the
-        internal connection is made to the target host.
+        request_line = f"{self.request.method} /{self.request.path} {self.request.version}\r\n"
+        header_block = "\r\n".join(new_headers)
+        return f"{request_line}{header_block}\r\n\r\n".encode()
 
-        We do not need to do a URL to mapping, as this passes through the
-        tunnel with a FQDN already set by the source (client) request.
-        """
+    def handle_connect(self) -> None:
+        """Handle CONNECT request for SSL/TLS tunneling"""
         try:
-            path = unquote(self.target)
-            if ":" in path:
-                self.target_host, port = path.split(":")
-                self.target_port = int(port)
-                logger.debug("=" * 40)
-                logger.debug(f"CONNECT request to {self.target_host}:{self.target_port}")
-                logger.debug("Headers:")
-                for header in self.headers:
-                    logger.debug(f"  {header}")
+            path = unquote(self.request.target)
+            if ":" not in path:
+                raise ValueError(f"Invalid CONNECT path: {path}")
 
-                logger.debug("=" * 40)
-                cert_path, key_path = self.ca.get_domain_certificate(self.target_host)
+            self.target_host, port = path.split(":")
+            self.target_port = int(port)
 
-                logger.debug(f"Setting up SSL context for {self.target_host}")
-                logger.debug(f"Using certificate: {cert_path}")
-                logger.debug(f"Using key: {key_path}")
+            cert_path, key_path = self.ca.get_domain_certificate(self.target_host)
+            self.ssl_context = self._create_ssl_context(cert_path, key_path)
 
-                self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                self.ssl_context.load_cert_chain(cert_path, key_path)
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+            self.is_connect = True
+            asyncio.create_task(self.connect_to_target())
+            self.handshake_done = True
 
-                self.is_connect = True
-                logger.debug("CONNECT handshake complete")
-                asyncio.create_task(self.connect_to_target())
-                self.handshake_done = True
-            else:
-                logger.error(f"Invalid CONNECT path: {path}")
-                self.send_error_response(400, b"Invalid CONNECT path")
         except Exception as e:
             logger.error(f"Error handling CONNECT: {e}")
             self.send_error_response(502, str(e).encode())
 
-    def send_error_response(self, status: int, message: bytes):
-        logger.debug(f"Sending error response: {status} {message} fn: send_error_response")
-        response = (
-            f"HTTP/1.1 {status} {self.get_status_text(status)}\r\n"
-            f"Content-Length: {len(message)}\r\n"
-            f"Content-Type: text/plain\r\n"
-            f"\r\n"
-        ).encode() + message
-        if self.transport and not self.transport.is_closing():
-            self.transport.write(response)
-            self.transport.close()
+    def _create_ssl_context(self, cert_path: str, key_path: str) -> ssl.SSLContext:
+        """Create SSL context for CONNECT tunneling"""
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(cert_path, key_path)
+        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+        return ssl_context
 
-    def get_status_text(self, status: int) -> str:
-        logger.debug(f"Getting status text for {status} fn: get_status_text")
-        status_texts = {
-            400: "Bad Request",
-            404: "Not Found",
-            413: "Request Entity Too Large",
-            502: "Bad Gateway",
-        }
-        return status_texts.get(status, "Error")
-
-    async def connect_to_target(self):
-        logger.debug(
-            f"Connecting to target {self.target_host}:{self.target_port} fn: connect_to_target"
-        )
+    async def connect_to_target(self) -> None:
+        """Establish connection to target for CONNECT requests"""
         try:
             if not self.target_host or not self.target_port:
                 raise ValueError("Target host and port not set")
 
-            logger.debug(f"Attempting to connect to {self.target_host}:{self.target_port}")
-
-            # Create SSL context for target connection
-            logger.debug("Creating SSL context for target connection")
             target_ssl_context = ssl.create_default_context()
-            # Don't verify certificates when connecting to target
             target_ssl_context.check_hostname = False
             target_ssl_context.verify_mode = ssl.CERT_NONE
 
-            # Connect directly to target host
-            logger.debug(f"Connecting to {self.target_host}:{self.target_port}")
             target_protocol = CopilotProxyTargetProtocol(self)
             transport, _ = await self.loop.create_connection(
                 lambda: target_protocol, self.target_host, self.target_port, ssl=target_ssl_context
             )
 
-            logger.debug(f"Successfully connected to {self.target_host}:{self.target_port}")
-
-            # Send 200 Connection Established
             if self.transport and not self.transport.is_closing():
-                logger.debug("Sending 200 Connection Established response")
                 self.transport.write(
                     b"HTTP/1.1 200 Connection Established\r\n"
                     b"Proxy-Agent: ProxyPilot\r\n"
                     b"Connection: keep-alive\r\n\r\n"
                 )
 
-                # Upgrade client connection to SSL
-                logger.debug("Upgrading client connection to SSL")
-                transport = await self.loop.start_tls(
+                self.transport = await self.loop.start_tls(
                     self.transport, self, self.ssl_context, server_side=True
                 )
-                self.transport = transport
 
         except Exception as e:
             logger.error(f"Failed to connect to target {self.target_host}:{self.target_port}: {e}")
             self.send_error_response(502, str(e).encode())
 
-    def connection_lost(self, exc):
-        logger.debug(f"Connection lost from {self.peername} fn: connection_lost")
-        logger.debug(f"Client disconnected from {self.peername}")
+    def send_error_response(self, status: int, message: bytes) -> None:
+        """Send error response to client"""
+        if self._closing:
+            return
+
+        response = (
+            f"HTTP/1.1 {status} {HTTP_STATUS_MESSAGES.get(status, 'Error')}\r\n"
+            f"Content-Length: {len(message)}\r\n"
+            f"Content-Type: text/plain\r\n"
+            f"\r\n"
+        ).encode() + message
+
+        if self.transport and not self.transport.is_closing():
+            self.transport.write(response)
+            self.transport.close()
+
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        """Handle connection loss"""
+        if self._closing:
+            return
+
+        self._closing = True
+        logger.debug(f"Connection lost from {self.peername}")
+
+        # Close target transport if it exists and isn't already closing
         if self.target_transport and not self.target_transport.is_closing():
-            self.target_transport.close()
+            try:
+                self.target_transport.close()
+            except Exception as e:
+                logger.error(f"Error closing target transport: {e}")
+
+        # Clear references to help with cleanup
+        self.transport = None
+        self.target_transport = None
+        self.buffer.clear()
+        self.ssl_context = None
+
+    @staticmethod
+    def _log_decrypted_data(data: bytes, direction: str) -> None:
+        """Log decrypted data for debugging"""
+        pass  # Logging disabled by default
 
     @classmethod
     async def create_proxy_server(
         cls, host: str, port: int, ssl_context: Optional[ssl.SSLContext] = None
-    ):
-        logger.debug(f"Creating proxy server on {host}:{port} fn: create_proxy_server")
+    ) -> asyncio.AbstractServer:
+        """Create and start proxy server"""
         loop = asyncio.get_event_loop()
-
-        def create_protocol():
-            logger.debug("Creating protocol for proxy server fn: create_protocol")
-            return cls(loop)
-
-        logger.debug(f"Starting proxy server on {host}:{port}")
         server = await loop.create_server(
-            create_protocol, host, port, ssl=ssl_context, reuse_port=True, start_serving=True
+            lambda: cls(loop), host, port, ssl=ssl_context, reuse_port=True, start_serving=True
         )
-
         logger.debug(f"Proxy server running on {host}:{port}")
         return server
 
     @classmethod
-    async def run_proxy_server(cls):
-        logger.debug("Running proxy server fn: run_proxy_server")
+    async def run_proxy_server(cls) -> None:
+        """Run the proxy server"""
         try:
-            # Get the singleton instance of CertificateAuthority
             ca = CertificateAuthority.get_instance()
-            logger.debug("Creating SSL context for proxy server")
             ssl_context = ca.create_ssl_context()
-            server = await cls.create_proxy_server(
-                Config.get_config().host, Config.get_config().proxy_port, ssl_context
-            )
-            logger.debug("Proxy server created")
+            config = Config.get_config()
+            server = await cls.create_proxy_server(config.host, config.proxy_port, ssl_context)
+
             async with server:
                 await server.serve_forever()
-
         except Exception as e:
             logger.error(f"Proxy server error: {e}")
             raise
 
-    @classmethod
-    async def get_target_url(cls, path: str) -> Optional[str]:
+    @staticmethod
+    async def get_target_url(path: str) -> Optional[str]:
         """Get target URL for the given path"""
-        logger.debug(f"Attempting to get target URL for path: {path} fn: get_target_url")
-
-        logger.debug("=" * 40)
-        logger.debug("Validated routes:")
+        # Check for exact path match
         for route in VALIDATED_ROUTES:
             if path == route.path:
-                logger.debug(f"  {route.path} -> {route.target}")
-                logger.debug(f"Found exact path match: {path} -> {route.target}")
                 return str(route.target)
 
-        # Then check for prefix match
+        # Check for prefix match
         for route in VALIDATED_ROUTES:
             # For prefix matches, keep the rest of the path
             remaining_path = path[len(route.path) :]
@@ -449,10 +425,6 @@ class CopilotProvider(asyncio.Protocol):
             if remaining_path and remaining_path.startswith("/"):
                 remaining_path = remaining_path[1:]
             target = urljoin(str(route.target), remaining_path)
-            logger.debug(
-                f"Found prefix match: {path} -> {target} "
-                "(using route {route.path} -> {route.target})"
-            )
             return target
 
         logger.warning(f"No route found for path: {path}")
@@ -460,25 +432,31 @@ class CopilotProvider(asyncio.Protocol):
 
 
 class CopilotProxyTargetProtocol(asyncio.Protocol):
+    """Protocol implementation for proxy target connections"""
+
     def __init__(self, proxy: CopilotProvider):
-        logger.debug("Initializing CopilotProxyTargetProtocol class: CopilotProxyTargetProtocol")
         self.proxy = proxy
         self.transport: Optional[asyncio.Transport] = None
 
-    def connection_made(self, transport: asyncio.Transport):
-        logger.debug(f"Connection made to target {self.proxy.target_host}:{self.proxy.target_port}")
+    def connection_made(self, transport: asyncio.Transport) -> None:
+        """Handle successful connection to target"""
         self.transport = transport
         self.proxy.target_transport = transport
 
-    def data_received(self, data: bytes):
-        logger.debug(f"Data received from target {self.proxy.target_host}:{self.proxy.target_port}")
+    def data_received(self, data: bytes) -> None:
+        """Handle data received from target"""
         if self.proxy.transport and not self.proxy.transport.is_closing():
-            self.proxy.log_decrypted_data(data, "Server to Client")
+            self.proxy._log_decrypted_data(data, "Server to Client")
             self.proxy.transport.write(data)
 
-    def connection_lost(self, exc):
-        logger.debug(
-            f"Connection lost from target {self.proxy.target_host}:{self.proxy.target_port}"
-        )
-        if self.proxy.transport and not self.proxy.transport.is_closing():
-            self.proxy.transport.close()
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        """Handle connection loss to target"""
+        if (
+            not self.proxy._closing
+            and self.proxy.transport
+            and not self.proxy.transport.is_closing()
+        ):
+            try:
+                self.proxy.transport.close()
+            except Exception as e:
+                logger.error(f"Error closing proxy transport: {e}")

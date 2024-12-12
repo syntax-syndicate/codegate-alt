@@ -349,7 +349,6 @@ class CertificateAuthority:
             algorithm=hashes.SHA256(),
         )
 
-        # os.path.join(Config.get_config().server_key)
         with open(
             os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert), "wb"
         ) as f:
