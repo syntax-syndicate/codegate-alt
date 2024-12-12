@@ -388,7 +388,7 @@ class CopilotProvider(asyncio.Protocol):
         """Create and start proxy server"""
         loop = asyncio.get_event_loop()
         server = await loop.create_server(
-            lambda: cls(loop), host, port, ssl=ssl_context, reuse_port=True, start_serving=True
+            lambda: cls(loop), host, port, ssl=ssl_context, reuse_port=True, start_serving=False
         )
         logger.debug(f"Proxy server running on {host}:{port}")
         return server
