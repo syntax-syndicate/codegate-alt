@@ -559,31 +559,52 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         self.headers_sent = False
         self.sse_processor: Optional[SSEProcessor] = None
         self.output_pipeline_instance: Optional[OutputPipelineInstance] = None
+        self.stream_queue: Optional[asyncio.Queue] = None
 
     def connection_made(self, transport: asyncio.Transport) -> None:
         """Handle successful connection to target"""
         self.transport = transport
         self.proxy.target_transport = transport
 
+    async def _process_stream(self):
+        try:
+            async def stream_iterator():
+                while True:
+                    incoming_record = await self.stream_queue.get()
+                    yield incoming_record
+
+            async for record in stream_iterator():
+                print("received from stream")
+                print(record)
+                if record["type"] == "done":
+                    sse_data = b"data: [DONE]\n\n"
+                    # Add chunk size for DONE message too
+                    chunk_size = hex(len(sse_data))[2:] + "\r\n"
+                    self._proxy_transport_write(chunk_size.encode())
+                    self._proxy_transport_write(sse_data)
+                    self._proxy_transport_write(b"\r\n")
+                    # Now send the final zero chunk
+                    self._proxy_transport_write(b"0\r\n\r\n")
+                else:
+                    sse_data = f"data: {json.dumps(record['content'])}\n\n".encode("utf-8")
+                    chunk_size = hex(len(sse_data))[2:] + "\r\n"
+                    self._proxy_transport_write(chunk_size.encode())
+                    self._proxy_transport_write(sse_data)
+                    self._proxy_transport_write(b"\r\n")
+
+        except Exception as e:
+            logger.error(f"Error processing stream: {e}")
+
     def _process_chunk(self, chunk: bytes):
         records = self.sse_processor.process_chunk(chunk)
 
         for record in records:
-            if record["type"] == "done":
-                sse_data = b"data: [DONE]\n\n"
-                # Add chunk size for DONE message too
-                chunk_size = hex(len(sse_data))[2:] + "\r\n"
-                self._proxy_transport_write(chunk_size.encode())
-                self._proxy_transport_write(sse_data)
-                self._proxy_transport_write(b"\r\n")
-                # Now send the final zero chunk
-                self._proxy_transport_write(b"0\r\n\r\n")
-            else:
-                sse_data = f"data: {json.dumps(record['content'])}\n\n".encode("utf-8")
-                chunk_size = hex(len(sse_data))[2:] + "\r\n"
-                self._proxy_transport_write(chunk_size.encode())
-                self._proxy_transport_write(sse_data)
-                self._proxy_transport_write(b"\r\n")
+            if self.stream_queue is None:
+                # Initialize queue and start processing task on first record
+                self.stream_queue = asyncio.Queue()
+                self.processing_task = asyncio.create_task(self._process_stream())
+
+            self.stream_queue.put_nowait(record)
 
     def _proxy_transport_write(self, data: bytes):
         self.proxy.transport.write(data)
