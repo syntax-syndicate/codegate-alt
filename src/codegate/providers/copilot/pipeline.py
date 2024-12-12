@@ -44,13 +44,21 @@ class CopilotPipeline(ABC):
 
     @staticmethod
     def _get_copilot_headers(headers: Dict[str, str]) -> Dict[str, str]:
-        copilot_header_names = ['copilot-integration-id', 'editor-plugin-version', 'editor-version',
-                                'openai-intent', 'openai-organization', 'user-agent',
-                                'vscode-machineid', 'vscode-sessionid', 'x-github-api-version',
-                                'x-request-id']
+        copilot_header_names = [
+            "copilot-integration-id",
+            "editor-plugin-version",
+            "editor-version",
+            "openai-intent",
+            "openai-organization",
+            "user-agent",
+            "vscode-machineid",
+            "vscode-sessionid",
+            "x-github-api-version",
+            "x-request-id",
+        ]
         copilot_headers = {}
         for a_name in copilot_header_names:
-            copilot_headers[a_name] = headers.get(a_name, '')
+            copilot_headers[a_name] = headers.get(a_name, "")
 
         return copilot_headers
 
@@ -73,9 +81,9 @@ class CopilotPipeline(ABC):
                 provider=self.provider_name,
                 prompt_id=self._request_id(headers),
                 model=normalized_body.get("model", "gpt-4o-mini"),
-                api_key = headers_dict.get('authorization','').replace('Bearer ', ''),
-                api_base = "https://" + headers_dict.get('host', ''),
-                extra_headers=CopilotPipeline._get_copilot_headers(headers_dict)
+                api_key=headers_dict.get("authorization", "").replace("Bearer ", ""),
+                api_base="https://" + headers_dict.get("host", ""),
+                extra_headers=CopilotPipeline._get_copilot_headers(headers_dict),
             )
 
             if result.request:

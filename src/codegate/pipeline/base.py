@@ -224,7 +224,7 @@ class InputPipelineInstance:
         model: str,
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
-        extra_headers: Optional[Dict[str, str]] = None
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> PipelineResult:
         """Process a request through all pipeline steps"""
         self.context.sensitive = PipelineSensitiveData(
@@ -273,7 +273,7 @@ class SequentialPipelineProcessor:
         model: str,
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
-        extra_headers: Optional[Dict[str, str]] = None
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> PipelineResult:
         """Create a new pipeline instance and process the request"""
         instance = self.create_instance()
