@@ -190,6 +190,12 @@ class CodegateSecrets(PipelineStep):
         total_redacted = 0
 
         # Process all messages
+        last_assistant_idx = -1
+        for i, message in enumerate(new_request["messages"]):
+            if message.get("role", "") == "assistant":
+                last_assistant_idx = i
+
+        # Process all messages
         for i, message in enumerate(new_request["messages"]):
             if "content" in message and message["content"]:
                 # Protect the text
@@ -198,11 +204,11 @@ class CodegateSecrets(PipelineStep):
                 )
                 new_request["messages"][i]["content"] = protected_string
 
-                # only sum to the count if it is the last message
-                if i == len(new_request["messages"]) - 1:
+                # Sum redacted count for messages after the last assistant message
+                if i > last_assistant_idx:
                     total_redacted += redacted_count
 
-        logger.info(f"Total secrets redacted: {total_redacted}")
+        logger.info(f"Total secrets redacted since last assistant message: {total_redacted}")
 
         # Store the count in context metadata
         context.metadata["redacted_secrets_count"] = total_redacted
@@ -350,7 +356,7 @@ class SecretRedactionNotifier(OutputPipelineStep):
             return [chunk]
 
         # Check if this is the first chunk (delta role will be present, others will not)
-        if chunk.choices[0].delta.role:
+        if len(chunk.choices) > 0 and chunk.choices[0].delta.role:
             redacted_count = input_context.metadata["redacted_secrets_count"]
             secret_text = "secret" if redacted_count == 1 else "secrets"
             # Create notification chunk
