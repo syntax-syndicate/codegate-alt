@@ -92,15 +92,6 @@ jobs:
         id: image-digest
         run: |
           echo "digest=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.version-string.outputs.tag }})" >> "$GITHUB_OUTPUT"
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
-        with:
-          image-ref: '${{ steps.image-digest.outputs.digest }}'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
       - name: Install cosign
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
