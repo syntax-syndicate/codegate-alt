@@ -101,6 +101,21 @@ class CopilotFimNormalizer:
         return json.dumps(normalized_json_body).encode()
 
 
+class CopilotChatNormalizer:
+    """
+    A custom normalizer for the chat format used by Copilot
+    The requests are already in the OpenAI format, we just need
+    to unmarshall them and marshall them back.
+    """
+
+    def normalize(self, body: bytes) -> ChatCompletionRequest:
+        json_body = json.loads(body)
+        return ChatCompletionRequest(**json_body)
+
+    def denormalize(self, request_from_pipeline: ChatCompletionRequest) -> bytes:
+        return json.dumps(request_from_pipeline).encode()
+
+
 class CopilotFimPipeline(CopilotPipeline):
     """
     A pipeline for the FIM format used by Copilot. Combines the normalizer for the FIM
@@ -108,7 +123,20 @@ class CopilotFimPipeline(CopilotPipeline):
     """
 
     def _create_normalizer(self):
-        return CopilotFimNormalizer()  # Uses your custom normalizer
+        return CopilotFimNormalizer()
 
     def create_pipeline(self):
         return self.pipeline_factory.create_fim_pipeline()
+
+
+class CopilotChatPipeline(CopilotPipeline):
+    """
+    A pipeline for the Chat format used by Copilot. Combines the normalizer for the FIM
+    format and the FIM pipeline used by all providers.
+    """
+
+    def _create_normalizer(self):
+        return CopilotChatNormalizer()
+
+    def create_pipeline(self):
+        return self.pipeline_factory.create_input_pipeline()
