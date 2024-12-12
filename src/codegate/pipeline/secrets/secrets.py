@@ -175,6 +175,10 @@ class CodegateSecrets(PipelineStep):
         Returns:
             PipelineResult containing the processed request and context with redaction metadata
         """
+
+        if 'messages' not in request:
+            return PipelineResult(request=request, context=context)
+
         secrets_manager = context.sensitive.manager
         if not secrets_manager or not isinstance(secrets_manager, SecretsManager):
             raise ValueError("Secrets manager not found in context")

@@ -1,5 +1,6 @@
 import json
 from abc import ABC, abstractmethod
+from typing import Dict
 
 import structlog
 from litellm.types.llms.openai import ChatCompletionRequest
@@ -41,6 +42,18 @@ class CopilotPipeline(ABC):
         print("No request ID found in headers")
         return ""
 
+    @staticmethod
+    def _get_copilot_headers(headers: Dict[str, str]) -> Dict[str, str]:
+        copilot_header_names = ['copilot-integration-id', 'editor-plugin-version', 'editor-version',
+                                'openai-intent', 'openai-organization', 'user-agent',
+                                'vscode-machineid', 'vscode-sessionid', 'x-github-api-version',
+                                'x-request-id']
+        copilot_headers = {}
+        for a_name in copilot_header_names:
+            copilot_headers[a_name] = headers.get(a_name, '')
+
+        return copilot_headers
+
     async def process_body(self, headers: list[str], body: bytes) -> bytes:
         """Common processing logic for all strategies"""
         try:
@@ -51,8 +64,10 @@ class CopilotPipeline(ABC):
                 request=normalized_body,
                 provider=self.provider_name,
                 prompt_id=self._request_id(headers),
-                model=normalized_body.get("model", ""),
-                api_key=None,
+                model=normalized_body.get("model", "gpt-4o-mini"),
+                api_key = headers.get('authorization','').replace('Bearer ', ''),
+                api_base = "https://" + headers.get('host', ''),
+                extra_headers=CopilotPipeline._get_copilot_headers(headers)
             )
 
             if result.request:

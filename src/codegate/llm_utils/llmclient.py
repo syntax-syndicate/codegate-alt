@@ -27,6 +27,7 @@ class LLMClient:
         model: str = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        extra_headers: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -53,6 +54,7 @@ class LLMClient:
             model,
             api_key,
             base_url,
+            extra_headers,
             **kwargs,
         )
 
@@ -102,6 +104,7 @@ class LLMClient:
         model: str,
         api_key: str,
         base_url: Optional[str] = None,
+        extra_headers: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         # Use the private method to create the request
@@ -134,6 +137,7 @@ class LLMClient:
                     temperature=request["temperature"],
                     base_url=base_url,
                     response_format=request["response_format"],
+                    extra_headers=extra_headers
                 )
                 content = response["choices"][0]["message"]["content"]
 

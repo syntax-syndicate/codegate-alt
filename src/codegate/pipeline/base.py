@@ -224,6 +224,7 @@ class InputPipelineInstance:
         model: str,
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
+        extra_headers: Optional[Dict[str, str]] = None
     ) -> PipelineResult:
         """Process a request through all pipeline steps"""
         self.context.sensitive = PipelineSensitiveData(
@@ -235,6 +236,7 @@ class InputPipelineInstance:
             api_base=api_base,
         )
         self.context.metadata["prompt_id"] = prompt_id
+        self.context.metadata["extra_headers"] = extra_headers
         current_request = request
 
         for step in self.pipeline_steps:
@@ -271,9 +273,10 @@ class SequentialPipelineProcessor:
         model: str,
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
+        extra_headers: Optional[Dict[str, str]] = None
     ) -> PipelineResult:
         """Create a new pipeline instance and process the request"""
         instance = self.create_instance()
         return await instance.process_request(
-            request, provider, prompt_id, model, api_key, api_base
+            request, provider, prompt_id, model, api_key, api_base, extra_headers
         )

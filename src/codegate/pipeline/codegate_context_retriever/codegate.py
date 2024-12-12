@@ -66,6 +66,7 @@ class CodegateContextRetriever(PipelineStep):
             model=context.sensitive.model,
             api_key=context.sensitive.api_key,
             base_url=context.sensitive.api_base,
+            extra_headers=context.metadata.get('extra_headers', None),
         )
 
         logger.info(f"Packages in user query: {packages}")
@@ -79,6 +80,7 @@ class CodegateContextRetriever(PipelineStep):
             model=context.sensitive.model,
             api_key=context.sensitive.api_key,
             base_url=context.sensitive.api_base,
+            extra_headers=context.metadata.get('extra_headers', None),
         )
 
         logger.info(f"Ecosystem in user query: {ecosystem}")
