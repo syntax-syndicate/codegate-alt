@@ -296,12 +296,17 @@ def serve(
         setup_logging(cfg.log_level, cfg.log_format)
         logger = structlog.get_logger("codegate")
 
-        init_db_sync(cfg.db_path)
-
         # Check certificates and create CA if necessary
         logger.info("Checking certificates and creating CA if needed")
         ca = CertificateAuthority.get_instance()
         ca.ensure_certificates_exist()
+
+        # Set up logging first
+        setup_logging(cfg.log_level, cfg.log_format)
+        logger = structlog.get_logger("codegate")
+
+        # Initialize the database
+        init_db_sync(cfg.db_path)
 
         # Set up event loop
         loop = asyncio.new_event_loop()
