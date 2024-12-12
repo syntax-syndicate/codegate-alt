@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import structlog
 
@@ -24,6 +24,7 @@ class PackageExtractor:
         model: str = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
+        extra_headers: Optional[Dict[str, str]] = None
     ) -> List[str]:
         """Extract package names from the given content."""
         system_prompt = Config.get_config().prompts.lookup_packages
@@ -35,6 +36,7 @@ class PackageExtractor:
             model=model,
             api_key=api_key,
             base_url=base_url,
+            extra_headers=extra_headers,
         )
 
         # Handle both formats: {"packages": [...]} and direct list [...]
@@ -49,6 +51,7 @@ class PackageExtractor:
         model: str = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
+        extra_headers: Optional[Dict[str, str]] = None
     ) -> List[str]:
         """Extract ecosystem from the given content."""
         system_prompt = Config.get_config().prompts.lookup_ecosystem
@@ -60,6 +63,7 @@ class PackageExtractor:
             model=model,
             api_key=api_key,
             base_url=base_url,
+            extra_headers=extra_headers,
         )
 
         ecosystem = result if isinstance(result, str) else result.get("ecosystem")
