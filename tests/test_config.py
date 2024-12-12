@@ -1,6 +1,7 @@
 """Tests for configuration management."""
 
 import os
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -62,47 +63,51 @@ def test_config_from_env(env_vars: None) -> None:
 
 def test_config_priority_resolution(temp_config_file: Path, env_vars: None) -> None:
     """Test configuration priority resolution."""
-    # CLI args should override everything
-    config = Config.load(
-        config_path=temp_config_file,
-        cli_port=8080,
-        cli_host="example.com",
-        cli_log_level="WARNING",
-        cli_log_format="TEXT",
-        cli_provider_urls={"vllm": "https://custom.vllm.server"},
-        certs_dir="./custom-certs",
-        ca_cert="custom-ca.crt",
-        ca_key="custom-ca.key",
-        server_cert="custom-server.crt",
-        server_key="custom-server.key",
-    )
-    assert config.port == 8080
-    assert config.host == "example.com"
-    assert config.log_level == LogLevel.WARNING
-    assert config.log_format == LogFormat.TEXT
-    assert config.provider_urls["vllm"] == "https://custom.vllm.server"
-    assert config.certs_dir == "./custom-certs"
-    assert config.ca_cert == "custom-ca.crt"
-    assert config.ca_key == "custom-ca.key"
-    assert config.server_cert == "custom-server.crt"
-    assert config.server_key == "custom-server.key"
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        custom_certs_dir = os.path.join(tmpdirname, "custom-certs")
+        os.makedirs(custom_certs_dir)
 
-    # Env vars should override config file
-    config = Config.load(config_path=temp_config_file)
-    assert config.port == 8989  # from env
-    assert config.host == "localhost"  # from env
-    assert config.log_level == LogLevel.WARNING  # from env
-    assert config.log_format == LogFormat.TEXT  # from env
-    assert config.provider_urls == DEFAULT_PROVIDER_URLS  # no env override
+        # CLI args should override everything
+        config = Config.load(
+            config_path=temp_config_file,
+            cli_port=8080,
+            cli_host="example.com",
+            cli_log_level="WARNING",
+            cli_log_format="TEXT",
+            cli_provider_urls={"vllm": "https://custom.vllm.server"},
+            certs_dir=custom_certs_dir,
+            ca_cert="custom-ca.crt",
+            ca_key="custom-ca.key",
+            server_cert="custom-server.crt",
+            server_key="custom-server.key",
+        )
+        assert config.port == 8080
+        assert config.host == "example.com"
+        assert config.log_level == LogLevel.WARNING
+        assert config.log_format == LogFormat.TEXT
+        assert config.provider_urls["vllm"] == "https://custom.vllm.server"
+        assert config.certs_dir == custom_certs_dir
+        assert config.ca_cert == "custom-ca.crt"
+        assert config.ca_key == "custom-ca.key"
+        assert config.server_cert == "custom-server.crt"
+        assert config.server_key == "custom-server.key"
 
-    # Config file should override defaults
-    os.environ.clear()  # Remove env vars
-    config = Config.load(config_path=temp_config_file)
-    assert config.port == 8989  # from file
-    assert config.host == "localhost"  # from file
-    assert config.log_level == LogLevel.DEBUG  # from file
-    assert config.log_format == LogFormat.JSON  # from file
-    assert config.provider_urls == DEFAULT_PROVIDER_URLS  # default values
+        # Env vars should override config file
+        config = Config.load(config_path=temp_config_file)
+        assert config.port == 8989  # from env
+        assert config.host == "localhost"  # from env
+        assert config.log_level == LogLevel.WARNING  # from env
+        assert config.log_format == LogFormat.TEXT  # from env
+        assert config.provider_urls == DEFAULT_PROVIDER_URLS  # no env override
+
+        # Config file should override defaults
+        os.environ.clear()  # Remove env vars
+        config = Config.load(config_path=temp_config_file)
+        assert config.port == 8989  # from file
+        assert config.host == "localhost"  # from file
+        assert config.log_level == LogLevel.DEBUG  # from file
+        assert config.log_format == LogFormat.JSON  # from file
+        assert config.provider_urls == DEFAULT_PROVIDER_URLS  # default values
 
 
 def test_provider_urls_from_config(tmp_path: Path) -> None:
