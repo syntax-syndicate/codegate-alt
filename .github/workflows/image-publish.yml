@@ -8,14 +8,16 @@ on:
 jobs:
   build-codegate-image:
     name: Build Docker image
-    runs-on: ubuntu-latest-m
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       actions: read
+      id-token: write
+      attestations: write
     env:
-      BASE_REPO: "ghcr.io/stacklok"
-      CODEGATE_SERVER_IMAGE: "ghcr.io/stacklok/codegate/codegate"
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -39,11 +41,11 @@ jobs:
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5
         id: docker-metadata
         with:
-          images: ${{ env.CODEGATE_SERVER_IMAGE }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           labels: |
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.description="This is a container for the Stacklok Codegate server"
-            org.opencontainers.image.title="Stacklok Codegate Server"
+            org.opencontainers.image.description="Container image for the Codegate Local Gateway"
+            org.opencontainers.image.title="Codegate Container Image"
             org.opencontainers.image.vendor="Stacklok Inc."
             org.opencontainers.image.version=${{ github.sha }}
           flavor: |
@@ -65,7 +67,7 @@ jobs:
         id: fetch_commit_fe_sha
         run: |
           echo "LATEST_COMMIT_SHA=$(curl -LSsk 'https://api.github.com/repos/stacklok/codegate-ui/commits?per_page=1' -H 'Authorization: Bearer ${{ secrets.GH_CI_TOKEN }}' | jq -r '.[0].sha')" >> $GITHUB_ENV
-      - name: Rename to accomodate to image
+      - name: Rename to accommodate to image
         run: mv ./backup_weaviate ./weaviate_backup
       - name: Download git lfs dependencies
         run: |
@@ -88,3 +90,15 @@ jobs:
             gh_token=${{ secrets.GH_CI_TOKEN }}
           build-args: |
             LATEST_COMMIT_SHA=${{ env.LATEST_COMMIT_SHA }}
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version-string.outputs.tag }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
