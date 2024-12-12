@@ -1,6 +1,4 @@
 #!/bin/bash
-DEFAULT_CODEGATE_VLLM_URL="https://inference.codegate.ai"
-CODEGATE_VLLM_URL=${CODEGATE_VLLM_URL:-$DEFAULT_CODEGATE_VLLM_URL}
 
 # those are hardcoded on the image, will not change
 BACKUP_PATH="/tmp/weaviate_backup"
@@ -38,12 +36,13 @@ start_dashboard() {
 start_application() {
     # first restore the models
     cp /app/default_models/* /app/codegate_volume/models
-    CMD_ARGS="--port 8989 --host 0.0.0.0 --vllm-url $CODEGATE_VLLM_URL --model-base-path $MODEL_BASE_PATH --db-path $CODEGATE_DB_FILE"
+    CMD_ARGS="--port 8989 --host 0.0.0.0 --model-base-path $MODEL_BASE_PATH --db-path $CODEGATE_DB_FILE"
 
     # Check and append additional URLs if they are set
     [ -n "$CODEGATE_OPENAI_URL" ] && CMD_ARGS+=" --openai-url $CODEGATE_OPENAI_URL"
     [ -n "$CODEGATE_ANTHROPIC_URL" ] && CMD_ARGS+=" --anthropic-url $CODEGATE_ANTHROPIC_URL"
     [ -n "$CODEGATE_OLLAMA_URL" ] && CMD_ARGS+=" --ollama-url $CODEGATE_OLLAMA_URL"
+    [ -n "$CODEGATE_VLLM_URL" ] && CMD_ARGS+=" --vllm-url $CODEGATE_VLLM_URL"
 
     # Check and append debug level if set
     [ -n "$CODEGATE_APP_LOG_LEVEL" ] && CMD_ARGS+=" --log-level $CODEGATE_APP_LOG_LEVEL"

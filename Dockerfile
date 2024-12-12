@@ -101,7 +101,7 @@ EXPOSE 80
 ENV PYTHONPATH=/app/src
 
 # Expose additional env vars
-ENV CODEGATE_VLLM_URL=https://inference.codegate.ai
+ENV CODEGATE_VLLM_URL=
 ENV CODEGATE_OPENAI_URL=
 ENV CODEGATE_ANTHROPIC_URL=
 ENV CODEGATE_OLLAMA_URL=http://host.docker.internal:11434
