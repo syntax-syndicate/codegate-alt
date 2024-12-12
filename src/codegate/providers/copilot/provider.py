@@ -350,15 +350,20 @@ class CopilotProvider(asyncio.Protocol):
             # Create SSL context for target connection
             logger.debug("Creating SSL context for target connection")
             target_ssl_context = ssl.create_default_context()
-            # Don't verify certificates when connecting to target
-            target_ssl_context.check_hostname = False
-            target_ssl_context.verify_mode = ssl.CERT_NONE
 
-            # Connect directly to target host
+            # Ensure that the target SSL certificate is verified
+            target_ssl_context.check_hostname = True
+            target_ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+            # Connect to target
             logger.debug(f"Connecting to {self.target_host}:{self.target_port}")
             target_protocol = CopilotProxyTargetProtocol(self)
             transport, _ = await self.loop.create_connection(
-                lambda: target_protocol, self.target_host, self.target_port, ssl=target_ssl_context
+                lambda: target_protocol,
+                self.target_host,
+                self.target_port,
+                ssl=target_ssl_context,
+                server_hostname=self.target_host,
             )
 
             logger.debug(f"Successfully connected to {self.target_host}:{self.target_port}")
