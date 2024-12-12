@@ -156,7 +156,7 @@ def generate_certificates(cert_dir="certs"):
     print("\nOn Windows (PowerShell as Admin):")
     print(
         'Import-Certificate -FilePath "certs\\server.crt" '
-        '-CertStoreLocation Cert:\\LocalMachine\\Root'
+        "-CertStoreLocation Cert:\\LocalMachine\\Root"
     )
     print("\nOn Linux:")
     print("sudo cp certs/server.crt /usr/local/share/ca-certificates/proxy-pilot.crt")

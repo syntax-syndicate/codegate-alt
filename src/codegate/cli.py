@@ -1,6 +1,7 @@
 """Command-line interface for codegate."""
 
 import asyncio
+import signal
 import sys
 from pathlib import Path
 from typing import Dict, Optional
@@ -18,8 +19,6 @@ from codegate.providers.copilot.provider import CopilotProvider
 from codegate.server import init_app
 from codegate.storage.utils import restore_storage_backup
 
-logger = structlog.get_logger("codegate")
-
 
 class UvicornServer:
     def __init__(self, config: UvicornConfig, server: Server):
@@ -32,10 +31,16 @@ class UvicornServer:
         self._startup_complete = asyncio.Event()
         self._shutdown_event = asyncio.Event()
         self._should_exit = False
+        self.logger = structlog.get_logger("codegate")
 
     async def serve(self) -> None:
         """Start the uvicorn server and handle shutdown gracefully."""
-        logger.debug(f"Starting server on {self.host}:{self.port}")
+        self.logger.debug(f"Starting server on {self.host}:{self.port}")
+
+        # Set up signal handlers
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.cleanup()))
+        loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(self.cleanup()))
 
         self.server = Server(config=self.config)
         self.server.force_exit = True
@@ -44,27 +49,27 @@ class UvicornServer:
             self._startup_complete.set()
             await self.server.serve()
         except asyncio.CancelledError:
-            logger.info("Server received cancellation")
+            self.logger.info("Server received cancellation")
         except Exception as e:
-            logger.exception("Unexpected error occurred during server execution", exc_info=e)
+            self.logger.exception("Unexpected error occurred during server execution", exc_info=e)
         finally:
             await self.cleanup()
 
     async def wait_startup_complete(self) -> None:
         """Wait for the server to complete startup."""
-        logger.debug("Waiting for server startup to complete")
+        self.logger.debug("Waiting for server startup to complete")
         await self._startup_complete.wait()
 
     async def cleanup(self) -> None:
         """Cleanup server resources and ensure graceful shutdown."""
-        logger.debug("Cleaning up server resources")
+        self.logger.debug("Cleaning up server resources")
         if not self._should_exit:
             self._should_exit = True
-            logger.debug("Initiating server shutdown")
+            self.logger.debug("Initiating server shutdown")
             self._shutdown_event.set()
 
             if hasattr(self.server, "shutdown"):
-                logger.debug("Shutting down server")
+                self.logger.debug("Shutting down server")
                 await self.server.shutdown()
 
             # Ensure all connections are closed
@@ -72,12 +77,13 @@ class UvicornServer:
             [task.cancel() for task in tasks]
 
             await asyncio.gather(*tasks, return_exceptions=True)
-            logger.debug("Server shutdown complete")
+            self.logger.debug("Server shutdown complete")
 
 
 def validate_port(ctx: click.Context, param: click.Parameter, value: int) -> int:
-    logger.debug(f"Validating port number: {value}")
     """Validate the port number is in valid range."""
+    logger = structlog.get_logger("codegate")
+    logger.debug(f"Validating port number: {value}")
     if value is not None and not (1 <= value <= 65535):
         raise click.BadParameter("Port must be between 1 and 65535")
     return value
@@ -286,10 +292,14 @@ def serve(
             db_path=db_path,
         )
 
+        # Set up logging first
+        setup_logging(cfg.log_level, cfg.log_format)
+        logger = structlog.get_logger("codegate")
+
         init_db_sync(cfg.db_path)
 
         # Check certificates and create CA if necessary
-        logger.info("Checking certificates and creating CA our created")
+        logger.info("Checking certificates and creating CA if needed")
         ca = CertificateAuthority.get_instance()
         ca.ensure_certificates_exist()
 
@@ -311,8 +321,8 @@ def serve(
         click.echo(f"Configuration error: {e}", err=True)
         sys.exit(1)
     except Exception as e:
-        if logger:
-            logger.exception("Unexpected error occurred")
+        logger = structlog.get_logger("codegate")
+        logger.exception("Unexpected error occurred")
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -320,7 +330,6 @@ def serve(
 async def run_servers(cfg: Config, app) -> None:
     """Run the codegate server."""
     try:
-        setup_logging(cfg.log_level, cfg.log_format)
         logger = structlog.get_logger("codegate")
         logger.info(
             "Starting server",

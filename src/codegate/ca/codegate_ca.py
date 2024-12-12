@@ -349,7 +349,6 @@ class CertificateAuthority:
             algorithm=hashes.SHA256(),
         )
 
-        # os.path.join(Config.get_config().server_key)
         with open(
             os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert), "wb"
         ) as f:
@@ -379,7 +378,7 @@ class CertificateAuthority:
         print("\nOn Windows (PowerShell as Admin):")
         print(
             'Import-Certificate -FilePath "certs\\ca.crt" '
-            '-CertStoreLocation Cert:\\LocalMachine\\Root'
+            "-CertStoreLocation Cert:\\LocalMachine\\Root"
         )
         print("\nOn Linux:")
         print("sudo cp certs/ca.crt /usr/local/share/ca-certificates/codegate.crt")

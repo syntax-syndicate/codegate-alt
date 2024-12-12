@@ -13,6 +13,12 @@ import yaml
 from codegate.config import Config
 
 
+@pytest.fixture(autouse=True)
+def setup_config() -> None:
+    """Initialize Config with default prompts before each test."""
+    Config.load()
+
+
 @pytest.fixture
 def temp_config_file(tmp_path: Path) -> Iterator[Path]:
     """Create a temporary config file."""
