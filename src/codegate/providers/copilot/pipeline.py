@@ -21,7 +21,7 @@ class CopilotPipeline(ABC):
     def __init__(self, pipeline_factory):
         self.pipeline_factory = pipeline_factory
         self.normalizer = self._create_normalizer()
-        self.provider_name = "copilot"
+        self.provider_name = "openai"
 
     @abstractmethod
     def _create_normalizer(self):

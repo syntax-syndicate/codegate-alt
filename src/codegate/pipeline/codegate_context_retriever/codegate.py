@@ -93,17 +93,16 @@ class CodegateContextRetriever(PipelineStep):
         Use RAG DB to add context to the user request
         """
 
-        # Get the last user message
-        last_user_message = self.get_last_user_message(request)
+        # Get all user messages
+        user_messages = self.get_all_user_messages(request)
 
-        # Nothing to do if the last user message is none
-        if last_user_message is None:
+        # Nothing to do if the user_messages string is empty
+        if len(user_messages) == 0:
             return PipelineResult(request=request)
 
         # Extract packages from the user message
-        last_user_message_str, last_user_idx = last_user_message
-        ecosystem = await self.__lookup_ecosystem(last_user_message_str, context)
-        packages = await self.__lookup_packages(last_user_message_str, context)
+        ecosystem = await self.__lookup_ecosystem(user_messages, context)
+        packages = await self.__lookup_packages(user_messages, context)
         packages = [pkg.lower() for pkg in packages]
 
         # If user message does not reference any packages, then just return
@@ -112,7 +111,7 @@ class CodegateContextRetriever(PipelineStep):
 
         # Look for matches in vector DB using list of packages as filter
         searched_objects = await self.get_objects_from_search(
-            last_user_message_str, ecosystem, packages
+            user_messages, ecosystem, packages
         )
 
         logger.info(
@@ -136,24 +135,18 @@ class CodegateContextRetriever(PipelineStep):
         else:
             context_str = "Codegate did not find any malicious or archived packages."
 
+        last_user_idx = self.get_last_user_message_idx(request)
+        if last_user_idx == -1:
+            return PipelineResult(request=request, context=context)
+
         # Make a copy of the request
         new_request = request.copy()
 
         # Add the context to the last user message
-        # Format: "Context: {context_str} \n Query: {last user message conent}"
-        # Handle the two cases: (a) message content is str, (b)message content
-        # is list
+        # Format: "Context: {context_str} \n Query: {last user message content}"
         message = new_request["messages"][last_user_idx]
-        if isinstance(message["content"], str):
-            context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
-            message["content"] = context_msg
-        elif isinstance(message["content"], (list, tuple)):
-            for item in message["content"]:
-                if isinstance(item, dict) and item.get("type") == "text":
-                    context_msg = f'Context: {context_str} \n\n Query: {item["text"]}'
-                    item["text"] = context_msg
+        context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
+        message["content"] = context_msg
 
-                return PipelineResult(request=new_request, context=context)
+        return PipelineResult(request=new_request, context=context)
 
-        # Fall through
-        return PipelineResult(request=request, context=context)

@@ -178,29 +178,30 @@ class PipelineStep(ABC):
         for i in reversed(range(len(request["messages"]))):
             if request["messages"][i]["role"] == "user":
                 content = request["messages"][i]["content"]
-
-                # This is really another LiteLLM weirdness. Depending on the
-                # provider inside the ChatCompletionRequest you might either
-                # have a string or a list of Union, one of which is a
-                # ChatCompletionTextObject. We'll handle this better by
-                # either dumping litellm completely or converting to a more sane
-                # format # in our own adapter
-
-                # Handle string content
-                if isinstance(content, str):
-                    return content, i
-
-                # Handle iterable of ChatCompletionTextObject
-                if isinstance(content, (list, tuple)):
-                    # Find first text content
-                    for item in content:
-                        if isinstance(item, dict) and item.get("type") == "text":
-                            return item["text"], i
-
-                    # If no text content found, return None
-                    return None
+                return content, i
 
         return None
+
+    @staticmethod
+    def get_last_user_message_idx(request: ChatCompletionRequest) -> int:
+        if request.get("messages") is None:
+            return -1
+
+        for idx, message in reversed(list(enumerate(request['messages']))):
+            if message.get("role", "") == "user":
+                return idx
+
+        return -1
+
+    @staticmethod
+    def get_all_user_messages(request: ChatCompletionRequest) -> str:
+        all_user_messages = ""
+
+        for message in request.get("messages", []):
+            if message["role"] == "user":
+                all_user_messages += "\n" + message["content"]
+
+        return all_user_messages
 
     @abstractmethod
     async def process(
