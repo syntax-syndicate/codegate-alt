@@ -82,6 +82,8 @@ RUN chown -R codegate /var/lib/nginx && \
     chown -R codegate /var/log/nginx && \
     chown -R codegate /run
 
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Switch to codegate user
 USER codegate
 WORKDIR /app
