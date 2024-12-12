@@ -13,9 +13,6 @@ class SSEProcessor:
         self.size_written = False
 
     def process_chunk(self, chunk: bytes) -> list:
-        print("BUFFER AT START")
-        print(self.buffer)
-        print("BUFFER AT START - END")
         # Skip any chunk size lines (hex number followed by \r\n)
         try:
             chunk_str = chunk.decode("utf-8")
@@ -25,13 +22,12 @@ class SSEProcessor:
                     continue
                 self.buffer += line
         except UnicodeDecodeError:
-            print("Failed to decode chunk")
+            logger.error("Failed to decode chunk")
 
         records = []
         while True:
             record_end = self.buffer.find("\n\n")
             if record_end == -1:
-                print(f"REMAINING BUFFER {self.buffer}")
                 break
 
             record = self.buffer[:record_end]

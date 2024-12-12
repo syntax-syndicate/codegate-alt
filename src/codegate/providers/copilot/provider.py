@@ -1,5 +1,4 @@
 import asyncio
-import json
 import re
 import ssl
 from dataclasses import dataclass
@@ -7,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 from urllib.parse import unquote, urljoin, urlparse
 
 import structlog
+from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
 from codegate.ca.codegate_ca import CertificateAuthority
 from codegate.config import Config
@@ -568,29 +568,51 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
 
     async def _process_stream(self):
         try:
+
             async def stream_iterator():
                 while True:
                     incoming_record = await self.stream_queue.get()
-                    yield incoming_record
+                    record_content = incoming_record.get("content", {})
 
-            async for record in stream_iterator():
-                print("received from stream")
-                print(record)
-                if record["type"] == "done":
-                    sse_data = b"data: [DONE]\n\n"
-                    # Add chunk size for DONE message too
-                    chunk_size = hex(len(sse_data))[2:] + "\r\n"
-                    self._proxy_transport_write(chunk_size.encode())
-                    self._proxy_transport_write(sse_data)
-                    self._proxy_transport_write(b"\r\n")
-                    # Now send the final zero chunk
-                    self._proxy_transport_write(b"0\r\n\r\n")
-                else:
-                    sse_data = f"data: {json.dumps(record['content'])}\n\n".encode("utf-8")
-                    chunk_size = hex(len(sse_data))[2:] + "\r\n"
-                    self._proxy_transport_write(chunk_size.encode())
-                    self._proxy_transport_write(sse_data)
-                    self._proxy_transport_write(b"\r\n")
+                    streaming_choices = []
+                    for choice in record_content.get("choices", []):
+                        streaming_choices.append(
+                            StreamingChoices(
+                                finish_reason=choice.get("finish_reason", None),
+                                index=0,
+                                delta=Delta(
+                                    content=choice.get("delta", {}).get("content"), role="assistant"
+                                ),
+                                logprobs=None,
+                            )
+                        )
+
+                    # Convert record to ModelResponse
+                    mr = ModelResponse(
+                        id=record_content.get("id", ""),
+                        choices=streaming_choices,
+                        created=record_content.get("created", 0),
+                        model=record_content.get("model", ""),
+                        object="chat.completion.chunk",
+                    )
+                    yield mr
+
+            async for record in self.output_pipeline_instance.process_stream(stream_iterator()):
+                chunk = record.model_dump_json(exclude_none=True, exclude_unset=True)
+                sse_data = f"data:{chunk}\n\n".encode("utf-8")
+                chunk_size = hex(len(sse_data))[2:] + "\r\n"
+                self._proxy_transport_write(chunk_size.encode())
+                self._proxy_transport_write(sse_data)
+                self._proxy_transport_write(b"\r\n")
+
+            sse_data = b"data: [DONE]\n\n"
+            # Add chunk size for DONE message too
+            chunk_size = hex(len(sse_data))[2:] + "\r\n"
+            self._proxy_transport_write(chunk_size.encode())
+            self._proxy_transport_write(sse_data)
+            self._proxy_transport_write(b"\r\n")
+            # Now send the final zero chunk
+            self._proxy_transport_write(b"0\r\n\r\n")
 
         except Exception as e:
             logger.error(f"Error processing stream: {e}")
