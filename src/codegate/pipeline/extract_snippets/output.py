@@ -98,7 +98,7 @@ archived packages: {libobjects_text}\n"
         input_context: Optional[PipelineContext] = None,
     ) -> list[ModelResponse]:
         """Process a single chunk of the stream"""
-        if not chunk.choices[0].delta.content:
+        if len(chunk.choices) == 0 or not chunk.choices[0].delta.content:
             return [chunk]
 
         # Get current content plus this new chunk

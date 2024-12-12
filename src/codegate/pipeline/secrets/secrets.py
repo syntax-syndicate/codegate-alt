@@ -262,7 +262,7 @@ class SecretUnredactionStep(OutputPipelineStep):
         if input_context.sensitive.session_id == "":
             raise ValueError("Session ID not found in input context")
 
-        if not chunk.choices[0].delta.content:
+        if len(chunk.choices) == 0 or not chunk.choices[0].delta.content:
             return [chunk]
 
         # Check the buffered content
