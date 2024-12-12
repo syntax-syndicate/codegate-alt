@@ -306,12 +306,20 @@ class CopilotProvider(asyncio.Protocol):
                 raise ValueError("Target host and port not set")
 
             target_ssl_context = ssl.create_default_context()
-            target_ssl_context.check_hostname = False
-            target_ssl_context.verify_mode = ssl.CERT_NONE
 
+            # Ensure that the target SSL certificate is verified
+            target_ssl_context.check_hostname = True
+            target_ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+            # Connect to target
+            logger.debug(f"Connecting to {self.target_host}:{self.target_port}")
             target_protocol = CopilotProxyTargetProtocol(self)
             transport, _ = await self.loop.create_connection(
-                lambda: target_protocol, self.target_host, self.target_port, ssl=target_ssl_context
+                lambda: target_protocol,
+                self.target_host,
+                self.target_port,
+                ssl=target_ssl_context,
+                server_hostname=self.target_host,
             )
 
             if self.transport and not self.transport.is_closing():
