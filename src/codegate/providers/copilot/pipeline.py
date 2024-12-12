@@ -44,13 +44,21 @@ class CopilotPipeline(ABC):
 
     @staticmethod
     def _get_copilot_headers(headers: Dict[str, str]) -> Dict[str, str]:
-        copilot_header_names = ['copilot-integration-id', 'editor-plugin-version', 'editor-version',
-                                'openai-intent', 'openai-organization', 'user-agent',
-                                'vscode-machineid', 'vscode-sessionid', 'x-github-api-version',
-                                'x-request-id']
+        copilot_header_names = [
+            "copilot-integration-id",
+            "editor-plugin-version",
+            "editor-version",
+            "openai-intent",
+            "openai-organization",
+            "user-agent",
+            "vscode-machineid",
+            "vscode-sessionid",
+            "x-github-api-version",
+            "x-request-id",
+        ]
         copilot_headers = {}
         for a_name in copilot_header_names:
-            copilot_headers[a_name] = headers.get(a_name, '')
+            copilot_headers[a_name] = headers.get(a_name, "")
 
         return copilot_headers
 
@@ -59,15 +67,23 @@ class CopilotPipeline(ABC):
         try:
             normalized_body = self.normalizer.normalize(body)
 
+            headers_dict = {}
+            for header in headers:
+                try:
+                    name, value = header.split(":", 1)
+                    headers_dict[name.strip().lower()] = value.strip()
+                except ValueError:
+                    continue
+
             pipeline = self.create_pipeline()
             result = await pipeline.process_request(
                 request=normalized_body,
                 provider=self.provider_name,
                 prompt_id=self._request_id(headers),
                 model=normalized_body.get("model", "gpt-4o-mini"),
-                api_key = headers.get('authorization','').replace('Bearer ', ''),
-                api_base = "https://" + headers.get('host', ''),
-                extra_headers=CopilotPipeline._get_copilot_headers(headers)
+                api_key=headers_dict.get("authorization", "").replace("Bearer ", ""),
+                api_base="https://" + headers_dict.get("host", ""),
+                extra_headers=CopilotPipeline._get_copilot_headers(headers_dict),
             )
 
             if result.request:
@@ -101,6 +117,21 @@ class CopilotFimNormalizer:
         return json.dumps(normalized_json_body).encode()
 
 
+class CopilotChatNormalizer:
+    """
+    A custom normalizer for the chat format used by Copilot
+    The requests are already in the OpenAI format, we just need
+    to unmarshall them and marshall them back.
+    """
+
+    def normalize(self, body: bytes) -> ChatCompletionRequest:
+        json_body = json.loads(body)
+        return ChatCompletionRequest(**json_body)
+
+    def denormalize(self, request_from_pipeline: ChatCompletionRequest) -> bytes:
+        return json.dumps(request_from_pipeline).encode()
+
+
 class CopilotFimPipeline(CopilotPipeline):
     """
     A pipeline for the FIM format used by Copilot. Combines the normalizer for the FIM
@@ -108,7 +139,20 @@ class CopilotFimPipeline(CopilotPipeline):
     """
 
     def _create_normalizer(self):
-        return CopilotFimNormalizer()  # Uses your custom normalizer
+        return CopilotFimNormalizer()
 
     def create_pipeline(self):
         return self.pipeline_factory.create_fim_pipeline()
+
+
+class CopilotChatPipeline(CopilotPipeline):
+    """
+    A pipeline for the Chat format used by Copilot. Combines the normalizer for the FIM
+    format and the FIM pipeline used by all providers.
+    """
+
+    def _create_normalizer(self):
+        return CopilotChatNormalizer()
+
+    def create_pipeline(self):
+        return self.pipeline_factory.create_input_pipeline()

@@ -24,7 +24,7 @@ class PackageExtractor:
         model: str = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        extra_headers: Optional[Dict[str, str]] = None
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> List[str]:
         """Extract package names from the given content."""
         system_prompt = Config.get_config().prompts.lookup_packages
@@ -51,7 +51,7 @@ class PackageExtractor:
         model: str = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        extra_headers: Optional[Dict[str, str]] = None
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> List[str]:
         """Extract ecosystem from the given content."""
         system_prompt = Config.get_config().prompts.lookup_ecosystem

@@ -13,7 +13,11 @@ from codegate.pipeline.base import PipelineContext
 from codegate.pipeline.factory import PipelineFactory
 from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.copilot.mapping import VALIDATED_ROUTES
-from codegate.providers.copilot.pipeline import CopilotFimPipeline
+from codegate.providers.copilot.pipeline import (
+    CopilotChatPipeline,
+    CopilotFimPipeline,
+    CopilotPipeline,
+)
 
 logger = structlog.get_logger("codegate")
 
@@ -38,6 +42,61 @@ class HttpRequest:
     headers: List[str]
     original_path: str
     target: Optional[str] = None
+    body: Optional[bytes] = None
+
+    def reconstruct(self) -> bytes:
+        """Reconstruct HTTP request from stored details"""
+        headers = "\r\n".join(self.headers)
+        request_line = f"{self.method} /{self.path} {self.version}\r\n"
+        header_block = f"{request_line}{headers}\r\n\r\n"
+
+        # Convert header block to bytes and combine with body
+        result = header_block.encode("utf-8")
+        if self.body:
+            result += self.body
+
+        return result
+
+
+def extract_path(full_path: str) -> str:
+    """Extract clean path from full URL or path string"""
+    logger.debug(f"Extracting path from {full_path}")
+    if full_path.startswith(("http://", "https://")):
+        parsed = urlparse(full_path)
+        path = parsed.path
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
+        return path.lstrip("/")
+    return full_path.lstrip("/")
+
+
+def http_request_from_bytes(data: bytes) -> Optional[HttpRequest]:
+    """
+    Parse HTTP request details from raw bytes data.
+    TODO: Make safer by checking for valid HTTP request format, check
+    if there is a method if there are headers, etc.
+    """
+    if b"\r\n\r\n" not in data:
+        return None
+
+    headers_end = data.index(b"\r\n\r\n")
+    headers = data[:headers_end].split(b"\r\n")
+
+    request = headers[0].decode("utf-8")
+    method, full_path, version = request.split(" ")
+
+    body_start = data.index(b"\r\n\r\n") + 4
+    body = data[body_start:]
+
+    return HttpRequest(
+        method=method,
+        path=extract_path(full_path),
+        version=version,
+        headers=[header.decode("utf-8") for header in headers[1:]],
+        original_path=full_path,
+        target=full_path if method == "CONNECT" else None,
+        body=body,
+    )
 
 
 class CopilotProvider(asyncio.Protocol):
@@ -63,20 +122,26 @@ class CopilotProvider(asyncio.Protocol):
         self.pipeline_factory = PipelineFactory(SecretsManager())
         self.context_tracking: Optional[PipelineContext] = None
 
-    def _select_pipeline(self):
-        if (
-            self.request.method == "POST"
-            and self.request.path == "v1/engines/copilot-codex/completions"
-        ):
+    def _select_pipeline(self, method: str, path: str) -> Optional[CopilotPipeline]:
+        if method == "POST" and path == "v1/engines/copilot-codex/completions":
             logger.debug("Selected CopilotFimStrategy")
             return CopilotFimPipeline(self.pipeline_factory)
+        if method == "POST" and path == "chat/completions":
+            logger.debug("Selected CopilotChatStrategy")
+            return CopilotChatPipeline(self.pipeline_factory)
 
         logger.debug("No pipeline strategy selected")
         return None
 
-    async def _body_through_pipeline(self, headers: list[str], body: bytes) -> bytes:
+    async def _body_through_pipeline(
+        self,
+        method: str,
+        path: str,
+        headers: list[str],
+        body: bytes,
+    ) -> bytes:
         logger.debug(f"Processing body through pipeline: {len(body)} bytes")
-        strategy = self._select_pipeline()
+        strategy = self._select_pipeline(method, path)
         if strategy is None:
             # if we didn't select any strategy that would change the request
             # let's just pass through the body as-is
@@ -89,7 +154,12 @@ class CopilotProvider(asyncio.Protocol):
         ).encode()
         logger.debug(f"Request Line: {request_line}")
 
-        body = await self._body_through_pipeline(headers, body)
+        body = await self._body_through_pipeline(
+            self.request.method,
+            self.request.path,
+            headers,
+            body,
+        )
 
         for header in headers:
             if header.lower().startswith("content-length:"):
@@ -112,18 +182,6 @@ class CopilotProvider(asyncio.Protocol):
         self.transport = transport
         self.peername = transport.get_extra_info("peername")
         logger.debug(f"Client connected from {self.peername}")
-
-    @staticmethod
-    def extract_path(full_path: str) -> str:
-        """Extract clean path from full URL or path string"""
-        logger.debug(f"Extracting path from {full_path}")
-        if full_path.startswith(("http://", "https://")):
-            parsed = urlparse(full_path)
-            path = parsed.path
-            if parsed.query:
-                path = f"{path}?{parsed.query}"
-            return path.lstrip("/")
-        return full_path.lstrip("/")
 
     def get_headers_dict(self) -> Dict[str, str]:
         """Convert raw headers to dictionary format"""
@@ -161,7 +219,7 @@ class CopilotProvider(asyncio.Protocol):
 
             self.request = HttpRequest(
                 method=method,
-                path=self.extract_path(full_path),
+                path=extract_path(full_path),
                 version=version,
                 headers=[header.decode("utf-8") for header in headers[1:]],
                 original_path=full_path,
@@ -179,9 +237,33 @@ class CopilotProvider(asyncio.Protocol):
         """Check if adding new data would exceed buffer size limit"""
         return len(self.buffer) + len(new_data) <= MAX_BUFFER_SIZE
 
-    def _forward_data_to_target(self, data: bytes) -> None:
+    async def _forward_data_through_pipeline(self, data: bytes) -> bytes:
+        http_request = http_request_from_bytes(data)
+        if not http_request:
+            # we couldn't parse this into an HTTP request, so we just pass through
+            return data
+
+        http_request.body = await self._body_through_pipeline(
+            http_request.method,
+            http_request.path,
+            http_request.headers,
+            http_request.body,
+        )
+
+        for header in http_request.headers:
+            if header.lower().startswith("content-length:"):
+                http_request.headers.remove(header)
+                break
+        http_request.headers.append(f"Content-Length: {len(http_request.body)}")
+
+        pipeline_data = http_request.reconstruct()
+
+        return pipeline_data
+
+    async def _forward_data_to_target(self, data: bytes) -> None:
         """Forward data to target if connection is established"""
         if self.target_transport and not self.target_transport.is_closing():
+            data = await self._forward_data_through_pipeline(data)
             self.target_transport.write(data)
 
     def data_received(self, data: bytes) -> None:
@@ -201,7 +283,7 @@ class CopilotProvider(asyncio.Protocol):
                     else:
                         asyncio.create_task(self.handle_http_request())
             else:
-                self._forward_data_to_target(data)
+                asyncio.create_task(self._forward_data_to_target(data))
 
         except Exception as e:
             logger.error(f"Error processing received data: {e}")

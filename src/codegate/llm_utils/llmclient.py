@@ -137,7 +137,7 @@ class LLMClient:
                     temperature=request["temperature"],
                     base_url=base_url,
                     response_format=request["response_format"],
-                    extra_headers=extra_headers
+                    extra_headers=extra_headers,
                 )
                 content = response["choices"][0]["message"]["content"]
 
