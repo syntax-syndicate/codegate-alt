@@ -29,10 +29,12 @@ codegate serve [OPTIONS]
   - Overrides configuration file and environment variables
   
 - `--log-level [ERROR|WARNING|INFO|DEBUG]`: Set the log level (default: INFO)
+  - Optional
   - Case-insensitive
   - Overrides configuration file and environment variables
   
 - `--log-format [JSON|TEXT]`: Set the log format (default: JSON)
+  - Optional
   - Case-insensitive
   - Overrides configuration file and environment variables
   
@@ -72,6 +74,10 @@ codegate serve [OPTIONS]
 - `--embedding-model TEXT`: Name of the model used for embeddings
   - Optional
 
+- `--db-path TEXT`: Path to a SQLite DB. It will create one if it doesn't exist. (default: ./codegate_volume/db/codegate.db)
+  - Optional
+  - Overrides configuration file and environment variables
+
 ### show-prompts
 
 Display the loaded system prompts:
@@ -86,6 +92,46 @@ codegate show-prompts [OPTIONS]
   - Optional
   - Must be a valid YAML file
   - If not provided, shows default prompts from prompts/default.yaml
+
+### generate_certs
+
+Generate certificates for the CodeGate server.
+
+```bash
+codegate generate-certs [OPTIONS]
+```
+
+#### Options
+
+- `--certs-out-dir PATH`: Directory path where the certificates are going to be generated. (default: ./codegate_volume/certs)
+  - Optional
+  - Overrides configuration file and environment variables
+
+- `--ca-cert-name TEXT`: Name that will be given to the created CA certificate. (default: ca.crt)
+  - Optional
+  - Overrides configuration file and environment variables
+
+- `--ca-key-name TEXT`: Name that will be given to the created CA key. (default: ca.key)
+  - Optional
+  - Overrides configuration file and environment variables
+
+- `--server-cert-name TEXT`: Name that will be given to the created server certificate. (default: server.crt)
+  - Optional
+  - Overrides configuration file and environment variables
+
+- `--server-key-name TEXT`: Name that will be given to the created server key. (default: server.key)
+  - Optional
+  - Overrides configuration file and environment variables
+
+- `--log-level [ERROR|WARNING|INFO|DEBUG]`: Set the log level (default: INFO)
+  - Optional
+  - Case-insensitive
+  - Overrides configuration file and environment variables
+  
+- `--log-format [JSON|TEXT]`: Set the log format (default: JSON)
+  - Optional
+  - Case-insensitive
+  - Overrides configuration file and environment variables
 
 ## Error Handling
 
@@ -144,3 +190,9 @@ codegate show-prompts
 Show prompts from a custom file:
 ```bash
 codegate show-prompts --prompts my-prompts.yaml
+```
+
+Generate certificates with default settings:
+```bash
+codegate generate-certs
+```

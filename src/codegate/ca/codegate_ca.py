@@ -297,7 +297,7 @@ class CertificateAuthority:
 
         # CA generated, now generate server certificate
 
-        # Generate new certificate for domain
+        ## Generate new certificate for domain
         logger.debug("Generating private key for server")
         server_key = rsa.generate_private_key(
             public_exponent=65537,
@@ -368,31 +368,34 @@ class CertificateAuthority:
             )
 
         # Print instructions for trusting the certificates
-        print("Certificates generated successfully in the 'certs' directory")
-        print("\nTo trust these certificates:")
-        print("\nOn macOS:")
-        print(
-            "`sudo security add-trusted-cert -d -r trustRoot "
-            "-k /Library/Keychains/System.keychain certs/ca.crt"
-        )
-        print("\nOn Windows (PowerShell as Admin):")
-        print(
-            'Import-Certificate -FilePath "certs\\ca.crt" '
-            "-CertStoreLocation Cert:\\LocalMachine\\Root"
-        )
-        print("\nOn Linux:")
-        print("sudo cp certs/ca.crt /usr/local/share/ca-certificates/codegate.crt")
-        print("sudo update-ca-certificates")
-        print("\nFor VSCode, add to settings.json:")
-        print(
-            """{
+        logger.info(
+            """
+Certificates generated successfully in the 'certs' directory
+To trust these certificates:
+
+On macOS:
+`sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt`
+
+On Windows (PowerShell as Admin):
+`Import-Certificate -FilePath "certs\\ca.crt" -CertStoreLocation Cert:\\LocalMachine\\Root`
+
+On Linux:
+`sudo cp certs/ca.crt /usr/local/share/ca-certificates/codegate.crt`
+`sudo update-ca-certificates`
+
+For VSCode, add to settings.json:
+{
     "http.proxy": "https://localhost:8990",
+    "http.proxyStrictSSL": true,
     "http.proxySupport": "on",
     "github.copilot.advanced": {
+        "debug.useNodeFetcher": true,
+        "debug.useElectronFetcher": true,
         "debug.testOverrideProxyUrl": "https://localhost:8990",
         "debug.overrideProxyUrl": "https://localhost:8990"
-    }
-}"""
+    },
+}
+"""
         )
         logger.debug("Certificates generated successfully")
         return server_cert, server_key
@@ -433,10 +436,9 @@ class CertificateAuthority:
             logger.debug("Certificates not found, generating new certificates")
             self.generate_certificates()
         else:
-            logger.debug(
-                f"Certificates found at: {Config.get_config().server_cert} "
-                "and {Config.get_config().server_key}"
-            )
+            server_cert = Config.get_config().server_cert
+            server_key = Config.get_config().server_key
+            logger.debug(f"Certificates found at: {server_cert} and {server_key}.")
 
     def get_ssl_context(self) -> ssl.SSLContext:
         """Get SSL context with certificates"""

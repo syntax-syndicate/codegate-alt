@@ -412,6 +412,72 @@ def restore_backup(backup_path: Path, backup_name: str) -> None:
         sys.exit(1)
 
 
+@cli.command()
+@click.option(
+    "--certs-out-dir",
+    type=click.Path(exists=False, file_okay=False, path_type=Path),
+    help="Directory path where the certificates are going to be generated.",
+)
+@click.option(
+    "--ca-cert-name",
+    type=str,
+    default=None,
+    help="Name that will be given to the created ca-cert.",
+)
+@click.option(
+    "--ca-key-name",
+    type=str,
+    default=None,
+    help="Name that will be given to the created ca-key.",
+)
+@click.option(
+    "--server-cert-name",
+    type=str,
+    default=None,
+    help="Name that will be given to the created server-cert.",
+)
+@click.option(
+    "--server-key-name",
+    type=str,
+    default=None,
+    help="Name that will be given to the created server-key.",
+)
+@click.option(
+    "--log-level",
+    type=click.Choice([level.value for level in LogLevel]),
+    default=None,
+    help="Set the log level (default: INFO)",
+)
+@click.option(
+    "--log-format",
+    type=click.Choice([fmt.value for fmt in LogFormat], case_sensitive=False),
+    default=None,
+    help="Set the log format (default: JSON)",
+)
+def generate_certs(
+    certs_out_dir: Optional[Path],
+    ca_cert_name: Optional[str],
+    ca_key_name: Optional[str],
+    server_cert_name: Optional[str],
+    server_key_name: Optional[str],
+    log_level: Optional[str],
+    log_format: Optional[str],
+) -> None:
+    """Generate certificates for the codegate server."""
+    cfg = Config.load(
+        certs_dir=certs_out_dir,
+        ca_cert=ca_cert_name,
+        ca_key=ca_key_name,
+        server_cert=server_cert_name,
+        server_key=server_key_name,
+        cli_log_level=log_level,
+        cli_log_format=log_format,
+    )
+    setup_logging(cfg.log_level, cfg.log_format)
+    ca = CertificateAuthority.get_instance()
+    ca.generate_certificates()
+
+
 def main() -> None:
     """Main entry point for the CLI."""
     cli()

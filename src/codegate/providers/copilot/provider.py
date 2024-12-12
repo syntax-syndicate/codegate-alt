@@ -170,8 +170,53 @@ class CopilotProvider(asyncio.Protocol):
             self.target_host = parsed_url.hostname
             self.target_port = parsed_url.port or (443 if parsed_url.scheme == "https" else 80)
 
-            await self._establish_target_connection(parsed_url.scheme == "https")
-            self._send_request_to_target()
+            target_protocol = CopilotProxyTargetProtocol(self)
+            logger.debug(f"Connecting to {self.target_host}:{self.target_port}")
+            await self.loop.create_connection(
+                lambda: target_protocol,
+                self.target_host,
+                self.target_port,
+                ssl=parsed_url.scheme == "https",
+            )
+
+            has_host = False
+            new_headers = []
+
+            for header in self.headers:
+                if header.lower().startswith("host:"):
+                    has_host = True
+                    new_headers.append(f"Host: {self.target_host}")
+                else:
+                    new_headers.append(header)
+
+            if not has_host:
+                new_headers.append(f"Host: {self.target_host}")
+
+            request_line = f"{self.method} /{self.path} {self.version}\r\n".encode()
+            logger.debug(f"Request Line: {request_line}")
+            header_block = "\r\n".join(new_headers).encode()
+            headers = request_line + header_block + b"\r\n\r\n"
+
+            if self.target_transport:
+                logger.debug("=" * 40)
+                self.log_decrypted_data(headers, "Request")
+                self.target_transport.write(headers)
+                logger.debug("=" * 40)
+
+                body_start = self.buffer.index(b"\r\n\r\n") + 4
+                body = self.buffer[body_start:]
+
+                if body:
+                    self.log_decrypted_data(body, "Request Body")
+
+                for i in range(0, len(body), CHUNK_SIZE):
+                    chunk = body[i : i + CHUNK_SIZE]
+                    self.target_transport.write(chunk)
+            else:
+                logger.debug("=" * 40)
+                logger.error("Target transport not available")
+                logger.debug("=" * 40)
+                self.send_error_response(502, b"Failed to establish target connection")
 
         except Exception as e:
             logger.error(f"Error handling HTTP request: {e}")
@@ -373,7 +418,10 @@ class CopilotProvider(asyncio.Protocol):
 
         # Check for prefix match
         for route in VALIDATED_ROUTES:
+            # For prefix matches, keep the rest of the path
             remaining_path = path[len(route.path) :]
+            logger.debug(f"Remaining path: {remaining_path}")
+            # Make sure we don't end up with double slashes
             if remaining_path and remaining_path.startswith("/"):
                 remaining_path = remaining_path[1:]
             target = urljoin(str(route.target), remaining_path)

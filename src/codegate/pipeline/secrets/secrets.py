@@ -76,7 +76,7 @@ class CodegateSecrets(PipelineStep):
 
         return start, end
 
-    def _redeact_text(
+    def _redact_text(
         self, text: str, secrets_manager: SecretsManager, session_id: str, context: PipelineContext
     ) -> tuple[str, int]:
         """
@@ -189,11 +189,14 @@ class CodegateSecrets(PipelineStep):
         for i, message in enumerate(new_request["messages"]):
             if "content" in message and message["content"]:
                 # Protect the text
-                protected_string, redacted_count = self._redeact_text(
+                protected_string, redacted_count = self._redact_text(
                     message["content"], secrets_manager, session_id, context
                 )
                 new_request["messages"][i]["content"] = protected_string
-                total_redacted += redacted_count
+
+                # only sum to the count if it is the last message
+                if i == len(new_request["messages"]) - 1:
+                    total_redacted += redacted_count
 
         logger.info(f"Total secrets redacted: {total_redacted}")
 
