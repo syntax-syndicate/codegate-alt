@@ -59,15 +59,23 @@ class CopilotPipeline(ABC):
         try:
             normalized_body = self.normalizer.normalize(body)
 
+            headers_dict = {}
+            for header in headers:
+                try:
+                    name, value = header.split(":", 1)
+                    headers_dict[name.strip().lower()] = value.strip()
+                except ValueError:
+                    continue
+
             pipeline = self.create_pipeline()
             result = await pipeline.process_request(
                 request=normalized_body,
                 provider=self.provider_name,
                 prompt_id=self._request_id(headers),
                 model=normalized_body.get("model", "gpt-4o-mini"),
-                api_key = headers.get('authorization','').replace('Bearer ', ''),
-                api_base = "https://" + headers.get('host', ''),
-                extra_headers=CopilotPipeline._get_copilot_headers(headers)
+                api_key = headers_dict.get('authorization','').replace('Bearer ', ''),
+                api_base = "https://" + headers_dict.get('host', ''),
+                extra_headers=CopilotPipeline._get_copilot_headers(headers_dict)
             )
 
             if result.request:
