@@ -1,43 +1,52 @@
-This guide provides comprehensive information for developers working on the Codegate project.
+# Development guide
 
-## Project Overview
+This guide provides comprehensive information for developers working on the
+CodeGate project.
 
-Codegate is a configurable Generative AI gateway designed to protect developers from potential AI-related security risks. Key features include:
+## Project overview
+
+CodeGate is a configurable generative AI gateway designed to protect developers
+from potential AI-related security risks. Key features include:
+
 - Secrets exfiltration prevention
 - Secure coding recommendations
 - Prevention of AI recommending deprecated/malicious libraries
 - Modular system prompts configuration
 - Multiple AI provider support with configurable endpoints
 
-## Development Setup
+## Development setup
 
 ### Prerequisites
 
 - Python 3.11 or higher
-- [Poetry](https://python-poetry.org/docs/#installation) for dependency management
-- [Docker](https://docs.docker.com/get-docker/) (for containerized deployment)
-- or
-- [PodMan](https://podman.io/getting-started/installation) (for containerized deployment)
-- [VSCode](https://code.visualstudio.com/download) (recommended IDE)
+- [Poetry](https://python-poetry.org/docs/#installation) for dependency
+  management
+- [Docker](https://docs.docker.com/get-docker/) or
+  [Podman](https://podman.io/getting-started/installation) (for containerized
+  deployment)
+- [Visual Studio Code](https://code.visualstudio.com/download) (recommended IDE)
 
-### Initial Setup
+### Initial setup
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/stacklok/codegate.git
    cd codegate
    ```
 
-2. Install Poetry following the [official installation guide](https://python-poetry.org/docs/#installation)
+2. Install Poetry following the
+   [official installation guide](https://python-poetry.org/docs/#installation)
 
 3. Install project dependencies:
+
    ```bash
    poetry install --with dev
    ```
 
-## Project Structure
+## Project structure
 
-```
+```plain
 codegate/
 ├── pyproject.toml    # Project configuration and dependencies
 ├── poetry.lock      # Lock file (committed to version control)
@@ -61,9 +70,9 @@ codegate/
 └── docs/            # Documentation
 ```
 
-## Development Workflow
+## Development workflow
 
-### 1. Environment Management
+### 1. Environment management
 
 Poetry commands for managing your development environment:
 
@@ -75,21 +84,24 @@ Poetry commands for managing your development environment:
 - `poetry show`: List all installed packages
 - `poetry env info`: Show information about the virtual environment
 
-### 2. Code Style and Quality
+### 2. Code style and quality
 
 The project uses several tools to maintain code quality:
 
-- **Black** for code formatting:
+- [**Black**](https://black.readthedocs.io/en/stable/) for code formatting:
+
   ```bash
   poetry run black .
   ```
 
-- **Ruff** for linting:
+- [**Ruff**](https://docs.astral.sh/ruff/) for linting:
+
   ```bash
   poetry run ruff check .
   ```
 
-- **Bandit** for security checks:
+- [**Bandit**](https://bandit.readthedocs.io/) for security checks:
+
   ```bash
   poetry run bandit -r src/
   ```
@@ -97,85 +109,92 @@ The project uses several tools to maintain code quality:
 ### 3. Testing
 
 Run the test suite with coverage:
+
 ```bash
 poetry run pytest
 ```
 
-Tests are located in the `tests/` directory and follow the same structure as the source code.
+Tests are located in the `tests/` directory and follow the same structure as the
+source code.
 
-### 4. Make Commands
+### 4. Make commands
 
 The project includes a Makefile for common development tasks:
 
-- `make install`: Install all dependencies
-- `make format`: Format code using black and ruff
-- `make lint`: Run linting checks
-- `make test`: Run tests with coverage
-- `make security`: Run security checks
-- `make build`: Build distribution packages
-- `make all`: Run all checks and build (recommended before committing)
+- `make install`: install all dependencies
+- `make format`: format code using black and ruff
+- `make lint`: run linting checks
+- `make test`: run tests with coverage
+- `make security`: run security checks
+- `make build`: build distribution packages
+- `make all`: run all checks and build (recommended before committing)
 
-## Configuration System
+## Configuration system
 
-Codegate uses a hierarchical configuration system with the following priority (highest to lowest):
+CodeGate uses a hierarchical configuration system with the following priority
+(highest to lowest):
 
 1. CLI arguments
 2. Environment variables
 3. Config file (YAML)
 4. Default values (including default prompts)
 
-### Configuration Options
+### Configuration options
 
-- Port: Server port (default: 8989)
-- Host: Server host (default: "localhost")
-- Log Level: Logging level (ERROR|WARNING|INFO|DEBUG)
-- Log Format: Log format (JSON|TEXT)
-- Prompts: System prompts configuration
+- Port: server port (default: `8989`)
+- Host: server host (default: `"localhost"`)
+- Log level: logging verbosity level (`ERROR`|`WARNING`|`INFO`|`DEBUG`)
+- Log format: log format (`JSON`|`TEXT`)
+- Prompts: system prompts configuration
 - Provider URLs: AI provider endpoint configuration
 
-See [Configuration Documentation](configuration.md) for detailed information.
+See [Configuration system](configuration.md) for detailed information.
 
-## Working with Providers
+## Working with providers
 
-Codegate supports multiple AI providers through a modular provider system.
+CodeGate supports multiple AI providers through a modular provider system.
 
-### Available Providers
+### Available providers
 
-1. **vLLM Provider**
-   - Default URL: http://localhost:8000
-   - Supports OpenAI-compatible API
-   - Automatically adds /v1 path to base URL
-   - Model names are prefixed with "hosted_vllm/"
+1. **vLLM provider**
 
-2. **OpenAI Provider**
-   - Default URL: https://api.openai.com/v1
+   - Default URL: `http://localhost:8000`
+   - Supports OpenAI-compatible APIs
+   - Automatically adds `/v1` path to base URL
+   - Model names are prefixed with `hosted_vllm/`
+
+2. **OpenAI provider**
+
+   - Default URL: `https://api.openai.com/v1`
    - Standard OpenAI API implementation
 
-3. **Anthropic Provider**
-   - Default URL: https://api.anthropic.com/v1
+3. **Anthropic provider**
+
+   - Default URL: `https://api.anthropic.com/v1`
    - Anthropic Claude API implementation
 
-4. **Ollama Provider**
-   - Default URL: http://localhost:11434
+4. **Ollama provider**
+   - Default URL: `http://localhost:11434`
    - Endpoints:
-     * Native Ollama API: `/ollama/api/chat`
-     * OpenAI-compatible: `/ollama/chat/completions`
-     ```
+     - Native Ollama API: `/ollama/api/chat`
+     - OpenAI-compatible: `/ollama/chat/completions`
 
-### Configuring Providers
+### Configuring providers
 
 Provider URLs can be configured through:
 
 1. Config file (config.yaml):
+
    ```yaml
    provider_urls:
      vllm: "https://vllm.example.com"
      openai: "https://api.openai.com/v1"
      anthropic: "https://api.anthropic.com/v1"
-     ollama: "http://localhost:11434"  # /api path added automatically
+     ollama: "http://localhost:11434" # /api path added automatically
    ```
 
 2. Environment variables:
+
    ```bash
    export CODEGATE_PROVIDER_VLLM_URL=https://vllm.example.com
    export CODEGATE_PROVIDER_OPENAI_URL=https://api.openai.com/v1
@@ -184,11 +203,12 @@ Provider URLs can be configured through:
    ```
 
 3. CLI flags:
+
    ```bash
    codegate serve --vllm-url https://vllm.example.com --ollama-url http://localhost:11434
    ```
 
-### Implementing New Providers
+### Implementing new providers
 
 To add a new provider:
 
@@ -199,6 +219,7 @@ To add a new provider:
    - `__init__.py`: Export provider class
 
 Example structure:
+
 ```python
 from codegate.providers.base import BaseProvider
 
@@ -221,35 +242,39 @@ class NewProvider(BaseProvider):
         pass
 ```
 
-## Working with Prompts
+## Working with prompts
 
-### Default Prompts
+### Default prompts
 
-Default prompts are stored in `prompts/default.yaml`. These prompts are loaded automatically when no other prompts are specified.
+Default prompts are stored in `prompts/default.yaml`. These prompts are loaded
+automatically when no other prompts are specified.
 
-### Creating Custom Prompts
+### Creating custom prompts
 
 1. Create a new YAML file following the format:
+
    ```yaml
    prompt_name: "Prompt text content"
    another_prompt: "More prompt text"
    ```
 
 2. Use the prompts file:
+
    ```bash
    # Via CLI
    codegate serve --prompts my-prompts.yaml
 
-   # Or in config.yaml
+   # Via config.yaml
    prompts: "path/to/prompts.yaml"
 
-   # Or via environment
+   # Via environment
    export CODEGATE_PROMPTS_FILE=path/to/prompts.yaml
    ```
 
-### Testing Prompts
+### Testing prompts
 
 1. View loaded prompts:
+
    ```bash
    # Show default prompts
    codegate show-prompts
@@ -259,13 +284,14 @@ Default prompts are stored in `prompts/default.yaml`. These prompts are loaded a
    ```
 
 2. Write tests for prompt functionality:
+
    ```python
    def test_custom_prompts():
        config = Config.load(prompts_path="path/to/test/prompts.yaml")
        assert config.prompts.my_prompt == "Expected prompt text"
    ```
 
-## CLI Interface
+## CLI interface
 
 The main command-line interface is implemented in `cli.py`. Basic usage:
 
@@ -283,4 +309,4 @@ codegate serve --prompts my-prompts.yaml
 codegate serve --vllm-url https://vllm.example.com
 ```
 
-See [CLI Documentation](cli.md) for detailed command information.
+See [CLI commands and flags](cli.md) for detailed command information.
