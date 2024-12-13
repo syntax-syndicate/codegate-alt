@@ -86,26 +86,39 @@ async def parse_output(output_str: str) -> Tuple[Optional[str], Optional[str]]:
         logger.warning(f"Error parsing output: {output_str}. {e}")
         return None, None
 
-    output_message = ""
+    def _parse_single_output(single_output: dict) -> str:
+        single_chat_id = single_output.get("id")
+        single_output_message = ""
+        for choice in single_output.get("choices", []):
+            if not isinstance(choice, dict):
+                continue
+            content_dict = choice.get("delta", {}) or choice.get("message", {})
+            single_output_message += content_dict.get("content", "")
+        return single_output_message, single_chat_id
+
+    full_output_message = ""
     chat_id = None
     if isinstance(output, list):
         for output_chunk in output:
-            if not isinstance(output_chunk, dict):
-                continue
-            chat_id = chat_id or output_chunk.get("id")
-            for choice in output_chunk.get("choices", []):
-                if not isinstance(choice, dict):
-                    continue
-                delta_dict = choice.get("delta", {})
-                output_message += delta_dict.get("content", "")
+            output_message, output_chat_id = "", None
+            if isinstance(output_chunk, dict):
+                output_message, output_chat_id = _parse_single_output(output_chunk)
+            elif isinstance(output_chunk, str):
+                try:
+                    output_decoded = json.loads(output_chunk)
+                    output_message, output_chat_id = _parse_single_output(output_decoded)
+                except Exception:
+                    logger.error(f"Error reading chunk: {output_chunk}")
+            else:
+                logger.warning(
+                    f"Could not handle output: {output_chunk}", out_type=type(output_chunk)
+                )
+            chat_id = chat_id or output_chat_id
+            full_output_message += output_message
     elif isinstance(output, dict):
-        chat_id = chat_id or output.get("id")
-        for choice in output.get("choices", []):
-            if not isinstance(choice, dict):
-                continue
-            output_message += choice.get("message", {}).get("content", "")
+        full_output_message, chat_id = _parse_single_output(output)
 
-    return output_message, chat_id
+    return full_output_message, chat_id
 
 
 async def _get_question_answer(
@@ -124,7 +137,7 @@ async def _get_question_answer(
     output_msg_str, chat_id = output_task.result()
 
     # If we couldn't parse the request or output, return None
-    if not request_msg_str or not output_msg_str or not chat_id:
+    if not request_msg_str:
         return None, None
 
     request_message = ChatMessage(
@@ -132,11 +145,15 @@ async def _get_question_answer(
         timestamp=row.timestamp,
         message_id=row.id,
     )
-    output_message = ChatMessage(
-        message=output_msg_str,
-        timestamp=row.output_timestamp,
-        message_id=row.output_id,
-    )
+    if output_msg_str:
+        output_message = ChatMessage(
+            message=output_msg_str,
+            timestamp=row.output_timestamp,
+            message_id=row.output_id,
+        )
+    else:
+        output_message = None
+        chat_id = row.id
     return QuestionAnswer(question=request_message, answer=output_message), chat_id
 
 

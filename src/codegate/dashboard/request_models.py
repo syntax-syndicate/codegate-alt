@@ -22,7 +22,7 @@ class QuestionAnswer(BaseModel):
     """
 
     question: ChatMessage
-    answer: ChatMessage
+    answer: Optional[ChatMessage]
 
 
 class PartialConversation(BaseModel):

@@ -1,13 +1,9 @@
 import asyncio
-import copy
-import datetime
 import json
-import uuid
 from pathlib import Path
-from typing import AsyncGenerator, AsyncIterator, List, Optional
+from typing import List, Optional
 
 import structlog
-from litellm import ChatCompletionRequest, ModelResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -35,7 +31,7 @@ class DbCodeGate:
             )
         self._db_path = Path(sqlite_path).absolute()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Initializing DB from path: {self._db_path}")
+        logger.info(f"Initializing DB from path: {self._db_path}")
         engine_dict = {
             "url": f"sqlite+aiosqlite:///{self._db_path}",
             "echo": False,  # Set to False in production
@@ -104,9 +100,7 @@ class DbRecorder(DbCodeGate):
                 logger.error(f"Failed to insert model: {model}.", error=str(e))
                 return None
 
-    async def record_request(
-        self, prompt_params: Optional[Prompt] = None
-    ) -> Optional[Prompt]:
+    async def record_request(self, prompt_params: Optional[Prompt] = None) -> Optional[Prompt]:
         if prompt_params is None:
             return None
         sql = text(
@@ -117,28 +111,28 @@ class DbRecorder(DbCodeGate):
                 """
         )
         recorded_request = await self._insert_pydantic_model(prompt_params, sql)
-        logger.info(f"Recorded request: {recorded_request}")
+        logger.debug(f"Recorded request: {recorded_request}")
         return recorded_request
 
-    async def _record_output(self, prompt: Prompt, output_str: str) -> Optional[Output]:
-        output_params = Output(
-            id=str(uuid.uuid4()),
-            prompt_id=prompt.id,
-            timestamp=datetime.datetime.now(datetime.timezone.utc),
-            output=output_str,
-        )
-        sql = text(
-            """
-                INSERT INTO outputs (id, prompt_id, timestamp, output)
-                VALUES (:id, :prompt_id, :timestamp, :output)
-                RETURNING *
-                """
-        )
-        return await self._insert_pydantic_model(output_params, sql)
-
-    async def record_outputs(self, outputs: List[Output]) -> List[Output]:
+    async def record_outputs(self, outputs: List[Output]) -> Optional[Output]:
         if not outputs:
             return
+
+        first_output = outputs[0]
+        # Create a single entry on DB but encode all of the chunks in the stream as a list
+        # of JSON objects in the field `output`
+        output_db = Output(
+            id=first_output.id,
+            prompt_id=first_output.prompt_id,
+            timestamp=first_output.timestamp,
+            output=first_output.output,
+        )
+        full_outputs = []
+        # Just store the model respnses in the list of JSON objects.
+        for output in outputs:
+            full_outputs.append(output.output)
+        output_db.output = json.dumps(full_outputs)
+
         sql = text(
             """
                 INSERT INTO outputs (id, prompt_id, timestamp, output)
@@ -146,58 +140,9 @@ class DbRecorder(DbCodeGate):
                 RETURNING *
                 """
         )
-        # We can insert each alert independently in parallel.
-        outputs_tasks = []
-        async with asyncio.TaskGroup() as tg:
-            for output in outputs:
-                try:
-                    outputs_tasks.append(tg.create_task(self._insert_pydantic_model(output, sql)))
-                except Exception as e:
-                    logger.error(f"Failed to record alert: {output}.", error=str(e))
-        recorded_outputs = [output.result() for output in outputs_tasks]
-        logger.info(f"Recorded outputs: {recorded_outputs}")
-        return recorded_outputs
-
-    async def record_output_stream(
-        self, prompt: Prompt, model_response: AsyncIterator
-    ) -> AsyncGenerator:
-        output_chunks = []
-        async for chunk in model_response:
-            if isinstance(chunk, BaseModel):
-                chunk_to_record = chunk.model_dump(exclude_none=True, exclude_unset=True)
-                output_chunks.append(chunk_to_record)
-            elif isinstance(chunk, dict):
-                output_chunks.append(copy.deepcopy(chunk))
-            else:
-                output_chunks.append({"chunk": str(chunk)})
-            yield chunk
-
-        if output_chunks:
-            # Record the output chunks
-            output_str = json.dumps(output_chunks)
-            await self._record_output(prompt, output_str)
-
-    async def record_output_non_stream(
-        self, prompt: Optional[Prompt], model_response: ModelResponse
-    ) -> Optional[Output]:
-        if prompt is None:
-            logger.warning("No prompt found to record output.")
-            return
-
-        output_str = None
-        if isinstance(model_response, BaseModel):
-            output_str = model_response.model_dump_json(exclude_none=True, exclude_unset=True)
-        else:
-            try:
-                output_str = json.dumps(model_response)
-            except Exception as e:
-                logger.error(f"Failed to serialize output: {model_response}", error=str(e))
-
-        if output_str is None:
-            logger.warning("No output found to record.")
-            return
-
-        return await self._record_output(prompt, output_str)
+        recorded_output = await self._insert_pydantic_model(output_db, sql)
+        logger.debug(f"Recorded output: {recorded_output}")
+        return recorded_output
 
     async def record_alerts(self, alerts: List[Alert]) -> List[Alert]:
         if not alerts:
@@ -220,16 +165,24 @@ class DbRecorder(DbCodeGate):
                 try:
                     result = tg.create_task(self._insert_pydantic_model(alert, sql))
                     alerts_tasks.append(result)
-                    if result and alert.trigger_category == "critical":
-                        await alert_queue.put(f"New alert detected: {alert.timestamp}")
                 except Exception as e:
                     logger.error(f"Failed to record alert: {alert}.", error=str(e))
-        recorded_alerts = [alert.result() for alert in alerts_tasks]
-        logger.info(f"Recorded alerts: {recorded_alerts}")
+
+        recorded_alerts = []
+        for alert_coro in alerts_tasks:
+            alert_result = alert_coro.result()
+            recorded_alerts.append(alert_result)
+            if alert_result and alert_result.trigger_category == "critical":
+                await alert_queue.put(f"New alert detected: {alert.timestamp}")
+
+        logger.debug(f"Recorded alerts: {recorded_alerts}")
         return recorded_alerts
 
     async def record_context(self, context: PipelineContext) -> None:
-        logger.info(f"Recording context: {context}")
+        logger.info(
+            f"Recording context in DB. Output chunks: {len(context.output_responses)}. "
+            f"Alerts: {len(context.alerts_raised)}."
+        )
         await self.record_request(context.input_request)
         await self.record_outputs(context.output_responses)
         await self.record_alerts(context.alerts_raised)

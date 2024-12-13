@@ -95,7 +95,7 @@ async def test_parse_request(request_dict, expected_str):
                     "model": "gpt-4o-mini",
                     "object": "chat.completion.chunk",
                     "system_fingerprint": "fp_0705bf87c0",
-                    "choices": [{"index": 0, "delta": {"content": "User", "role": "assistant"}}],
+                    "choices": [{"index": 0, "delta": {"content": "Hello", "role": "assistant"}}],
                 },
                 {
                     "id": "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl",
@@ -103,7 +103,7 @@ async def test_parse_request(request_dict, expected_str):
                     "model": "gpt-4o-mini",
                     "object": "chat.completion.chunk",
                     "system_fingerprint": "fp_0705bf87c0",
-                    "choices": [{"index": 0, "delta": {"content": " seeks"}}],
+                    "choices": [{"index": 0, "delta": {"content": " world"}}],
                 },
                 {
                     "id": "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl",
@@ -114,7 +114,7 @@ async def test_parse_request(request_dict, expected_str):
                     "choices": [{"finish_reason": "stop", "index": 0, "delta": {}}],
                 },
             ],
-            "User seeks",
+            "Hello world",
             "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl",
         ),
         (

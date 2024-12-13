@@ -81,7 +81,6 @@ class CopilotPipeline(ABC):
             result = await pipeline.process_request(
                 request=normalized_body,
                 provider=self.provider_name,
-                prompt_id=self._request_id(headers),
                 model=normalized_body.get("model", "gpt-4o-mini"),
                 api_key=headers_dict.get("authorization", "").replace("Bearer ", ""),
                 api_base="https://" + headers_dict.get("host", ""),

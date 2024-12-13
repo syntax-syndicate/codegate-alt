@@ -5,7 +5,6 @@ from litellm import ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
 from codegate.db.connection import DbRecorder
-from codegate.db.models import Prompt
 from codegate.pipeline.base import PipelineContext, PipelineResponse
 from codegate.providers.normalizer.base import ModelOutputNormalizer
 
@@ -76,7 +75,6 @@ async def _convert_to_stream(
     """
     # First chunk with content
     first_response = _create_model_response(content, step_name, model, streaming=True)
-    context.add_output(first_response)
     yield first_response
     # Final chunk with finish_reason
     yield _create_stream_end_response(first_response)
@@ -90,6 +88,19 @@ class PipelineResponseFormatter:
     ):
         self._output_normalizer = output_normalizer
         self._db_recorder = db_recorder
+
+    async def _cleanup_after_streaming(
+        self, stream: AsyncIterator[ModelResponse], context: PipelineContext
+    ) -> AsyncIterator[ModelResponse]:
+        """Wraps the stream to ensure cleanup after consumption"""
+        try:
+            async for item in stream:
+                context.add_output(item)
+                yield item
+        finally:
+            if context:
+                # Record to DB the objects captured during the stream
+                await self._db_recorder.record_context(context)
 
     async def handle_pipeline_response(
         self, pipeline_response: PipelineResponse, streaming: bool, context: PipelineContext
@@ -113,7 +124,6 @@ class PipelineResponseFormatter:
             # to the provider-specific format
             context.add_output(model_response)
             await self._db_recorder.record_context(context)
-            # await self._db_recorder.record_output_non_stream(prompt_db, model_response)
             return self._output_normalizer.denormalize(model_response)
 
         # If we're streaming, we need to convert the response to a stream first
@@ -121,5 +131,5 @@ class PipelineResponseFormatter:
         model_response_stream = _convert_to_stream(
             pipeline_response.content, pipeline_response.step_name, pipeline_response.model, context
         )
-        await self._db_recorder.record_context(context)
+        model_response_stream = self._cleanup_after_streaming(model_response_stream, context)
         return self._output_normalizer.denormalize_streaming(model_response_stream)

@@ -10,6 +10,7 @@ from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
 from codegate.ca.codegate_ca import CertificateAuthority
 from codegate.config import Config
+from codegate.db.connection import DbRecorder
 from codegate.pipeline.base import PipelineContext
 from codegate.pipeline.factory import PipelineFactory
 from codegate.pipeline.output import OutputPipelineInstance
@@ -124,6 +125,7 @@ class CopilotProvider(asyncio.Protocol):
         self._closing = False
         self.pipeline_factory = PipelineFactory(SecretsManager())
         self.context_tracking: Optional[PipelineContext] = None
+        self._db_recorder = DbRecorder()
 
     def _select_pipeline(self, method: str, path: str) -> Optional[CopilotPipeline]:
         if method == "POST" and path == "v1/engines/copilot-codex/completions":
@@ -344,6 +346,12 @@ class CopilotProvider(asyncio.Protocol):
         except Exception as e:
             logger.error(f"Error handling HTTP request: {e}")
             self.send_error_response(502, str(e).encode())
+        # This should work for recording FIM and Chat to DB. Now we keep the objects that are going
+        # to be written to DB in the pipeline `context`. Copilot also uses pipelines and `context`.
+        # For some reason is only working for FIM. Investigatig and enabling on future PR.
+        # finally:
+        #     if self.context_tracking:
+        #         await self._db_recorder.record_context(self.context_tracking)
 
     async def _get_target_url(self) -> Optional[str]:
         """Determine target URL based on request path and headers"""
