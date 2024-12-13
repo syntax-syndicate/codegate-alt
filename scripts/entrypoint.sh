@@ -6,6 +6,7 @@ BACKUP_NAME="backup"
 MODEL_BASE_PATH="/app/codegate_volume/models"
 CODEGATE_DB_FILE="/app/codegate_volume/db/codegate.db"
 CODEGATE_CERTS="/app/codegate_volume/certs"
+WEBAPP="/usr/src/webapp"
 
 # Function to restore backup if paths are provided
 restore_backup() {
@@ -62,8 +63,12 @@ restore_backup
 # Step 2: Generate certificates
 genrerate_certs
 
-# Step 3: Start the dashboard
+# Step 3: Make CA available to UI
+mkdir "$WEBAPP/public/certificates/"
+cp "$CERTS/ca.crt" "$WEBAPP/public/certificates/codegate_ca.crt"
+
+# Step 4: Start the dashboard
 start_dashboard
 
-# Step 4: Start the main application
+# Step 5: Start the main application
 start_application
