@@ -6,7 +6,7 @@ from litellm.types.utils import Delta, StreamingChoices
 
 from codegate.db.connection import DbRecorder
 from codegate.db.models import Prompt
-from codegate.pipeline.base import PipelineResponse
+from codegate.pipeline.base import PipelineContext, PipelineResponse
 from codegate.providers.normalizer.base import ModelOutputNormalizer
 
 
@@ -67,6 +67,7 @@ async def _convert_to_stream(
     content: str,
     step_name: str,
     model: str,
+    context: PipelineContext,
 ) -> AsyncIterator[ModelResponse]:
     """
     Converts a single completion response, provided by our pipeline as a shortcut
@@ -75,6 +76,7 @@ async def _convert_to_stream(
     """
     # First chunk with content
     first_response = _create_model_response(content, step_name, model, streaming=True)
+    context.add_output(first_response)
     yield first_response
     # Final chunk with finish_reason
     yield _create_stream_end_response(first_response)
@@ -90,7 +92,7 @@ class PipelineResponseFormatter:
         self._db_recorder = db_recorder
 
     async def handle_pipeline_response(
-        self, pipeline_response: PipelineResponse, streaming: bool, prompt_db: Prompt
+        self, pipeline_response: PipelineResponse, streaming: bool, context: PipelineContext
     ) -> Union[ModelResponse, AsyncIterator[ModelResponse]]:
         """
         Convert pipeline response to appropriate format based on streaming flag
@@ -109,15 +111,15 @@ class PipelineResponseFormatter:
         if not streaming:
             # If we're not streaming, we just return the response translated
             # to the provider-specific format
-            await self._db_recorder.record_output_non_stream(prompt_db, model_response)
+            context.add_output(model_response)
+            await self._db_recorder.record_context(context)
+            # await self._db_recorder.record_output_non_stream(prompt_db, model_response)
             return self._output_normalizer.denormalize(model_response)
 
         # If we're streaming, we need to convert the response to a stream first
         # then feed the stream into the completion handler's conversion method
         model_response_stream = _convert_to_stream(
-            pipeline_response.content, pipeline_response.step_name, pipeline_response.model
+            pipeline_response.content, pipeline_response.step_name, pipeline_response.model, context
         )
-        model_response_stream = self._db_recorder.record_output_stream(
-            prompt_db, model_response_stream
-        )
+        await self._db_recorder.record_context(context)
         return self._output_normalizer.denormalize_streaming(model_response_stream)

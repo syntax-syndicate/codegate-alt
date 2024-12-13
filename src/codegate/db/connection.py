@@ -18,6 +18,7 @@ from codegate.db.queries import (
     GetAlertsWithPromptAndOutputRow,
     GetPromptWithOutputsRow,
 )
+from codegate.pipeline.base import PipelineContext
 
 logger = structlog.get_logger("codegate")
 alert_queue = asyncio.Queue()
@@ -104,29 +105,10 @@ class DbRecorder(DbCodeGate):
                 return None
 
     async def record_request(
-        self, normalized_request: ChatCompletionRequest, is_fim_request: bool, provider_str: str
+        self, prompt_params: Optional[Prompt] = None
     ) -> Optional[Prompt]:
-        request_str = None
-        if isinstance(normalized_request, BaseModel):
-            request_str = normalized_request.model_dump_json(exclude_none=True, exclude_unset=True)
-        else:
-            try:
-                request_str = json.dumps(normalized_request)
-            except Exception as e:
-                logger.error(f"Failed to serialize output: {normalized_request}", error=str(e))
-
-        if request_str is None:
-            logger.warning("No request found to record.")
-            return
-
-        # Create a new prompt record
-        prompt_params = Prompt(
-            id=str(uuid.uuid4()),  # Generate a new UUID for the prompt
-            timestamp=datetime.datetime.now(datetime.timezone.utc),
-            provider=provider_str,
-            type="fim" if is_fim_request else "chat",
-            request=request_str,
-        )
+        if prompt_params is None:
+            return None
         sql = text(
             """
                 INSERT INTO prompts (id, timestamp, provider, request, type)
@@ -134,7 +116,9 @@ class DbRecorder(DbCodeGate):
                 RETURNING *
                 """
         )
-        return await self._insert_pydantic_model(prompt_params, sql)
+        recorded_request = await self._insert_pydantic_model(prompt_params, sql)
+        logger.info(f"Recorded request: {recorded_request}")
+        return recorded_request
 
     async def _record_output(self, prompt: Prompt, output_str: str) -> Optional[Output]:
         output_params = Output(
@@ -151,6 +135,28 @@ class DbRecorder(DbCodeGate):
                 """
         )
         return await self._insert_pydantic_model(output_params, sql)
+
+    async def record_outputs(self, outputs: List[Output]) -> List[Output]:
+        if not outputs:
+            return
+        sql = text(
+            """
+                INSERT INTO outputs (id, prompt_id, timestamp, output)
+                VALUES (:id, :prompt_id, :timestamp, :output)
+                RETURNING *
+                """
+        )
+        # We can insert each alert independently in parallel.
+        outputs_tasks = []
+        async with asyncio.TaskGroup() as tg:
+            for output in outputs:
+                try:
+                    outputs_tasks.append(tg.create_task(self._insert_pydantic_model(output, sql)))
+                except Exception as e:
+                    logger.error(f"Failed to record alert: {output}.", error=str(e))
+        recorded_outputs = [output.result() for output in outputs_tasks]
+        logger.info(f"Recorded outputs: {recorded_outputs}")
+        return recorded_outputs
 
     async def record_output_stream(
         self, prompt: Prompt, model_response: AsyncIterator
@@ -193,7 +199,7 @@ class DbRecorder(DbCodeGate):
 
         return await self._record_output(prompt, output_str)
 
-    async def record_alerts(self, alerts: List[Alert]) -> None:
+    async def record_alerts(self, alerts: List[Alert]) -> List[Alert]:
         if not alerts:
             return
         sql = text(
@@ -208,15 +214,25 @@ class DbRecorder(DbCodeGate):
                 """
         )
         # We can insert each alert independently in parallel.
+        alerts_tasks = []
         async with asyncio.TaskGroup() as tg:
             for alert in alerts:
                 try:
                     result = tg.create_task(self._insert_pydantic_model(alert, sql))
+                    alerts_tasks.append(result)
                     if result and alert.trigger_category == "critical":
                         await alert_queue.put(f"New alert detected: {alert.timestamp}")
                 except Exception as e:
                     logger.error(f"Failed to record alert: {alert}.", error=str(e))
-        return None
+        recorded_alerts = [alert.result() for alert in alerts_tasks]
+        logger.info(f"Recorded alerts: {recorded_alerts}")
+        return recorded_alerts
+
+    async def record_context(self, context: PipelineContext) -> None:
+        logger.info(f"Recording context: {context}")
+        await self.record_request(context.input_request)
+        await self.record_outputs(context.output_responses)
+        await self.record_alerts(context.alerts_raised)
 
 
 class DbReader(DbCodeGate):

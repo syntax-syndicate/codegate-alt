@@ -109,7 +109,7 @@ class BaseProvider(ABC):
         api_key: Optional[str],
         api_base: Optional[str],
         is_fim_request: bool,
-        prompt_id: str,
+        # prompt_id: str,
     ) -> PipelineResult:
         # Decide which pipeline processor to use
         if is_fim_request:
@@ -125,7 +125,7 @@ class BaseProvider(ABC):
         result = await pipeline_processor.process_request(
             request=normalized_request,
             provider=self.provider_route_name,
-            prompt_id=prompt_id,
+            # prompt_id=prompt_id,
             model=normalized_request.get("model"),
             api_key=api_key,
             api_base=api_base,
@@ -194,10 +194,11 @@ class BaseProvider(ABC):
             async for item in stream:
                 yield item
         finally:
-            # Ensure sensitive data is cleaned up after the stream is consumed
-            if context and context.sensitive:
-                context.sensitive.secure_cleanup()
-                await self._db_recorder.record_alerts(context.alerts_raised)
+            if context:
+                await self._db_recorder.record_context(context)
+                # Ensure sensitive data is cleaned up after the stream is consumed
+                if context.sensitive:
+                    context.sensitive.secure_cleanup()
 
     async def complete(
         self, data: Dict, api_key: Optional[str], is_fim_request: bool
@@ -215,22 +216,22 @@ class BaseProvider(ABC):
         """
         normalized_request = self._input_normalizer.normalize(data)
         streaming = normalized_request.get("stream", False)
-        prompt_db = await self._db_recorder.record_request(
-            normalized_request, is_fim_request, self.provider_route_name
-        )
+        # prompt_db = await self._db_recorder.record_request(
+        #     normalized_request, is_fim_request, self.provider_route_name
+        # )
 
-        prompt_db_id = prompt_db.id if prompt_db is not None else None
+        # prompt_db_id = prompt_db.id if prompt_db is not None else None
         input_pipeline_result = await self._run_input_pipeline(
             normalized_request,
             api_key,
             data.get("base_url"),
             is_fim_request,
-            prompt_id=prompt_db_id,
+            # prompt_id=prompt_db_id,
         )
         if input_pipeline_result.response:
-            await self._db_recorder.record_alerts(input_pipeline_result.context.alerts_raised)
+            # await self._db_recorder.record_alerts(input_pipeline_result.context.alerts_raised)
             return await self._pipeline_response_formatter.handle_pipeline_response(
-                input_pipeline_result.response, streaming, prompt_db=prompt_db
+                input_pipeline_result.response, streaming, context=input_pipeline_result.context
             )
 
         provider_request = self._input_normalizer.denormalize(input_pipeline_result.request)
@@ -247,17 +248,18 @@ class BaseProvider(ABC):
             normalized_response = self._output_normalizer.normalize(model_response)
             pipeline_output = self._run_output_pipeline(normalized_response)
             # Record the output and alerts in the database can be done in parallel
-            async with asyncio.TaskGroup() as tg:
-                tg.create_task(
-                    self._db_recorder.record_output_non_stream(prompt_db, model_response)
-                )
-                if input_pipeline_result and input_pipeline_result.context:
-                    tg.create_task(
-                        self._db_recorder.record_alerts(input_pipeline_result.context.alerts_raised)
-                    )
+            # async with asyncio.TaskGroup() as tg:
+            #     tg.create_task(
+            #         self._db_recorder.record_output_non_stream(prompt_db, model_response)
+            #     )
+            #     if input_pipeline_result and input_pipeline_result.context:
+            #         tg.create_task(
+            #             self._db_recorder.record_alerts(input_pipeline_result.context.alerts_raised)
+            #         )
+            await self._db_recorder.record_context(input_pipeline_result.context)
             return self._output_normalizer.denormalize(pipeline_output)
 
-        model_response = self._db_recorder.record_output_stream(prompt_db, model_response)
+        # model_response = self._db_recorder.record_output_stream(prompt_db, model_response)
         pipeline_output_stream = await self._run_output_stream_pipeline(
             input_pipeline_result.context, model_response, is_fim_request=is_fim_request
         )

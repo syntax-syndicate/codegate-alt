@@ -115,6 +115,7 @@ class OutputPipelineInstance:
             async for chunk in stream:
                 # Store chunk content in buffer
                 self._buffer_chunk(chunk)
+                self._input_context.add_output(chunk)
 
                 # Process chunk through each step of the pipeline
                 current_chunks = [chunk]

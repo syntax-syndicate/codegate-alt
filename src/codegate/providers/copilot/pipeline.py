@@ -6,6 +6,7 @@ import structlog
 from litellm.types.llms.openai import ChatCompletionRequest
 
 from codegate.pipeline.base import PipelineContext
+from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.normalizer.completion import CompletionNormalizer
 
 logger = structlog.get_logger("codegate")
@@ -18,7 +19,7 @@ class CopilotPipeline(ABC):
     factory to create the pipeline itself and run the request
     """
 
-    def __init__(self, pipeline_factory):
+    def __init__(self, pipeline_factory: PipelineFactory):
         self.pipeline_factory = pipeline_factory
         self.normalizer = self._create_normalizer()
         self.provider_name = "openai"
