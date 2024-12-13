@@ -50,6 +50,7 @@ class Config:
     ca_key: str = "ca.key"
     server_cert: str = "server.crt"
     server_key: str = "server.key"
+    force_certs: bool = False
 
     # Provider URLs with defaults
     provider_urls: Dict[str, str] = field(default_factory=lambda: DEFAULT_PROVIDER_URLS.copy())
@@ -142,6 +143,7 @@ class Config:
                 ca_key=config_data.get("ca_key", cls.ca_key),
                 server_cert=config_data.get("server_cert", cls.server_cert),
                 server_key=config_data.get("server_key", cls.server_key),
+                force_certs=config_data.get("force_certs", cls.force_certs),
                 prompts=prompts_config,
                 provider_urls=provider_urls,
             )
@@ -187,6 +189,8 @@ class Config:
                 config.server_cert = os.environ["CODEGATE_SERVER_CERT"]
             if "CODEGATE_SERVER_KEY" in os.environ:
                 config.server_key = os.environ["CODEGATE_SERVER_KEY"]
+            if "CODEGATE_FORCE_CERTS" in os.environ:
+                config.force_certs = os.environ["CODEGATE_FORCE_CERTS"]
 
             # Load provider URLs from environment variables
             for provider in DEFAULT_PROVIDER_URLS.keys():
@@ -216,6 +220,7 @@ class Config:
         ca_key: Optional[str] = None,
         server_cert: Optional[str] = None,
         server_key: Optional[str] = None,
+        force_certs: Optional[bool] = None,
         db_path: Optional[str] = None,
     ) -> "Config":
         """Load configuration with priority resolution.
@@ -242,6 +247,7 @@ class Config:
             ca_key: Optional path to CA key
             server_cert: Optional path to server certificate
             server_key: Optional path to server key
+            force_certs: Optional flag to force certificate generation
             db_path: Optional path to the SQLite database file
 
         Returns:
@@ -289,6 +295,8 @@ class Config:
             config.server_cert = env_config.server_cert
         if "CODEGATE_SERVER_KEY" in os.environ:
             config.server_key = env_config.server_key
+        if "CODEGATE_FORCE_CERTS" in os.environ:
+            config.force_certs = env_config.force_certs
 
         # Override provider URLs from environment
         for provider, url in env_config.provider_urls.items():
@@ -325,16 +333,8 @@ class Config:
             config.server_key = server_key
         if db_path is not None:
             config.db_path = db_path
-        if certs_dir is not None:
-            config.certs_dir = certs_dir
-        if ca_cert is not None:
-            config.ca_cert = ca_cert
-        if ca_key is not None:
-            config.ca_key = ca_key
-        if server_cert is not None:
-            config.server_cert = server_cert
-        if server_key is not None:
-            config.server_key = server_key
+        if force_certs is not None:
+            config.force_certs = force_certs
 
         # Set the __config class attribute
         Config.__config = config

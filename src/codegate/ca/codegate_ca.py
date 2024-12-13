@@ -368,35 +368,6 @@ class CertificateAuthority:
             )
 
         # Print instructions for trusting the certificates
-        logger.info(
-            """
-Certificates generated successfully in the 'certs' directory
-To trust these certificates:
-
-On macOS:
-`sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/ca.crt`
-
-On Windows (PowerShell as Admin):
-`Import-Certificate -FilePath "certs\\ca.crt" -CertStoreLocation Cert:\\LocalMachine\\Root`
-
-On Linux:
-`sudo cp certs/ca.crt /usr/local/share/ca-certificates/codegate.crt`
-`sudo update-ca-certificates`
-
-For VSCode, add to settings.json:
-{
-    "http.proxy": "https://localhost:8990",
-    "http.proxyStrictSSL": true,
-    "http.proxySupport": "on",
-    "github.copilot.advanced": {
-        "debug.useNodeFetcher": true,
-        "debug.useElectronFetcher": true,
-        "debug.testOverrideProxyUrl": "https://localhost:8990",
-        "debug.overrideProxyUrl": "https://localhost:8990"
-    },
-}
-"""
-        )
         logger.debug("Certificates generated successfully")
         return server_cert, server_key
 
@@ -422,23 +393,21 @@ For VSCode, add to settings.json:
         logger.debug("SSL context created successfully")
         return ssl_context
 
-    def ensure_certificates_exist(self) -> None:
+    def check_certificates_exist(self) -> bool:
+        """Check if SSL certificates exist"""
+        logger.debug("Checking if certificates exist fn: check_certificates_exist")
+        return os.path.exists(
+            os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert)
+        ) and os.path.exists(
+            os.path.join(Config.get_config().certs_dir, Config.get_config().server_key)
+        )
+
+    def ensure_certificates_exist(self) -> bool:
         """Ensure SSL certificates exist, generate if they don't"""
         logger.debug("Ensuring certificates exist. fn ensure_certificates_exist")
-        if not (
-            os.path.exists(
-                os.path.join(Config.get_config().certs_dir, Config.get_config().server_cert)
-            )
-            and os.path.exists(
-                os.path.join(Config.get_config().certs_dir, Config.get_config().server_key)
-            )
-        ):
-            logger.debug("Certificates not found, generating new certificates")
+        if not self.check_certificates_exist():
+            logger.info("Certificates not found. Generating new certificates.")
             self.generate_certificates()
-        else:
-            server_cert = Config.get_config().server_cert
-            server_key = Config.get_config().server_key
-            logger.debug(f"Certificates found at: {server_cert} and {server_key}.")
 
     def get_ssl_context(self) -> ssl.SSLContext:
         """Get SSL context with certificates"""
