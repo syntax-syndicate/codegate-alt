@@ -260,7 +260,6 @@ def serve(
     ca_key: Optional[str],
     server_cert: Optional[str],
     server_key: Optional[str],
-    force_certs: bool,
 ) -> None:
     """Start the codegate server."""
     try:
@@ -292,7 +291,6 @@ def serve(
             ca_key=ca_key,
             server_cert=server_cert,
             server_key=server_key,
-            force_certs=force_certs,
             db_path=db_path,
         )
 
@@ -501,7 +499,7 @@ def generate_certs(
         click.echo("Make sure to add the new CA certificate to the operating system trust store.")
     else:
         click.echo("Certificates already exist. Skipping generation...")
-        sys.exit(0)
+
 
 def main() -> None:
     """Main entry point for the CLI."""

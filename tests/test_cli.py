@@ -1,24 +1,23 @@
 """Tests for the server module."""
 
 import os
-from unittest.mock import MagicMock, patch, AsyncMock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from click.testing import CliRunner
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from uvicorn.config import Config as UvicornConfig
 
 from codegate import __version__
 from codegate.pipeline.factory import PipelineFactory
 from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.registry import ProviderRegistry
 from codegate.server import init_app
-from src.codegate.cli import UvicornServer
-from src.codegate.cli import cli
-from src.codegate.codegate_logging import LogLevel, LogFormat
-from uvicorn.config import Config as UvicornConfig
-from click.testing import CliRunner
-from pathlib import Path
+from src.codegate.cli import UvicornServer, cli
+from src.codegate.codegate_logging import LogFormat, LogLevel
 
 
 @pytest.fixture
@@ -176,12 +175,12 @@ def mock_app():
 @pytest.fixture
 def uvicorn_config(mock_app):
     # Assuming mock_app is defined to simulate ASGI application
-    return UvicornConfig(app=mock_app, host='localhost', port=8000, log_level='info')
+    return UvicornConfig(app=mock_app, host="localhost", port=8000, log_level="info")
 
 
 @pytest.fixture
 def server_instance(uvicorn_config):
-    with patch('src.codegate.cli.Server', autospec=True) as mock_server_class:
+    with patch("src.codegate.cli.Server", autospec=True) as mock_server_class:
         mock_server_instance = mock_server_class.return_value
         mock_server_instance.serve = AsyncMock()
         yield UvicornServer(uvicorn_config, mock_server_instance)
@@ -200,20 +199,22 @@ def cli_runner():
 
 @pytest.fixture
 def mock_logging(mocker):
-    return mocker.patch('your_cli_module.structlog.get_logger')
+    return mocker.patch("your_cli_module.structlog.get_logger")
 
 
 @pytest.fixture
 def mock_setup_logging(mocker):
-    return mocker.patch('your_cli_module.setup_logging')
+    return mocker.patch("your_cli_module.setup_logging")
 
 
 def test_serve_default_options(cli_runner):
     """Test serve command with default options."""
     # Use patches for run_servers and logging setup
-    with patch("src.codegate.cli.run_servers") as mock_run, \
-         patch("src.codegate.cli.structlog.get_logger") as mock_logging, \
-         patch("src.codegate.cli.setup_logging") as mock_setup_logging:
+    with (
+        patch("src.codegate.cli.run_servers") as mock_run,
+        patch("src.codegate.cli.structlog.get_logger") as mock_logging,
+        patch("src.codegate.cli.setup_logging") as mock_setup_logging,
+    ):
 
         logger_instance = MagicMock()
         mock_logging.return_value = logger_instance
@@ -236,9 +237,11 @@ def test_serve_default_options(cli_runner):
 
 def test_serve_custom_options(cli_runner):
     """Test serve command with custom options."""
-    with patch("src.codegate.cli.run_servers") as mock_run, \
-         patch("src.codegate.cli.structlog.get_logger") as mock_logging, \
-         patch("src.codegate.cli.setup_logging") as mock_setup_logging:
+    with (
+        patch("src.codegate.cli.run_servers") as mock_run,
+        patch("src.codegate.cli.structlog.get_logger") as mock_logging,
+        patch("src.codegate.cli.setup_logging") as mock_setup_logging,
+    ):
 
         logger_instance = MagicMock()
         mock_logging.return_value = logger_instance
@@ -248,15 +251,24 @@ def test_serve_custom_options(cli_runner):
             cli,
             [
                 "serve",
-                "--port", "8989",
-                "--host", "localhost",
-                "--log-level", "DEBUG",
-                "--log-format", "TEXT",
-                "--certs-dir", "./custom-certs",
-                "--ca-cert", "custom-ca.crt",
-                "--ca-key", "custom-ca.key",
-                "--server-cert", "custom-server.crt",
-                "--server-key", "custom-server.key",
+                "--port",
+                "8989",
+                "--host",
+                "localhost",
+                "--log-level",
+                "DEBUG",
+                "--log-format",
+                "TEXT",
+                "--certs-dir",
+                "./custom-certs",
+                "--ca-cert",
+                "custom-ca.crt",
+                "--ca-key",
+                "custom-ca.key",
+                "--server-cert",
+                "custom-server.crt",
+                "--server-key",
+                "custom-server.key",
             ],
         )
 
@@ -289,8 +301,9 @@ def test_serve_custom_options(cli_runner):
 
         # Check if Config object attributes match the expected values
         for key, expected_value in expected_values.items():
-            assert getattr(config_arg, key) == expected_value, \
-                f"{key} does not match expected value"
+            assert (
+                getattr(config_arg, key) == expected_value
+            ), f"{key} does not match expected value"
 
 
 def test_serve_invalid_port(cli_runner):
@@ -310,21 +323,25 @@ def test_serve_invalid_log_level(cli_runner):
 @pytest.fixture
 def temp_config_file(tmp_path):
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("""
+    config_path.write_text(
+        """
     log_level: DEBUG
     log_format: JSON
     port: 8989
     host: localhost
     certs_dir: ./test-certs
-    """)
+    """
+    )
     return config_path
 
 
 def test_serve_with_config_file(cli_runner, temp_config_file):
     """Test serve command with config file."""
-    with patch("src.codegate.cli.run_servers") as mock_run, \
-         patch("src.codegate.cli.structlog.get_logger") as mock_logging, \
-         patch("src.codegate.cli.setup_logging") as mock_setup_logging:
+    with (
+        patch("src.codegate.cli.run_servers") as mock_run,
+        patch("src.codegate.cli.structlog.get_logger") as mock_logging,
+        patch("src.codegate.cli.setup_logging") as mock_setup_logging,
+    ):
 
         logger_instance = MagicMock()
         mock_logging.return_value = logger_instance
@@ -352,8 +369,9 @@ def test_serve_with_config_file(cli_runner, temp_config_file):
 
         # Check if passed arguments match the expected values
         for key, expected_value in expected_values.items():
-            assert getattr(config_arg, key) == expected_value, \
-                f"{key} does not match expected value"
+            assert (
+                getattr(config_arg, key) == expected_value
+            ), f"{key} does not match expected value"
 
 
 def test_serve_with_nonexistent_config_file(cli_runner: CliRunner) -> None:
@@ -366,10 +384,12 @@ def test_serve_with_nonexistent_config_file(cli_runner: CliRunner) -> None:
 def test_serve_priority_resolution(cli_runner: CliRunner, temp_config_file: Path) -> None:
     """Test serve command respects configuration priority."""
     # Set up environment variables and ensure they get cleaned up after the test
-    with patch.dict(os.environ, {'LOG_LEVEL': 'INFO', 'PORT': '9999'}, clear=True), \
-         patch('src.codegate.cli.run_servers') as mock_run, \
-         patch('src.codegate.cli.structlog.get_logger') as mock_logging, \
-         patch('src.codegate.cli.setup_logging') as mock_setup_logging:
+    with (
+        patch.dict(os.environ, {"LOG_LEVEL": "INFO", "PORT": "9999"}, clear=True),
+        patch("src.codegate.cli.run_servers") as mock_run,
+        patch("src.codegate.cli.structlog.get_logger") as mock_logging,
+        patch("src.codegate.cli.setup_logging") as mock_setup_logging,
+    ):
         # Set up mock logger
         logger_instance = MagicMock()
         mock_logging.return_value = logger_instance
@@ -406,7 +426,7 @@ def test_serve_priority_resolution(cli_runner: CliRunner, temp_config_file: Path
         assert result.exit_code == 0
 
         # Ensure logging setup was called with the highest priority settings (CLI arguments)
-        mock_setup_logging.assert_called_once_with('ERROR', 'TEXT')
+        mock_setup_logging.assert_called_once_with("ERROR", "TEXT")
         mock_logging.assert_called_with("codegate")
 
         # Verify that the run_servers was called with the overridden settings
@@ -415,8 +435,8 @@ def test_serve_priority_resolution(cli_runner: CliRunner, temp_config_file: Path
         expected_values = {
             "port": 8080,
             "host": "example.com",
-            "log_level": 'ERROR',
-            "log_format": 'TEXT',
+            "log_level": "ERROR",
+            "log_format": "TEXT",
             "certs_dir": "./cli-certs",
             "ca_cert": "cli-ca.crt",
             "ca_key": "cli-ca.key",
@@ -426,15 +446,18 @@ def test_serve_priority_resolution(cli_runner: CliRunner, temp_config_file: Path
 
         # Verify if Config object attributes match the expected values from CLI arguments
         for key, expected_value in expected_values.items():
-            assert getattr(config_arg, key) == expected_value, \
-                f"{key} does not match expected value"
+            assert (
+                getattr(config_arg, key) == expected_value
+            ), f"{key} does not match expected value"
 
 
 def test_serve_certificate_options(cli_runner: CliRunner) -> None:
     """Test serve command with certificate options."""
-    with patch('src.codegate.cli.run_servers') as mock_run, \
-         patch('src.codegate.cli.structlog.get_logger') as mock_logging, \
-         patch('src.codegate.cli.setup_logging') as mock_setup_logging:
+    with (
+        patch("src.codegate.cli.run_servers") as mock_run,
+        patch("src.codegate.cli.structlog.get_logger") as mock_logging,
+        patch("src.codegate.cli.setup_logging") as mock_setup_logging,
+    ):
         # Set up mock logger
         logger_instance = MagicMock()
         mock_logging.return_value = logger_instance
@@ -461,7 +484,7 @@ def test_serve_certificate_options(cli_runner: CliRunner) -> None:
         assert result.exit_code == 0
 
         # Ensure logging setup was called with expected arguments
-        mock_setup_logging.assert_called_once_with('INFO', 'JSON')
+        mock_setup_logging.assert_called_once_with("INFO", "JSON")
         mock_logging.assert_called_with("codegate")
 
         # Verify that run_servers was called with the provided certificate options
@@ -477,14 +500,16 @@ def test_serve_certificate_options(cli_runner: CliRunner) -> None:
 
         # Check if Config object attributes match the expected values
         for key, expected_value in expected_values.items():
-            assert getattr(config_arg, key) == expected_value, \
-                f"{key} does not match expected value"
+            assert (
+                getattr(config_arg, key) == expected_value
+            ), f"{key} does not match expected value"
 
 
 def test_main_function() -> None:
     """Test main function."""
     with patch("sys.argv", ["cli"]), patch("codegate.cli.cli") as mock_cli:
         from codegate.cli import main
+
         main()
         mock_cli.assert_called_once()
 
@@ -501,8 +526,10 @@ def mock_uvicorn_server():
 
 @pytest.mark.asyncio
 async def test_uvicorn_server_cleanup(mock_uvicorn_server):
-    with patch("asyncio.get_running_loop"), \
-         patch.object(mock_uvicorn_server.server, 'shutdown', AsyncMock()):
+    with (
+        patch("asyncio.get_running_loop"),
+        patch.object(mock_uvicorn_server.server, "shutdown", AsyncMock()),
+    ):
         # Mock the loop or other components as needed
 
         # Start the server or trigger the condition you want to test
