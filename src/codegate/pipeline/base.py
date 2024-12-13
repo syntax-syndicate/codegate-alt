@@ -187,7 +187,7 @@ class PipelineStep(ABC):
         if request.get("messages") is None:
             return -1
 
-        for idx, message in reversed(list(enumerate(request['messages']))):
+        for idx, message in reversed(list(enumerate(request["messages"]))):
             if message.get("role", "") == "user":
                 return idx
 

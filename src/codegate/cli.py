@@ -449,6 +449,12 @@ def restore_backup(backup_path: Path, backup_name: str) -> None:
     help="Name that will be given to the created server-key.",
 )
 @click.option(
+    "--force-certs",
+    is_flag=True,
+    default=False,
+    help="Force the generation of certificates even if they already exist.",
+)
+@click.option(
     "--log-level",
     type=click.Choice([level.value for level in LogLevel]),
     default=None,
@@ -466,6 +472,7 @@ def generate_certs(
     ca_key_name: Optional[str],
     server_cert_name: Optional[str],
     server_key_name: Optional[str],
+    force_certs: bool,
     log_level: Optional[str],
     log_format: Optional[str],
 ) -> None:
@@ -476,12 +483,22 @@ def generate_certs(
         ca_key=ca_key_name,
         server_cert=server_cert_name,
         server_key=server_key_name,
+        force_certs=force_certs,
         cli_log_level=log_level,
         cli_log_format=log_format,
     )
     setup_logging(cfg.log_level, cfg.log_format)
+
     ca = CertificateAuthority.get_instance()
-    ca.generate_certificates()
+    should_generate = force_certs or not ca.check_certificates_exist()
+
+    if should_generate:
+        ca.generate_certificates()
+        click.echo("Certificates generated successfully.")
+        click.echo(f"Certificates saved to: {cfg.certs_dir}")
+        click.echo("Make sure to add the new CA certificate to the operating system trust store.")
+    else:
+        click.echo("Certificates already exist. Skipping generation...")
 
 
 def main() -> None:
