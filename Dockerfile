@@ -32,20 +32,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/
 
-# Get the latest commit sha as a build arg
-# This is needed otherwise Docker will cache the git clone step. With this workaround
-# we can force Docker to re-run the git clone step if the latest commit sha changes.
-# --build-arg LATEST_COMMIT_SHA=$(curl \
-#     -LSsk "https://api.github.com/repos/stacklok/codegate-ui/commits?per_page=1" \
-#     -H "Authorization: Bearer $GH_CI_TOKEN" | jq -r '.[0].sha')
-ARG LATEST_COMMIT_SHA=LATEST
-RUN echo "Latest FE commit: $LATEST_COMMIT_SHA"
-# Download the webapp from GH
-# -L to follow redirects
+# Get the latest release of the webapp from GH
 RUN --mount=type=secret,id=gh_token \
-    LATEST_COMMIT_SHA=${LATEST_COMMIT_SHA} \
-    curl -L -o main.zip "https://api.github.com/repos/stacklok/codegate-ui/zipball/main" \
-    -H "Authorization: Bearer $(cat /run/secrets/gh_token)"
+    curl -s -H "Authorization: Bearer $(cat /run/secrets/gh_token)" https://api.github.com/repos/stacklok/codegate-ui/releases/latest \
+    | grep '"zipball_url":' \
+    | cut -d '"' -f 4 \
+    | xargs -n 1 -I {} curl -L -H "Authorization: Bearer $(cat /run/secrets/gh_token)" -o main.zip {}
 
 # Extract the downloaded zip file
 RUN unzip main.zip

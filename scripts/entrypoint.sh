@@ -6,7 +6,31 @@ BACKUP_NAME="backup"
 MODEL_BASE_PATH="/app/codegate_volume/models"
 CODEGATE_DB_FILE="/app/codegate_volume/db/codegate.db"
 CODEGATE_CERTS="/app/codegate_volume/certs"
-WEBAPP="/usr/src/webapp"
+NGINX_CA_CERT="/usr/share/nginx/html/certificates"
+
+# Function to ensure the certificates directory exists and copy the certificate
+setup_certificate() {
+    echo "Ensuring the Nginx certificates directory exists..."
+    mkdir -p "$NGINX_CA_CERT"  # Ensure the directory exists
+
+    # Check if the source certificate exists
+    if [ ! -f "$CODEGATE_CERTS/ca.crt" ]; then
+        echo "Error: Certificate file not found at $CODEGATE_CERTS/ca.crt"
+        exit 1
+    fi
+
+    echo "Copying CA certificate to $NGINX_CA_CERT..."
+    cp "$CODEGATE_CERTS/ca.crt" "$NGINX_CA_CERT/codegate_ca.crt"
+
+    # Verify the copy was successful
+    if [ -f "$NGINX_CA_CERT/codegate_ca.crt" ]; then
+        echo "CA certificate successfully copied to $NGINX_CA_CERT"
+    else
+        echo "Error: Failed to copy CA certificate."
+        exit 1
+    fi
+}
+
 
 # Function to restore backup if paths are provided
 restore_backup() {
@@ -64,7 +88,7 @@ restore_backup
 genrerate_certs
 
 # Step 3: Make CA available to UI
-cp "$CODEGATE_CERTS/ca.crt" "$WEBAPP/public/certificates/codegate_ca.crt"
+setup_certificate
 
 # Step 4: Start the dashboard
 start_dashboard
