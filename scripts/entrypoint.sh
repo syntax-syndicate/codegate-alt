@@ -65,7 +65,7 @@ genrerate_certs
 
 # Step 3: Make CA available to UI
 mkdir "$WEBAPP/public/certificates/"
-cp "$CERTS/ca.crt" "$WEBAPP/public/certificates/codegate_ca.crt"
+cp "$CODEGATE_CERTS/ca.crt" "$WEBAPP/public/certificates/codegate_ca.crt"
 
 # Step 4: Start the dashboard
 start_dashboard
