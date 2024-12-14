@@ -1,11 +1,11 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, Tuple
 
 import structlog
 from litellm.types.llms.openai import ChatCompletionRequest
 
-from codegate.pipeline.base import PipelineContext
+from codegate.pipeline.base import PipelineContext, SequentialPipelineProcessor
 from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.normalizer.completion import CompletionNormalizer
 
@@ -30,7 +30,7 @@ class CopilotPipeline(ABC):
         pass
 
     @abstractmethod
-    def create_pipeline(self):
+    def create_pipeline(self) -> SequentialPipelineProcessor:
         """Each strategy defines which pipeline to create"""
         pass
 
@@ -64,7 +64,7 @@ class CopilotPipeline(ABC):
 
         return copilot_headers
 
-    async def process_body(self, headers: list[str], body: bytes) -> (bytes, PipelineContext):
+    async def process_body(self, headers: list[str], body: bytes) -> Tuple[bytes, PipelineContext]:
         """Common processing logic for all strategies"""
         try:
             normalized_body = self.normalizer.normalize(body)
@@ -85,6 +85,7 @@ class CopilotPipeline(ABC):
                 api_key=headers_dict.get("authorization", "").replace("Bearer ", ""),
                 api_base="https://" + headers_dict.get("host", ""),
                 extra_headers=CopilotPipeline._get_copilot_headers(headers_dict),
+                is_copilot=True,
             )
 
             if result.request:
@@ -142,7 +143,7 @@ class CopilotFimPipeline(CopilotPipeline):
     def _create_normalizer(self):
         return CopilotFimNormalizer()
 
-    def create_pipeline(self):
+    def create_pipeline(self) -> SequentialPipelineProcessor:
         return self.pipeline_factory.create_fim_pipeline()
 
 
@@ -155,5 +156,5 @@ class CopilotChatPipeline(CopilotPipeline):
     def _create_normalizer(self):
         return CopilotChatNormalizer()
 
-    def create_pipeline(self):
+    def create_pipeline(self) -> SequentialPipelineProcessor:
         return self.pipeline_factory.create_input_pipeline()

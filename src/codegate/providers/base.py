@@ -193,7 +193,9 @@ class BaseProvider(ABC):
         finally:
             if context:
                 # Record to DB the objects captured during the stream
-                await self._db_recorder.record_context(context)
+                if not context.metadata.get("stored_in_db", False):
+                    await self._db_recorder.record_context(context)
+                    context.metadata["stored_in_db"] = True
                 # Ensure sensitive data is cleaned up after the stream is consumed
                 if context.sensitive:
                     context.sensitive.secure_cleanup()

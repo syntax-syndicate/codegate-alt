@@ -276,6 +276,7 @@ class InputPipelineInstance:
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
         extra_headers: Optional[Dict[str, str]] = None,
+        is_copilot: bool = False,
     ) -> PipelineResult:
         """Process a request through all pipeline steps"""
         self.context.sensitive = PipelineSensitiveData(
@@ -289,6 +290,9 @@ class InputPipelineInstance:
         self.context.metadata["extra_headers"] = extra_headers
         current_request = request
 
+        # For Copilot provider=openai. Use a flag to not clash with other places that may use that.
+        provider_db = "copilot" if is_copilot else provider
+
         for step in self.pipeline_steps:
             result = await step.process(current_request, self.context)
             if result is None:
@@ -297,7 +301,7 @@ class InputPipelineInstance:
             if result.shortcuts_processing():
                 # Also record the input when shortchutting
                 self.context.add_input_request(
-                    current_request, is_fim_request=self.is_fim, provider=provider
+                    current_request, is_fim_request=self.is_fim, provider=provider_db
                 )
                 return result
 
@@ -309,7 +313,7 @@ class InputPipelineInstance:
 
         # Create the input request at the end so we make sure the secrets are obfuscated
         self.context.add_input_request(
-            current_request, is_fim_request=self.is_fim, provider=provider
+            current_request, is_fim_request=self.is_fim, provider=provider_db
         )
         return PipelineResult(request=current_request, context=self.context)
 
@@ -334,9 +338,10 @@ class SequentialPipelineProcessor:
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
         extra_headers: Optional[Dict[str, str]] = None,
+        is_copilot: bool = False,
     ) -> PipelineResult:
         """Create a new pipeline instance and process the request"""
         instance = self.create_instance()
         return await instance.process_request(
-            request, provider, model, api_key, api_base, extra_headers
+            request, provider, model, api_key, api_base, extra_headers, is_copilot
         )
