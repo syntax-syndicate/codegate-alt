@@ -6,6 +6,7 @@ import structlog
 from litellm import ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
+from codegate.db.connection import DbRecorder
 from codegate.pipeline.base import CodeSnippet, PipelineContext
 
 logger = structlog.get_logger("codegate")
@@ -75,6 +76,7 @@ class OutputPipelineInstance:
         self,
         pipeline_steps: list[OutputPipelineStep],
         input_context: Optional[PipelineContext] = None,
+        db_recorder: Optional[DbRecorder] = None,
     ):
         self._input_context = input_context
         self._pipeline_steps = pipeline_steps
@@ -83,6 +85,10 @@ class OutputPipelineInstance:
         # the remaining content in the buffer when the stream ends, we need
         # to store the parameters like model, timestamp, etc.
         self._buffered_chunk = None
+        if not db_recorder:
+            self._db_recorder = DbRecorder()
+        else:
+            self._db_recorder = db_recorder
 
     def _buffer_chunk(self, chunk: ModelResponse) -> None:
         """
@@ -105,6 +111,11 @@ class OutputPipelineInstance:
             if choice.delta is not None and choice.delta.content is not None:
                 self._context.processed_content.append(choice.delta.content)
 
+    async def _record_to_db(self):
+        if self._input_context and not self._input_context.metadata.get("stored_in_db", False):
+            await self._db_recorder.record_context(self._input_context)
+            self._input_context.metadata["stored_in_db"] = True
+
     async def process_stream(
         self, stream: AsyncIterator[ModelResponse]
     ) -> AsyncIterator[ModelResponse]:
@@ -115,6 +126,7 @@ class OutputPipelineInstance:
             async for chunk in stream:
                 # Store chunk content in buffer
                 self._buffer_chunk(chunk)
+                self._input_context.add_output(chunk)
 
                 # Process chunk through each step of the pipeline
                 current_chunks = [chunk]
@@ -131,6 +143,13 @@ class OutputPipelineInstance:
                         processed_chunks.extend(step_result)
 
                     current_chunks = processed_chunks
+
+                # **Needed for Copilot**. This is a hacky way of recording in DB the context
+                # when we see the last chunk. Ideally this should be done in a `finally` or
+                # `StopAsyncIteration` but Copilot streams in an infite while loop so is not
+                # possible
+                if len(chunk.choices) > 0 and chunk.choices[0].get("finish_reason", "") == "stop":
+                    await self._record_to_db()
 
                 # Yield all processed chunks
                 for c in current_chunks:

@@ -108,9 +108,6 @@ class CodegateSecrets(PipelineStep):
 
             # Get the full value
             full_value = text[start:end]
-            context.add_alert(
-                self.name, trigger_string=full_value, severity_category=AlertSeverity.CRITICAL
-            )
             absolute_matches.append((start, end, match._replace(value=full_value)))
 
         # Sort matches in reverse order to replace from end to start
@@ -134,6 +131,10 @@ class CodegateSecrets(PipelineStep):
 
             # Create the replacement string
             replacement = f"REDACTED<${encrypted_value}>"
+            # Store the protected text in DB.
+            context.add_alert(
+                self.name, trigger_string=replacement, severity_category=AlertSeverity.CRITICAL
+            )
 
             # Replace the secret in the text
             protected_text[start:end] = replacement
@@ -288,9 +289,11 @@ class SecretUnredactionStep(OutputPipelineStep):
                 # If value not found, leave as is
                 original_value = match.group(0)  # Keep the REDACTED marker
 
-            # Unredact the content, post an alert and return the chunk
+            # Post an alert with the redacted content
+            input_context.add_alert(self.name, trigger_string=encrypted_value)
+
+            # Unredact the content and return the chunk
             unredacted_content = buffered_content[: match.start()] + original_value + remaining
-            input_context.add_alert(self.name, trigger_string=unredacted_content)
             # Return the unredacted content up to this point
             chunk.choices = [
                 StreamingChoices(

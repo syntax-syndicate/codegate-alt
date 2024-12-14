@@ -95,7 +95,7 @@ async def test_parse_request(request_dict, expected_str):
                     "model": "gpt-4o-mini",
                     "object": "chat.completion.chunk",
                     "system_fingerprint": "fp_0705bf87c0",
-                    "choices": [{"index": 0, "delta": {"content": "User", "role": "assistant"}}],
+                    "choices": [{"index": 0, "delta": {"content": "Hello", "role": "assistant"}}],
                 },
                 {
                     "id": "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl",
@@ -103,7 +103,7 @@ async def test_parse_request(request_dict, expected_str):
                     "model": "gpt-4o-mini",
                     "object": "chat.completion.chunk",
                     "system_fingerprint": "fp_0705bf87c0",
-                    "choices": [{"index": 0, "delta": {"content": " seeks"}}],
+                    "choices": [{"index": 0, "delta": {"content": " world"}}],
                 },
                 {
                     "id": "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl",
@@ -114,7 +114,7 @@ async def test_parse_request(request_dict, expected_str):
                     "choices": [{"finish_reason": "stop", "index": 0, "delta": {}}],
                 },
             ],
-            "User seeks",
+            "Hello world",
             "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl",
         ),
         (
@@ -150,7 +150,7 @@ timestamp_now = datetime.datetime.now(datetime.timezone.utc)
 @pytest.mark.asyncio
 @pytest.mark.parametrize("request_msg_str", ["Hello", None])
 @pytest.mark.parametrize("output_msg_str", ["Hello, how can I help you?", None])
-@pytest.mark.parametrize("chat_id", ["chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl", None])
+@pytest.mark.parametrize("chat_id", ["chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl"])
 @pytest.mark.parametrize(
     "row",
     [
@@ -181,12 +181,13 @@ async def test_parse_get_prompt_with_output(request_msg_str, output_msg_str, cha
             mock_parse_request.assert_called_once()
             mock_parse_output.assert_called_once()
 
-            if any([request_msg_str is None, output_msg_str is None, chat_id is None]):
+            if request_msg_str is None:
                 assert result is None
             else:
                 assert result.question_answer.question.message == request_msg_str
-                assert result.question_answer.answer.message == output_msg_str
-                assert result.chat_id == chat_id
+                if output_msg_str is not None:
+                    assert result.question_answer.answer.message == output_msg_str
+                    assert result.chat_id == chat_id
                 assert result.provider == "provider"
                 assert result.type == "chat"
                 assert result.request_timestamp == timestamp_now

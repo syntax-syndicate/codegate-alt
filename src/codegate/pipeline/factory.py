@@ -32,13 +32,13 @@ class PipelineFactory:
             SystemPrompt(Config.get_config().prompts.default_chat),
             CodegateContextRetriever(),
         ]
-        return SequentialPipelineProcessor(input_steps, self.secrets_manager)
+        return SequentialPipelineProcessor(input_steps, self.secrets_manager, is_fim=False)
 
     def create_fim_pipeline(self) -> SequentialPipelineProcessor:
         fim_steps: List[PipelineStep] = [
             CodegateSecrets(),
         ]
-        return SequentialPipelineProcessor(fim_steps, self.secrets_manager)
+        return SequentialPipelineProcessor(fim_steps, self.secrets_manager, is_fim=True)
 
     def create_output_pipeline(self) -> OutputPipelineProcessor:
         output_steps: List[OutputPipelineStep] = [

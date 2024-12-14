@@ -142,7 +142,7 @@ class CopilotProvider(asyncio.Protocol):
         path: str,
         headers: list[str],
         body: bytes,
-    ) -> (bytes, PipelineContext):
+    ) -> Tuple[bytes, PipelineContext]:
         logger.debug(f"Processing body through pipeline: {len(body)} bytes")
         strategy = self._select_pipeline(method, path)
         if strategy is None:
