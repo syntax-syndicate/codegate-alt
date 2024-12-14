@@ -32,7 +32,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/
 
-# Get the latest release of the webapp from GH
 RUN --mount=type=secret,id=gh_token \
     curl -s -H "Authorization: Bearer $(cat /run/secrets/gh_token)" https://api.github.com/repos/stacklok/codegate-ui/releases/latest \
     | grep '"zipball_url":' \
