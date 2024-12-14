@@ -67,6 +67,7 @@ jobs:
         id: fetch_commit_fe_sha
         run: |
           echo "LATEST_COMMIT_SHA=$(curl -LSsk 'https://api.github.com/repos/stacklok/codegate-ui/commits?per_page=1' -H 'Authorization: Bearer ${{ secrets.GH_CI_TOKEN }}' | jq -r '.[0].sha')" >> $GITHUB_ENV
+          echo "Fetched LATEST_COMMIT_SHA: $LATEST_COMMIT_SHA"
       - name: Rename to accommodate to image
         run: mv ./backup_weaviate ./weaviate_backup
       - name: Download git lfs dependencies
