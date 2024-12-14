@@ -76,10 +76,6 @@ RUN chown -R codegate /var/lib/nginx && \
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Ensure directories are writable by the codegate user
-RUN mkdir -p /usr/share/nginx/html/certificates && \
-    chown -R codegate /usr/share/nginx/html/certificates
-
 # Switch to codegate user
 USER codegate
 WORKDIR /app
