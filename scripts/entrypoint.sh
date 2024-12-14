@@ -64,7 +64,6 @@ restore_backup
 genrerate_certs
 
 # Step 3: Make CA available to UI
-mkdir "$WEBAPP/public/certificates/"
 cp "$CODEGATE_CERTS/ca.crt" "$WEBAPP/public/certificates/codegate_ca.crt"
 
 # Step 4: Start the dashboard
