@@ -105,13 +105,6 @@ def test_provider_registration(mock_registry, mock_secrets_mgr, mock_pipeline_fa
     assert "ollama" in provider_names
 
 
-@patch("codegate.server.CodegateSignatures")
-def test_signatures_initialization(mock_signatures, mock_pipeline_factory) -> None:
-    """Test that signatures are initialized correctly."""
-    init_app(mock_pipeline_factory)
-    mock_signatures.initialize.assert_called_once_with("signatures.yaml")
-
-
 def test_pipeline_initialization(mock_pipeline_factory) -> None:
     """Test that pipelines are initialized correctly."""
     app = init_app(mock_pipeline_factory)

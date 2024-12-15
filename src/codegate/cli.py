@@ -331,7 +331,6 @@ def serve(
         logger.exception("Unexpected error occurred")
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
-        
 
 
 async def run_servers(cfg: Config, app) -> None:
