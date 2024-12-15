@@ -5,7 +5,7 @@ from litellm import ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
 from codegate.llm_utils.extractor import PackageExtractor
-from codegate.pipeline.base import CodeSnippet, PipelineContext, PipelineSensitiveData
+from codegate.pipeline.base import CodeSnippet, PipelineContext
 from codegate.pipeline.extract_snippets.extract_snippets import extract_snippets
 from codegate.pipeline.output import OutputPipelineContext, OutputPipelineStep
 from codegate.storage import StorageEngine
@@ -39,14 +39,15 @@ class CodeCommentStep(OutputPipelineStep):
             object="chat.completion.chunk",
         )
 
-    async def _snippet_comment(self, snippet: CodeSnippet, secrets: PipelineSensitiveData) -> str:
+    async def _snippet_comment(self, snippet: CodeSnippet, context: PipelineContext) -> str:
         """Create a comment for a snippet"""
         snippet.libraries = await PackageExtractor.extract_packages(
             content=snippet.code,
-            provider=secrets.provider,
-            model=secrets.model,
-            api_key=secrets.api_key,
-            base_url=secrets.api_base,
+            provider=context.sensitive.provider if context.sensitive else None,
+            model=context.sensitive.model if context.sensitive else None,
+            api_key=context.sensitive.api_key if context.sensitive else None,
+            base_url=context.sensitive.api_base if context.sensitive else None,
+            extra_headers=context.metadata.get("extra_headers", None),
         )
         # Check if any of the snippet libraries is a bad package
         storage_engine = StorageEngine()
@@ -126,7 +127,7 @@ archived packages: {libobjects_text}\n"
                 chunks.append(self._create_chunk(chunk, before))
                 complete_comment += before
 
-            comment = await self._snippet_comment(last_snippet, input_context.sensitive)
+            comment = await self._snippet_comment(last_snippet, input_context)
             complete_comment += comment
             chunks.append(
                 self._create_chunk(
