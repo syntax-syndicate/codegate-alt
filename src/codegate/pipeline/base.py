@@ -267,6 +267,7 @@ class InputPipelineInstance:
         self.secret_manager = secret_manager
         self.is_fim = is_fim
         self.context = PipelineContext()
+        self.context.metadata["is_fim"] = is_fim
 
     async def process_request(
         self,
