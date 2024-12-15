@@ -35,6 +35,7 @@ start_dashboard() {
 # Function to start the main application
 start_application() {
     # first restore the models
+    mkdir -p /app/codegate_volume/models
     cp /app/default_models/* /app/codegate_volume/models
     CMD_ARGS="--port 8989 --host 0.0.0.0 --model-base-path $MODEL_BASE_PATH --db-path $CODEGATE_DB_FILE"
 
