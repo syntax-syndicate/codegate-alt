@@ -305,15 +305,15 @@ def serve(
         ca = CertificateAuthority.get_instance()
         ca.ensure_certificates_exist()
 
-        # Set up event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
         # Initialize secrets manager and pipeline factory
         secrets_manager = SecretsManager()
         pipeline_factory = PipelineFactory(secrets_manager)
 
         app = init_app(pipeline_factory)
+
+        # Set up event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
         # Run the server
         try:
@@ -331,6 +331,7 @@ def serve(
         logger.exception("Unexpected error occurred")
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+        
 
 
 async def run_servers(cfg: Config, app) -> None:

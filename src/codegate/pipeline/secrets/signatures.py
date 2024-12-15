@@ -61,9 +61,11 @@ class CodegateSignatures:
             raise FileNotFoundError(f"Signatures file not found: {yaml_path}")
 
         with cls._instance_lock:
-            cls._yaml_path = yaml_path
-            cls._signatures_loaded = False
-            logger.debug(f"SecretFinder initialized with {yaml_path}")
+            # Only initialize if not already initialized with this path
+            if cls._yaml_path != yaml_path:
+                cls._yaml_path = yaml_path
+                cls._signatures_loaded = False
+                logger.debug(f"SecretFinder initialized with {yaml_path}")
 
     @classmethod
     def _preprocess_yaml(cls, content: str) -> str:
