@@ -566,6 +566,35 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         self.transport = transport
         self.proxy.target_transport = transport
 
+    def _ensure_output_processor(self) -> None:
+        if self.proxy.context_tracking is None:
+            # No context tracking, no need to process pipeline
+            return
+
+        if self.sse_processor is not None:
+            # Already initialized, no need to reinitialize
+            return
+
+        # this is a hotfix - we shortcut before selecting the output pipeline for FIM
+        # because our FIM output pipeline is actually empty as of now. We should fix this
+        # but don't have any immediate need.
+        is_fim = self.proxy.context_tracking.metadata.get("is_fim", False)
+        if is_fim:
+            return
+
+        logger.debug("Tracking context for pipeline processing")
+        self.sse_processor = SSEProcessor()
+        is_fim = self.proxy.context_tracking.metadata.get("is_fim", False)
+        if is_fim:
+            out_pipeline_processor = self.proxy.pipeline_factory.create_fim_output_pipeline()
+        else:
+            out_pipeline_processor = self.proxy.pipeline_factory.create_output_pipeline()
+
+        self.output_pipeline_instance = OutputPipelineInstance(
+            pipeline_steps=out_pipeline_processor.pipeline_steps,
+            input_context=self.proxy.context_tracking,
+        )
+
     async def _process_stream(self):
         try:
 
@@ -633,14 +662,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
 
     def data_received(self, data: bytes) -> None:
         """Handle data received from target"""
-        if self.proxy.context_tracking is not None and self.sse_processor is None:
-            logger.debug("Tracking context for pipeline processing")
-            self.sse_processor = SSEProcessor()
-            out_pipeline_processor = self.proxy.pipeline_factory.create_output_pipeline()
-            self.output_pipeline_instance = OutputPipelineInstance(
-                pipeline_steps=out_pipeline_processor.pipeline_steps,
-                input_context=self.proxy.context_tracking,
-            )
+        self._ensure_output_processor()
 
         if self.proxy.transport and not self.proxy.transport.is_closing():
             if not self.sse_processor:
