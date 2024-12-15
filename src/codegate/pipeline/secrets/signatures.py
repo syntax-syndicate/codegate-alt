@@ -216,7 +216,7 @@ class CodegateSignatures:
             return []
 
         if not cls._yaml_path:
-            raise RuntimeError("SecretFinder not initialized. Call initialize() first.")
+            raise RuntimeError("SecretFinder not initialized.")
 
         matches = []
         lines = text.splitlines()
