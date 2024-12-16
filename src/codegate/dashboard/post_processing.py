@@ -81,6 +81,9 @@ async def parse_output(output_str: str) -> Tuple[Optional[str], Optional[str]]:
     Parse the output string from the pipeline and return the message and chat_id.
     """
     try:
+        if output_str is None:
+            return None, None
+
         output = json.loads(output_str)
     except Exception as e:
         logger.warning(f"Error parsing output: {output_str}. {e}")
