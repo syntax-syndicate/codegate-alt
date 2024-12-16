@@ -52,6 +52,8 @@ class Config:
     server_key: str = "server.key"
     force_certs: bool = False
 
+    max_fim_hash_lifetime: int = 60 * 5  # Time in seconds. Default is 5 minutes.
+
     # Provider URLs with defaults
     provider_urls: Dict[str, str] = field(default_factory=lambda: DEFAULT_PROVIDER_URLS.copy())
 

@@ -609,9 +609,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                             StreamingChoices(
                                 finish_reason=choice.get("finish_reason", None),
                                 index=0,
-                                delta=Delta(
-                                    content=content, role="assistant"
-                                ),
+                                delta=Delta(content=content, role="assistant"),
                                 logprobs=None,
                             )
                         )
