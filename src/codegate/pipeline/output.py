@@ -112,9 +112,7 @@ class OutputPipelineInstance:
                 self._context.processed_content.append(choice.delta.content)
 
     async def _record_to_db(self):
-        if self._input_context and not self._input_context.metadata.get("stored_in_db", False):
-            await self._db_recorder.record_context(self._input_context)
-            self._input_context.metadata["stored_in_db"] = True
+        await self._db_recorder.record_context(self._input_context)
 
     async def process_stream(
         self, stream: AsyncIterator[ModelResponse]
