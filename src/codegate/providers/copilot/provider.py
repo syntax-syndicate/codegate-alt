@@ -580,6 +580,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         self.sse_processor: Optional[SSEProcessor] = None
         self.output_pipeline_instance: Optional[OutputPipelineInstance] = None
         self.stream_queue: Optional[asyncio.Queue] = None
+        self.processing_task: Optional[asyncio.Task] = None
 
     def connection_made(self, transport: asyncio.Transport) -> None:
         """Handle successful connection to target"""
@@ -629,9 +630,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                             StreamingChoices(
                                 finish_reason=choice.get("finish_reason", None),
                                 index=0,
-                                delta=Delta(
-                                    content=content, role="assistant"
-                                ),
+                                delta=Delta(content=content, role="assistant"),
                                 logprobs=None,
                             )
                         )
@@ -663,8 +662,17 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             # Now send the final zero chunk
             self._proxy_transport_write(b"0\r\n\r\n")
 
+        except asyncio.CancelledError:
+            logger.debug("Stream processing cancelled")
+            raise
         except Exception as e:
             logger.error(f"Error processing stream: {e}")
+        finally:
+            # Clean up
+            if self.processing_task and not self.processing_task.done():
+                self.processing_task.cancel()
+            if self.proxy.context_tracking and self.proxy.context_tracking.sensitive:
+                self.proxy.context_tracking.sensitive.secure_cleanup()
 
     def _process_chunk(self, chunk: bytes):
         records = self.sse_processor.process_chunk(chunk)
@@ -709,6 +717,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection loss to target"""
+
         if (
             not self.proxy._closing
             and self.proxy.transport
@@ -719,4 +728,8 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             except Exception as e:
                 logger.error(f"Error closing proxy transport: {e}")
 
-        # todo: clear the context to erase the sensitive data
+        # Clean up resources
+        if self.processing_task and not self.processing_task.done():
+            self.processing_task.cancel()
+        if self.proxy.context_tracking and self.proxy.context_tracking.sensitive:
+            self.proxy.context_tracking.sensitive.secure_cleanup()
