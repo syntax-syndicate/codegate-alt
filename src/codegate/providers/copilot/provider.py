@@ -575,12 +575,13 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             # Already initialized, no need to reinitialize
             return
 
-        # this is a hotfix - we shortcut before selecting the output pipeline for FIM
-        # because our FIM output pipeline is actually empty as of now. We should fix this
-        # but don't have any immediate need.
-        is_fim = self.proxy.context_tracking.metadata.get("is_fim", False)
-        if is_fim:
-            return
+        # # this is a hotfix - we shortcut before selecting the output pipeline for FIM
+        # # because our FIM output pipeline is actually empty as of now. We should fix this
+        # # but don't have any immediate need.
+        # is_fim = self.proxy.context_tracking.metadata.get("is_fim", False)
+        # if is_fim:
+        #     return
+        #
 
         logger.debug("Tracking context for pipeline processing")
         self.sse_processor = SSEProcessor()
@@ -601,16 +602,23 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             async def stream_iterator():
                 while True:
                     incoming_record = await self.stream_queue.get()
+
                     record_content = incoming_record.get("content", {})
 
                     streaming_choices = []
                     for choice in record_content.get("choices", []):
+                        is_fim = self.proxy.context_tracking.metadata.get("is_fim", False)
+                        if is_fim:
+                            content = choice.get("text", "")
+                        else:
+                            content = choice.get("delta", {}).get("content")
+
                         streaming_choices.append(
                             StreamingChoices(
                                 finish_reason=choice.get("finish_reason", None),
                                 index=0,
                                 delta=Delta(
-                                    content=choice.get("delta", {}).get("content"), role="assistant"
+                                    content=content, role="assistant"
                                 ),
                                 logprobs=None,
                             )
