@@ -67,7 +67,6 @@ jobs:
         id: fetch_commit_fe_sha
         run: |
           echo "LATEST_RELEASE=$(curl -s "https://api.github.com/repos/stacklok/codegate-ui/releases/latest" -H "Authorization: Bearer ${{ secrets.GH_CI_TOKEN }}" | grep '"zipball_url":' | cut -d '"' -f 4)" >> $GITHUB_ENV
-          echo "Fetched LATEST_RELEASE: $LATEST_RELEASE"
       - name: Rename to accommodate to image
         run: mv ./backup_weaviate ./weaviate_backup
       - name: Download git lfs dependencies
