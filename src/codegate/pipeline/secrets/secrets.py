@@ -26,6 +26,8 @@ class CodegateSecrets(PipelineStep):
     def __init__(self):
         """Initialize the CodegateSecrets pipeline step."""
         super().__init__()
+        # Initialize and load signatures immediately
+        CodegateSignatures.initialize("signatures.yaml")
 
     @property
     def name(self) -> str:

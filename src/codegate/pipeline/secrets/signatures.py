@@ -39,7 +39,6 @@ class CodegateSignatures:
     """Main class for detecting secrets in text using regex patterns."""
 
     _instance_lock: ClassVar[Lock] = Lock()
-    _signatures_loaded: ClassVar[bool] = False
     _signature_groups: ClassVar[List[SignatureGroup]] = []
     _compiled_regexes: ClassVar[Dict[str, re.Pattern]] = {}
     _yaml_path: ClassVar[Optional[str]] = None
@@ -48,7 +47,6 @@ class CodegateSignatures:
     def reset(cls) -> None:
         """Reset the cached patterns."""
         with cls._instance_lock:
-            cls._signatures_loaded = False
             cls._signature_groups = []
             cls._compiled_regexes = {}
             cls._yaml_path = None
@@ -56,14 +54,16 @@ class CodegateSignatures:
 
     @classmethod
     def initialize(cls, yaml_path: str) -> None:
-        """Initialize the SecretFinder with a YAML file path."""
+        """Initialize the SecretFinder with a YAML file path and load signatures."""
         if not Path(yaml_path).exists():
             raise FileNotFoundError(f"Signatures file not found: {yaml_path}")
 
         with cls._instance_lock:
-            cls._yaml_path = yaml_path
-            cls._signatures_loaded = False
-            logger.debug(f"SecretFinder initialized with {yaml_path}")
+            # Only initialize if not already initialized with this path
+            if cls._yaml_path != yaml_path:
+                cls._yaml_path = yaml_path
+                cls._load_signatures()
+                logger.debug(f"SecretFinder initialized with {yaml_path}")
 
     @classmethod
     def _preprocess_yaml(cls, content: str) -> str:
@@ -172,6 +172,10 @@ class CodegateSignatures:
     def _load_signatures(cls) -> None:
         """Load signature patterns from the YAML file."""
         try:
+            # Clear existing signatures before loading new ones
+            cls._signature_groups = []
+            cls._compiled_regexes = {}
+
             yaml_data = cls._load_yaml(cls._yaml_path)
 
             # Add custom GitHub token patterns
@@ -206,31 +210,13 @@ class CodegateSignatures:
             raise
 
     @classmethod
-    def _ensure_signatures_loaded(cls) -> None:
-        """Ensure signatures are loaded before use."""
-        if not cls._signatures_loaded:
-            with cls._instance_lock:
-                if not cls._signatures_loaded:
-                    if not cls._yaml_path:
-                        raise RuntimeError("SecretFinder not initialized. Call initialize() first.")
-                    try:
-                        cls._load_signatures()
-                        cls._signatures_loaded = True
-                    except Exception as e:
-                        logger.error(f"Failed to load signatures: {e}")
-                        raise
-
-    @classmethod
     def find_in_string(cls, text: str) -> List[Match]:
         """Search for secrets in the provided string."""
         if not text:
             return []
 
-        try:
-            cls._ensure_signatures_loaded()
-        except Exception as e:
-            logger.error(f"Failed to load signatures: {e}")
-            return []
+        if not cls._yaml_path:
+            raise RuntimeError("SecretFinder not initialized.")
 
         matches = []
         lines = text.splitlines()

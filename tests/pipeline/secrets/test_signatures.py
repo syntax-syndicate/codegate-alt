@@ -69,14 +69,12 @@ def test_initialize_and_reset(temp_yaml_file):
 
     CodegateSignatures.reset()
     assert CodegateSignatures._yaml_path is None
-    assert not CodegateSignatures._signatures_loaded
     assert not CodegateSignatures._signature_groups
     assert not CodegateSignatures._compiled_regexes
 
 
 def test_find_in_string_with_aws_credentials(temp_yaml_file):
     CodegateSignatures.initialize(temp_yaml_file)
-    CodegateSignatures._signatures_loaded = False  # Force reload of signatures
 
     test_string = """
     aws_access_key = 'AKIAIOSFODNN7EXAMPLE'
@@ -100,7 +98,6 @@ def test_find_in_string_with_github_token():
 
     try:
         CodegateSignatures.initialize(f.name)
-        CodegateSignatures._signatures_loaded = False  # Force reload of signatures
 
         test_string = "github_token = 'ghp_1234567890abcdef1234567890abcdef123456'"
         matches = CodegateSignatures.find_in_string(test_string)
@@ -121,7 +118,6 @@ def test_find_in_string_with_github_token():
 
 def test_find_in_string_with_no_matches(temp_yaml_file):
     CodegateSignatures.initialize(temp_yaml_file)
-    CodegateSignatures._signatures_loaded = False  # Force reload of signatures
 
     test_string = "No secrets here!"
     matches = CodegateSignatures.find_in_string(test_string)
@@ -158,7 +154,6 @@ def test_duplicate_patterns():
 
     try:
         CodegateSignatures.initialize(f.name)
-        CodegateSignatures._signatures_loaded = False  # Force reload of signatures
 
         test_string = "aws_key = 'AKIAIOSFODNN7EXAMPLE'"
         matches = CodegateSignatures.find_in_string(test_string)

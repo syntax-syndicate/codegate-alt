@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from codegate import __description__, __version__
 from codegate.dashboard.dashboard import dashboard_router
 from codegate.pipeline.factory import PipelineFactory
-from codegate.pipeline.secrets.signatures import CodegateSignatures
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
 from codegate.providers.ollama.provider import OllamaProvider
@@ -30,9 +29,6 @@ def init_app(pipeline_factory: PipelineFactory) -> FastAPI:
 
     # Create provider registry
     registry = ProviderRegistry(app)
-
-    # Initialize SignaturesFinder
-    CodegateSignatures.initialize("signatures.yaml")
 
     # Register all known providers
     registry.add_provider(
