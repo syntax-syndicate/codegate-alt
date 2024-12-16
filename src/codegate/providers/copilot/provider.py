@@ -441,7 +441,7 @@ class CopilotProvider(asyncio.Protocol):
             logger.error(f"Error with target host/port: {e}")
             self.send_error_response(502, str(e).encode())
             return
-        logger
+
         try:
             target_ssl_context = ssl.create_default_context()
             # Ensure that the target SSL certificate is verified
