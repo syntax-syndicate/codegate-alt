@@ -298,17 +298,23 @@ class CopilotProvider(asyncio.Protocol):
 
     async def handle_http_request(self) -> None:
         """Handle standard HTTP request"""
-
         try:
             target_url = await self._get_target_url()
-            if not target_url:
-                self.send_error_response(404, b"Not Found")
-                return
+        except Exception as e:
+            logger.error(f"Error getting target URL: {e}")
+            self.send_error_response(404, b"Not Found")
+            return
 
+        try:
             parsed_url = urlparse(target_url)
             self.target_host = parsed_url.hostname
             self.target_port = parsed_url.port or (443 if parsed_url.scheme == "https" else 80)
+        except Exception as e:
+            logger.error(f"Error parsing target URL: {e}")
+            self.send_error_response(502, b"Bad Gateway")
+            return
 
+        try:
             target_protocol = CopilotProxyTargetProtocol(self)
             logger.debug(f"Connecting to {self.target_host}:{self.target_port}")
             await self.loop.create_connection(
@@ -317,7 +323,12 @@ class CopilotProvider(asyncio.Protocol):
                 self.target_port,
                 ssl=parsed_url.scheme == "https",
             )
+        except Exception as e:
+            logger.error(f"Error connecting to target: {e}")
+            self.send_error_response(502, b"Failed to establish target connection")
+            return
 
+        try:
             has_host = False
             new_headers = []
 
@@ -336,14 +347,11 @@ class CopilotProvider(asyncio.Protocol):
                 body = self.buffer[body_start:]
                 await self._request_to_target(new_headers, body)
             else:
-                logger.debug("=" * 40)
                 logger.error("Target transport not available")
-                logger.debug("=" * 40)
                 self.send_error_response(502, b"Failed to establish target connection")
-
         except Exception as e:
-            logger.error(f"Error handling HTTP request: {e}")
-            self.send_error_response(502, str(e).encode())
+            logger.error(f"Error preparing or sending request to target: {e}")
+            self.send_error_response(502, b"Bad Gateway")
 
     async def _get_target_url(self) -> Optional[str]:
         """Determine target URL based on request path and headers"""
@@ -429,13 +437,22 @@ class CopilotProvider(asyncio.Protocol):
         try:
             if not self.target_host or not self.target_port:
                 raise ValueError("Target host and port not set")
+        except ValueError as e:
+            logger.error(f"Error with target host/port: {e}")
+            self.send_error_response(502, str(e).encode())
+            return
 
+        try:
             target_ssl_context = ssl.create_default_context()
-
             # Ensure that the target SSL certificate is verified
             target_ssl_context.check_hostname = True
             target_ssl_context.verify_mode = ssl.CERT_REQUIRED
+        except Exception as e:
+            logger.error(f"Error creating SSL context: {e}")
+            self.send_error_response(502, b"SSL context creation failed")
+            return
 
+        try:
             # Connect to target
             logger.debug(f"Connecting to {self.target_host}:{self.target_port}")
             target_protocol = CopilotProxyTargetProtocol(self)
@@ -446,21 +463,24 @@ class CopilotProvider(asyncio.Protocol):
                 ssl=target_ssl_context,
                 server_hostname=self.target_host,
             )
+        except Exception as e:
+            logger.error(f"Failed to connect to target {self.target_host}:{self.target_port}: {e}")
+            self.send_error_response(502, str(e).encode())
+            return
 
+        try:
             if self.transport and not self.transport.is_closing():
                 self.transport.write(
                     b"HTTP/1.1 200 Connection Established\r\n"
                     b"Proxy-Agent: Proxy\r\n"
                     b"Connection: keep-alive\r\n\r\n"
                 )
-
                 self.transport = await self.loop.start_tls(
                     self.transport, self, self.ssl_context, server_side=True
                 )
-
         except Exception as e:
-            logger.error(f"Failed to connect to target {self.target_host}:{self.target_port}: {e}")
-            self.send_error_response(502, str(e).encode())
+            logger.error(f"Error during TLS handshake: {e}")
+            self.send_error_response(502, b"TLS handshake failed")
 
     def send_error_response(self, status: int, message: bytes) -> None:
         """Send error response to client"""
