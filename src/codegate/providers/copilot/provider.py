@@ -575,14 +575,6 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             # Already initialized, no need to reinitialize
             return
 
-        # # this is a hotfix - we shortcut before selecting the output pipeline for FIM
-        # # because our FIM output pipeline is actually empty as of now. We should fix this
-        # # but don't have any immediate need.
-        # is_fim = self.proxy.context_tracking.metadata.get("is_fim", False)
-        # if is_fim:
-        #     return
-        #
-
         logger.debug("Tracking context for pipeline processing")
         self.sse_processor = SSEProcessor()
         is_fim = self.proxy.context_tracking.metadata.get("is_fim", False)
@@ -666,6 +658,9 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             self.stream_queue.put_nowait(record)
 
     def _proxy_transport_write(self, data: bytes):
+        if not self.proxy.transport or self.proxy.transport.is_closing():
+            logger.error("Proxy transport not available")
+            return
         self.proxy.transport.write(data)
 
     def data_received(self, data: bytes) -> None:
