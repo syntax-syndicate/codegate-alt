@@ -1,6 +1,7 @@
 import asyncio
 import re
 import ssl
+from collections import deque
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import unquote, urljoin, urlparse
@@ -25,7 +26,7 @@ from codegate.providers.copilot.streaming import SSEProcessor
 logger = structlog.get_logger("codegate")
 
 # Constants
-MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_BUFFER_SIZE = 1 * 1024 * 1024  # 1MB
 CHUNK_SIZE = 64 * 1024  # 64KB
 HTTP_STATUS_MESSAGES = {
     400: "Bad Request",
@@ -34,6 +35,89 @@ HTTP_STATUS_MESSAGES = {
     502: "Bad Gateway",
 }
 
+class StreamingBuffer:
+    """Efficient streaming buffer with backpressure support and length tracking"""
+
+    def __init__(self, high_water_mark: int = 65536):
+        self._buffer = deque()
+        self._size = 0
+        self._high_water_mark = high_water_mark
+        self._write_event = asyncio.Event()
+        self._read_event = asyncio.Event()
+        self._eof = False
+
+    def __len__(self) -> int:
+        """Support len() operations on the buffer"""
+        return self._size
+
+    async def write(self, data: bytes) -> None:
+        """Write data with backpressure"""
+        while self._size >= self._high_water_mark:
+            self._write_event.clear()
+            await self._write_event.wait()
+
+        self._buffer.append(data)
+        self._size += len(data)
+        self._read_event.set()
+
+    def write_sync(self, data: bytes) -> None:
+        """Synchronous write for protocol compatibility"""
+        if self._size >= self._high_water_mark:
+            raise BufferError("Buffer full")
+
+        self._buffer.append(data)
+        self._size += len(data)
+        self._read_event.set()
+
+    def read_sync(self) -> bytes:
+        """Synchronous read for protocol compatibility"""
+        if not self._buffer:
+            return b""
+
+        result = bytearray()
+        while self._buffer:
+            chunk = self._buffer.popleft()
+            result.extend(chunk)
+            self._size -= len(chunk)
+
+        if self._size < self._high_water_mark:
+            self._write_event.set()
+
+        return bytes(result)
+
+    async def read(self, size: int = -1) -> bytes:
+        """Read data with streaming support"""
+        while not self._buffer and not self._eof:
+            self._read_event.clear()
+            await self._read_event.wait()
+
+        result = bytearray()
+        while self._buffer and (size == -1 or len(result) < size):
+            chunk = self._buffer.popleft()
+            if size == -1 or len(result) + len(chunk) <= size:
+                result.extend(chunk)
+                self._size -= len(chunk)
+            else:
+                split_point = size - len(result)
+                result.extend(chunk[:split_point])
+                self._buffer.appendleft(chunk[split_point:])
+                self._size -= split_point
+
+        if self._size < self._high_water_mark:
+            self._write_event.set()
+
+        return bytes(result)
+
+    def clear(self) -> None:
+        """Clear the buffer"""
+        self._buffer.clear()
+        self._size = 0
+        self._write_event.set()
+
+    @property
+    def size(self) -> int:
+        """Current buffer size"""
+        return self._size
 
 @dataclass
 class HttpRequest:
@@ -111,7 +195,7 @@ class CopilotProvider(asyncio.Protocol):
         self.transport: Optional[asyncio.Transport] = None
         self.target_transport: Optional[asyncio.Transport] = None
         self.peername: Optional[Tuple[str, int]] = None
-        self.buffer = bytearray()
+        self.buffer = StreamingBuffer(high_water_mark=MAX_BUFFER_SIZE)
         self.target_host: Optional[str] = None
         self.target_port: Optional[int] = None
         self.handshake_done = False
@@ -124,6 +208,7 @@ class CopilotProvider(asyncio.Protocol):
         self._closing = False
         self.pipeline_factory = PipelineFactory(SecretsManager())
         self.context_tracking: Optional[PipelineContext] = None
+        self.write_lock = asyncio.Lock()
 
     def _select_pipeline(self, method: str, path: str) -> Optional[CopilotPipeline]:
         if method == "POST" and path == "v1/engines/copilot-codex/completions":
@@ -214,11 +299,16 @@ class CopilotProvider(asyncio.Protocol):
     def parse_headers(self) -> bool:
         """Parse HTTP headers from buffer"""
         try:
-            if b"\r\n\r\n" not in self.buffer:
+            # Read the entire buffer content for header parsing
+            buffer_content = self.buffer.read_sync() if self.buffer.size > 0 else b""
+
+            if b"\r\n\r\n" not in buffer_content:
+                # Put the content back if we don't have complete headers
+                self.buffer.write_sync(buffer_content)
                 return False
 
-            headers_end = self.buffer.index(b"\r\n\r\n")
-            headers = self.buffer[:headers_end].split(b"\r\n")
+            headers_end = buffer_content.index(b"\r\n\r\n")
+            headers = buffer_content[:headers_end].split(b"\r\n")
 
             request = headers[0].decode("utf-8")
             method, full_path, version = request.split(" ")
@@ -232,6 +322,10 @@ class CopilotProvider(asyncio.Protocol):
                 target=full_path if method == "CONNECT" else None,
             )
 
+            # Put any remaining data back into the buffer
+            if len(buffer_content) > headers_end + 4:
+                self.buffer.write_sync(buffer_content[headers_end + 4:])
+
             logger.debug(f"Request: {method} {full_path} {version}")
             return True
 
@@ -241,7 +335,7 @@ class CopilotProvider(asyncio.Protocol):
 
     def _check_buffer_size(self, new_data: bytes) -> bool:
         """Check if adding new data would exceed buffer size limit"""
-        return len(self.buffer) + len(new_data) <= MAX_BUFFER_SIZE
+        return self.buffer.size + len(new_data) <= MAX_BUFFER_SIZE
 
     async def _forward_data_through_pipeline(self, data: bytes) -> bytes:
         http_request = http_request_from_bytes(data)
@@ -280,7 +374,11 @@ class CopilotProvider(asyncio.Protocol):
                 self.send_error_response(413, b"Request body too large")
                 return
 
-            self.buffer.extend(data)
+            try:
+                self.buffer.write_sync(data)
+            except BufferError:
+                self.send_error_response(413, b"Buffer capacity exceeded")
+                return
 
             if not self.headers_parsed:
                 self.headers_parsed = self.parse_headers()
