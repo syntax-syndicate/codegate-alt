@@ -1,0 +1,66 @@
+---
+name: "Bug Report"
+about: "Report a bug to help us improve the proxy system"
+title: "[Bug]: <Short description of the issue>"
+labels: [bug]
+---
+
+## Bug Description
+_A clear and concise description of the bug._
+
+---
+
+## Environment Details
+- **Operating System**:  
+  - [ ] Windows
+  - [ ] macOS
+  - [ ] Linux
+  - [ ] Other (please specify): `______`
+
+- **IDE and Version**:  
+  `<e.g., VSCode 1.78.0>`
+
+- **Extension and Version**:  
+  `<e.g., Proxy Extension 0.5.1>`
+
+- **Provider**:
+  - [ ] Anthropic
+  - [ ] vLLM
+  - [ ] OpenAI
+  - [ ] GitHub Copilot
+  - [ ] Other (please specify): `______`
+
+- **Model**:  
+  `<e.g., Claude 3, GPT-4, etc.>`
+
+---
+
+## Steps to Reproduce
+1. _List the steps to reproduce the bug._
+2. _Provide clear instructions and, if possible, screenshots or logs._
+
+Example:
+1. Open the IDE.
+2. Start using the proxy with provider `OpenRouter`.
+3. The issue occurs when...
+
+---
+
+## Expected Behavior
+_What should have happened?_  
+
+## Actual Behavior
+_What actually happened?_  
+
+---
+
+## Logs
+_If applicable, provide logs or error messages here._
+```
+<Place log content here>
+```
+
+---
+
+## Additional Context
+_Add any other context or details about the problem here._
