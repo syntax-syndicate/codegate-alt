@@ -82,8 +82,12 @@ class BaseProvider(ABC):
             logger.info("No output pipeline processor found, passing through")
             return model_stream
 
-        # HACK! for anthropic we always need to run the output FIM pipeline even if empty to run the normalizers
-        if len(out_pipeline_processor.pipeline_steps) == 0 and self.provider_route_name != "anthropic":
+        # HACK! for anthropic we always need to run the output FIM pipeline even
+        # if empty to run the normalizers
+        if (
+            len(out_pipeline_processor.pipeline_steps) == 0
+            and self.provider_route_name != "anthropic"
+        ):
             logger.info("No output pipeline steps configured, passing through")
             return model_stream
 
