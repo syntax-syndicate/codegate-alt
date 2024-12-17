@@ -77,6 +77,7 @@ class PipelineContext:
     prompt_id: Optional[str] = field(default_factory=lambda: None)
     input_request: Optional[Prompt] = field(default_factory=lambda: None)
     output_responses: List[Output] = field(default_factory=list)
+    shortcut_response: bool = False
 
     def add_code_snippet(self, snippet: CodeSnippet):
         self.code_snippets.append(snippet)

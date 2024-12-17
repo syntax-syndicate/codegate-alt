@@ -2,7 +2,7 @@ import asyncio
 import re
 import ssl
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse
 
 import structlog
@@ -52,6 +52,30 @@ class HttpRequest:
         headers = "\r\n".join(self.headers)
         request_line = f"{self.method} /{self.path} {self.version}\r\n"
         header_block = f"{request_line}{headers}\r\n\r\n"
+
+        # Convert header block to bytes and combine with body
+        result = header_block.encode("utf-8")
+        if self.body:
+            result += self.body
+
+        return result
+
+
+@dataclass
+class HttpResponse:
+    """Data class to store HTTP response details"""
+
+    version: str
+    status_code: int
+    reason: str
+    headers: List[str]
+    body: Optional[bytes] = None
+
+    def reconstruct(self) -> bytes:
+        """Reconstruct HTTP response from stored details"""
+        headers = "\r\n".join(self.headers)
+        status_line = f"{self.version} {self.status_code} {self.reason}\r\n"
+        header_block = f"{status_line}{headers}\r\n\r\n"
 
         # Convert header block to bytes and combine with body
         result = header_block.encode("utf-8")
@@ -145,7 +169,7 @@ class CopilotProvider(asyncio.Protocol):
     ) -> Tuple[bytes, PipelineContext]:
         logger.debug(f"Processing body through pipeline: {len(body)} bytes")
         strategy = self._select_pipeline(method, path)
-        if strategy is None:
+        if len(body) == 0 or strategy is None:
             # if we didn't select any strategy that would change the request
             # let's just pass through the body as-is
             return body, None
@@ -243,13 +267,15 @@ class CopilotProvider(asyncio.Protocol):
         """Check if adding new data would exceed buffer size limit"""
         return len(self.buffer) + len(new_data) <= MAX_BUFFER_SIZE
 
-    async def _forward_data_through_pipeline(self, data: bytes) -> bytes:
+    async def _forward_data_through_pipeline(
+        self, data: bytes
+    ) -> Union[HttpRequest, HttpResponse]:
         http_request = http_request_from_bytes(data)
         if not http_request:
             # we couldn't parse this into an HTTP request, so we just pass through
             return data
 
-        http_request.body, context = await self._body_through_pipeline(
+        body, context = await self._body_through_pipeline(
             http_request.method,
             http_request.path,
             http_request.headers,
@@ -257,21 +283,71 @@ class CopilotProvider(asyncio.Protocol):
         )
         self.context_tracking = context
 
-        for header in http_request.headers:
-            if header.lower().startswith("content-length:"):
-                http_request.headers.remove(header)
-                break
-        http_request.headers.append(f"Content-Length: {len(http_request.body)}")
+        if context and context.shortcut_response:
+            # Send shortcut response
+            data_prefix = b'data:'
+            http_response = HttpResponse(
+                http_request.version,
+                200,
+                "OK",
+                [
+                    "server: uvicorn",
+                    "cache-control: no-cache",
+                    "connection: keep-alive",
+                    "Content-Type: application/json",
+                    "Transfer-Encoding: chunked",
+                ],
+                data_prefix + body
+            )
+            return http_response
 
-        pipeline_data = http_request.reconstruct()
+        else:
+            # Forward request to target
+            http_request.body = body
 
-        return pipeline_data
+            for header in http_request.headers:
+                if header.lower().startswith("content-length:"):
+                    http_request.headers.remove(header)
+                    break
+            http_request.headers.append(f"Content-Length: {len(http_request.body)}")
+
+            return http_request
 
     async def _forward_data_to_target(self, data: bytes) -> None:
-        """Forward data to target if connection is established"""
-        if self.target_transport and not self.target_transport.is_closing():
-            data = await self._forward_data_through_pipeline(data)
-            self.target_transport.write(data)
+        """
+        Forward data to target if connection is established. In case of shortcut
+        response, send a response to the client
+        """
+        pipeline_output = await self._forward_data_through_pipeline(data)
+
+        if isinstance(pipeline_output, HttpResponse):
+            # We need to send shortcut response
+            if self.transport and not self.transport.is_closing():
+                # First, close target_transport since we don't need to send any
+                # request to the target
+                self.target_transport.close()
+
+                # Send the shortcut response data in a chunk
+                chunk = pipeline_output.reconstruct()
+                chunk_size = hex(len(chunk))[2:] + "\r\n"
+                self.transport.write(chunk_size.encode())
+                self.transport.write(chunk)
+                self.transport.write(b"\r\n")
+
+                # Send data done chunk
+                chunk = b"data: [DONE]\n\n"
+                # Add chunk size for DONE message
+                chunk_size = hex(len(chunk))[2:] + "\r\n"
+                self.transport.write(chunk_size.encode())
+                self.transport.write(chunk)
+                self.transport.write(b"\r\n")
+                # Now send the final chunk with 0
+                self.transport.write(b"0\r\n\r\n")
+        else:
+            if self.target_transport and not self.target_transport.is_closing():
+                if isinstance(pipeline_output, HttpRequest):
+                    pipeline_output = pipeline_output.reconstruct()
+                self.target_transport.write(pipeline_output)
 
     def data_received(self, data: bytes) -> None:
         """Handle received data from client"""

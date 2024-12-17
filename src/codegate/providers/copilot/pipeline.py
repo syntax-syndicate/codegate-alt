@@ -1,11 +1,14 @@
 import json
+import time
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 
 import structlog
+from litellm import ModelResponse
 from litellm.types.llms.openai import ChatCompletionRequest
+from litellm.types.utils import Delta, StreamingChoices
 
-from codegate.pipeline.base import PipelineContext, SequentialPipelineProcessor
+from codegate.pipeline.base import PipelineContext, PipelineResult, SequentialPipelineProcessor
 from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.normalizer.completion import CompletionNormalizer
 
@@ -64,6 +67,23 @@ class CopilotPipeline(ABC):
 
         return copilot_headers
 
+    @staticmethod
+    def _create_shortcut_response(result: PipelineResult, model: str) -> bytes:
+        response = ModelResponse(
+            choices=[
+                StreamingChoices(
+                    finish_reason="stop",
+                    index=0,
+                    delta=Delta(content=result.response.content, role="assistant"),
+                )
+            ],
+            created=int(time.time()),
+            model=model,
+            stream=True,
+        )
+        body = response.model_dump_json(exclude_none=True, exclude_unset=True).encode()
+        return body
+
     async def process_body(self, headers: list[str], body: bytes) -> Tuple[bytes, PipelineContext]:
         """Common processing logic for all strategies"""
         try:
@@ -88,7 +108,14 @@ class CopilotPipeline(ABC):
                 is_copilot=True,
             )
 
-            if result.request:
+            if result.context.shortcut_response:
+                # Return shortcut response to the user
+                body = CopilotPipeline._create_shortcut_response(
+                    result, normalized_body.get("model", "gpt-4o-mini")
+                )
+                logger.info(f"Pipeline created shortcut response: {body}")
+
+            elif result.request:
                 # the pipeline did modify the request, return to the user
                 # in the original LLM format
                 body = self.normalizer.denormalize(result.request)

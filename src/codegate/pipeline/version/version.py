@@ -43,6 +43,7 @@ class CodegateVersion(PipelineStep):
         if last_user_message is not None:
             last_user_message_str, _ = last_user_message
             if "codegate-version" in last_user_message_str.lower():
+                context.shortcut_response = True
                 context.add_alert(self.name, trigger_string=last_user_message_str)
                 return PipelineResult(
                     response=PipelineResponse(
