@@ -29,7 +29,14 @@ body:
     attributes:
       label: "Operating System"
       description: "Select the operating system where the issue occurred."
-      placeholder: "e.g., Windows, macOS, Linux"
+      options:
+        - Microsoft Windows (Intel)
+        - Microsoft Windows (Arm)
+        - MacOS (Arm)
+        - MacOS (Intel)
+        - Linux (Arm)
+        - Linux (Intel)
+        - Other
     validations:
       required: true
 
@@ -58,8 +65,10 @@ body:
       description: "Select the provider used."
       options:
         - Anthropic
-        - OpenRouter
+        - OpenAI
         - GitHub Copilot
+        - vLLM
+        - Ollama
         - Other
     validations:
       required: true
