@@ -1,9 +1,11 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./static/codegate-logo-white.svg">
-  <img alt="CodeGate logo" src="./static/codegate-logo-white.svg" width="800px" style="max-width: 100%;">
+  <img alt="CodeGate logo" src="./static/codegate-logo-dark.svg" width="800px" style="max-width: 100%;">
 </picture>
 
 [![CI](https://github.com/stacklok/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/stacklok/codegate/actions/workflows/ci.yml)
+
+## Introduction
 
 CodeGate is a local gateway that makes AI coding assistants safer. CodeGate
 ensures AI-generated recommendations adhere to best practices, while
@@ -17,12 +19,15 @@ CodeGate is developed by [Stacklok](https://stacklok.com), a group of security
 experts with many years of experience building developer friendly open source
 security software tools and platforms.
 
+Check out the CodeGate **[website](https://codegate.ai)** and
+**[documentation](https://docs.codegate.ai)** to learn more.
+
 ## Experimental 🚧
 
-CodeGate is **experimental** and **undergoing fast iterations of development**.
+CodeGate is in active development and subject to **rapid change**.
 
 - Features may change frequently
-- Expect possible bugs
+- Expect possible bugs and breaking changes
 - Contributions, feedback, and testing are highly encouraged and welcomed!
 
 ## ✨ Why CodeGate?
@@ -38,20 +43,27 @@ your development process by:
 
 ## 🌟 Features
 
-### Supported AI providers
+### Supported AI coding assistants and providers
 
-CodeGate works seamlessly with leading AI providers:
+CodeGate works with multiple development environments and AI providers.
 
-- 🤖 Anthropic (Claude)
-- 🧠 OpenAI
-- ⚡ vLLM
-- 💻 Local LLMs (run AI completely offline!)
-- 🔮 Many more on the way!
+- **[GitHub Copilot](https://github.com/features/copilot)** with Visual Studio
+  Code and JetBrains IDEs
 
-### AI coding assistants
+- **[Continue](https://www.continue.dev/)** with Visual Studio Code and
+  JetBrains IDEs
 
-We're starting with Continue VS Code extension support, with many more AI coding
-assistants coming soon!
+With Continue, you can choose from several leading AI model providers:
+
+- 💻 Local LLMs with [Ollama](https://ollama.com/) and
+  [llama.cpp](https://github.com/ggerganov/llama.cpp) (run AI completely
+  offline!)
+- ⚡ [vLLM](https://docs.vllm.ai/en/latest/) (OpenAI-compatible mode, including
+  OpenRouter)
+- 🤖 [Anthropic API](https://www.anthropic.com/api)
+- 🧠 [OpenAI API](https://openai.com/api/)
+
+🔮 Many more on the way!
 
 ### Privacy first
 
@@ -65,75 +77,36 @@ at its core:
 
 ## 🚀 Quickstart
 
-### Prerequisites
+Check out the quickstart guides to get up and running quickly!
 
-Make sure you have these tools installed:
-
-- 🐳 [Docker](https://docs.docker.com/get-docker/)
-- 🛠️ [jq](https://stedolan.github.io/jq/download/)
-- 💻 [VS Code](https://code.visualstudio.com/download)
-
-### One-command setup
-
-```bash
-chmod +x install.sh && ./install.sh
-```
-
-This script will:
-
-1. Install the Continue VS Code extension
-2. Set up your configuration
-3. Create and start necessary Docker services
+- [Quickstart guide for GitHub Copilot with VS Code](https://docs.codegate.ai/quickstart)
+- [Quickstart guide for Continue with VS Code and Ollama](https://docs.codegate.ai/quickstart-continue)
 
 ## 🎯 Usage
 
-### VS Code integration with Continue
+### IDE integration
 
-Simply tap the Continue button in your VS Code editor to start chatting with
+Simply open the Continue or Copilot chat in your IDE to start interacting with
 your AI assistant - now protected by CodeGate!
 
-![Continue chat interface](./static/image.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./static/continue-extension-dark.webp">
+  <img alt="Continue chat in VS Code" src="./static/continue-extension-light.webp" width="720px" style="max-width: 100%;">
+</picture>
 
-### Manual configuration
+Refer to the CodeGate docs for more information:
 
-#### Basic server start
-
-```bash
-codegate serve
-```
-
-#### Custom settings
-
-```bash
-codegate serve --port 8989 --host localhost --log-level DEBUG
-```
-
-#### Using config file
-
-Create a `config.yaml`:
-
-```yaml
-port: 8989
-host: "localhost"
-log_level: "DEBUG"
-```
-
-Then run:
-
-```bash
-codegate serve --config config.yaml
-```
-
-#### Environment variables
-
-```bash
-export CODEGATE_APP_PORT=8989
-export CODEGATE_APP_HOST=localhost
-export CODEGATE_APP_LOG_LEVEL=DEBUG
-codegate serve
-```
+- [Using CodeGate](https://docs.codegate.ai/how-to)
+- [CodeGate features](https://docs.codegate.ai/features)
 
 ## 🛠️ Development
+
+Check out the developer reference guides:
+
+- [Development guide](./docs/development.md)
+- [CLI commands and flags](./docs/cli.md)
+- [Configuration system](./docs/configuration.md)
+- [Logging system](./docs/logging.md)
 
 ### Local setup
 
@@ -216,6 +189,8 @@ docker run -p 8989:8989 -p 9090:80 -e CODEGATE_OLLAMA_URL=http://1.2.3.4:11434/a
 
 We welcome contributions! Whether it's bug reports, feature requests, or code
 contributions, please feel free to contribute to making CodeGate better.
+
+Start by reading the [Contributor Guidelines](./CONTRIBUTING.md).
 
 ## 📜 License
 
