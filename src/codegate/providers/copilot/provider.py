@@ -180,7 +180,7 @@ class CopilotProvider(asyncio.Protocol):
         logger.debug("=" * 40)
 
         for i in range(0, len(body), CHUNK_SIZE):
-            chunk = body[i : i + CHUNK_SIZE]
+            chunk = body[i: i + CHUNK_SIZE]
             self.target_transport.write(chunk)
 
     def connection_made(self, transport: asyncio.Transport) -> None:
@@ -343,9 +343,13 @@ class CopilotProvider(asyncio.Protocol):
                 new_headers.append(f"Host: {self.target_host}")
 
             if self.target_transport:
-                body_start = self.buffer.index(b"\r\n\r\n") + 4
-                body = self.buffer[body_start:]
-                await self._request_to_target(new_headers, body)
+                if self.buffer:
+                    body_start = self.buffer.index(b"\r\n\r\n") + 4
+                    body = self.buffer[body_start:]
+                    await self._request_to_target(new_headers, body)
+                else:
+                    # just skip it
+                    logger.info("No buffer content arrived, skipping")
             else:
                 logger.error("Target transport not available")
                 self.send_error_response(502, b"Failed to establish target connection")
