@@ -2,7 +2,7 @@ import asyncio
 from typing import AsyncGenerator, List
 
 import structlog
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from codegate.dashboard.post_processing import (
@@ -15,11 +15,18 @@ from codegate.db.connection import DbReader, alert_queue
 logger = structlog.get_logger("codegate")
 
 dashboard_router = APIRouter(tags=["Dashboard"])
-db_reader = DbReader()
+db_reader = None
+
+
+def get_db_reader():
+    global db_reader
+    if db_reader is None:
+        db_reader = DbReader()
+    return db_reader
 
 
 @dashboard_router.get("/dashboard/messages")
-def get_messages() -> List[Conversation]:
+def get_messages(db_reader: DbReader = Depends(get_db_reader)) -> List[Conversation]:
     """
     Get all the messages from the database and return them as a list of conversations.
     """
@@ -29,7 +36,7 @@ def get_messages() -> List[Conversation]:
 
 
 @dashboard_router.get("/dashboard/alerts")
-def get_alerts() -> List[AlertConversation]:
+def get_alerts(db_reader: DbReader = Depends(get_db_reader)) -> List[AlertConversation]:
     """
     Get all the messages from the database and return them as a list of conversations.
     """
