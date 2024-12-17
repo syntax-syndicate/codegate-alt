@@ -24,7 +24,7 @@ body:
     validations:
       required: true
 
-  - type: input
+  - type: dropdown
     id: operating-system
     attributes:
       label: "Operating System"
