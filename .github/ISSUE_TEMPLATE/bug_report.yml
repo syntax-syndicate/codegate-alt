@@ -1,66 +1,87 @@
----
 name: "Bug Report"
-about: "Report a bug to help us improve the proxy system"
-title: "[Bug]: <Short description of the issue>"
+description: "Report a bug to help us improve the proxy system."
+title: "[Bug]: Provide a general summary of the issue"
 labels: [bug]
----
+assignees: "-"
+body:
+  - type: markdown
+    attributes:
+      value: "To expedite our maintainers' efforts, please search for [duplicate or closed issues](https://github.com/mindersec/minder/issues?q=is%3Aissue+) and familiarize yourself with our [contributing guidelines](https://github.com/mindersec/minder/blob/main/CONTRIBUTING.md)."
 
-## Bug Description
-_A clear and concise description of the bug._
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "Describe the issue"
+      description: "A clear and concise description of what the bug is. If applicable, add screenshots to illustrate the problem."
+    validations:
+      required: true
 
----
+  - type: textarea
+    id: reproduce-steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Describe the steps to reproduce the behavior."
+    validations:
+      required: true
 
-## Environment Details
-- **Operating System**:  
-  - [ ] Windows
-  - [ ] macOS
-  - [ ] Linux
-  - [ ] Other (please specify): `______`
+  - type: input
+    id: operating-system
+    attributes:
+      label: "Operating System"
+      description: "Select the operating system where the issue occurred."
+      placeholder: "e.g., Windows, macOS, Linux"
+    validations:
+      required: true
 
-- **IDE and Version**:  
-  `<e.g., VSCode 1.78.0>`
+  - type: input
+    id: ide-version
+    attributes:
+      label: "IDE and Version"
+      description: "Enter the IDE name and version."
+      placeholder: "e.g., VSCode 1.78.0"
+    validations:
+      required: true
 
-- **Extension and Version**:  
-  `<e.g., Proxy Extension 0.5.1>`
+  - type: input
+    id: extension-version
+    attributes:
+      label: "Extension and Version"
+      description: "Enter the extension name and version."
+      placeholder: "e.g., Proxy Extension 0.5.1"
+    validations:
+      required: true
 
-- **Provider**:
-  - [ ] Anthropic
-  - [ ] vLLM
-  - [ ] OpenAI
-  - [ ] GitHub Copilot
-  - [ ] Other (please specify): `______`
+  - type: dropdown
+    id: provider
+    attributes:
+      label: "Provider"
+      description: "Select the provider used."
+      options:
+        - Anthropic
+        - OpenRouter
+        - GitHub Copilot
+        - Other
+    validations:
+      required: true
 
-- **Model**:  
-  `<e.g., Claude 3, GPT-4, etc.>`
+  - type: input
+    id: model
+    attributes:
+      label: "Model"
+      description: "Enter the model name used (e.g., GPT-4, Claude 3)."
+      placeholder: "e.g., GPT-4"
+    validations:
+      required: true
 
----
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs"
+      description: "If applicable, paste logs or error messages."
+      placeholder: "Paste log content here."
 
-## Steps to Reproduce
-1. _List the steps to reproduce the bug._
-2. _Provide clear instructions and, if possible, screenshots or logs._
-
-Example:
-1. Open the IDE.
-2. Start using the proxy with provider `OpenRouter`.
-3. The issue occurs when...
-
----
-
-## Expected Behavior
-_What should have happened?_  
-
-## Actual Behavior
-_What actually happened?_  
-
----
-
-## Logs
-_If applicable, provide logs or error messages here._
-```
-<Place log content here>
-```
-
----
-
-## Additional Context
-_Add any other context or details about the problem here._
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Additional Context"
+      description: "Add any other context or details about the problem here."
