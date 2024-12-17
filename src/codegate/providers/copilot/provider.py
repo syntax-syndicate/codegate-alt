@@ -36,7 +36,6 @@ HTTP_STATUS_MESSAGES = {
 }
 
 class StreamingBuffer:
-    """Efficient streaming buffer with backpressure support and length tracking"""
 
     def __init__(self, high_water_mark: int = 65536):
         self._buffer = deque()
@@ -49,6 +48,10 @@ class StreamingBuffer:
     def __len__(self) -> int:
         """Support len() operations on the buffer"""
         return self._size
+
+    def __iter__(self):
+        """Make buffer iterable for protocol compatibility"""
+        return iter(self._buffer)
 
     async def write(self, data: bytes) -> None:
         """Write data with backpressure"""
