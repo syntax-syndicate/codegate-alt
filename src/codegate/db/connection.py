@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import re
+from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional
 
@@ -200,20 +201,23 @@ class DbRecorder(DbCodeGate):
 
     def _create_hash_key(self, message: str, provider: str) -> str:
         """Creates a hash key from the message and includes the provider"""
-        # Try to extract the path from the message. Most of the times is at the top of the message.
-        # The pattern was generated using ChatGPT. Should match common occurrences like:
+        # Try to extract the path from the FIM message. The path is in FIM request in these formats:
         # folder/testing_file.py
         # Path: file3.py
-        pattern = r"(?:[a-zA-Z]:\\|\/)?(?:[^\s\/]+\/)*[^\s\/]+\.[^\s\/]+"
-        match = re.search(pattern, message)
-        # Copilot it's the only provider that has an easy path to extract.
-        # Other providers are harder to extact. This part needs to be revisited for the moment
-        # hasing the entire request message.
-        if match is None or provider != "copilot":
-            logger.warning("No path found in message or not copilot. Creating hash from message.")
+        pattern = r"^#.*?\b([a-zA-Z0-9_\-\/]+\.\w+)\b"
+        matches = re.findall(pattern, message, re.MULTILINE)
+        # If no path is found, hash the entire prompt message.
+        if not matches:
+            logger.warning("No path found in messages. Creating hash cache from message.")
             message_to_hash = f"{message}-{provider}"
         else:
-            message_to_hash = f"{match.group(0)}-{provider}"
+            # Copilot puts the path at the top of the file. Continue providers contain
+            # several paths, the one in which the fim is triggered is the last one.
+            if provider == "copilot":
+                filepath = matches[0]
+            else:
+                filepath = matches[-1]
+            message_to_hash = f"{filepath}-{provider}"
 
         logger.debug(f"Message to hash: {message_to_hash}")
         hashed_content = hashlib.sha256(message_to_hash.encode("utf-8")).hexdigest()
@@ -247,7 +251,10 @@ class DbRecorder(DbCodeGate):
 
         elapsed_seconds = (context.input_request.timestamp - old_timestamp).total_seconds()
         if elapsed_seconds < Config.get_config().max_fim_hash_lifetime:
-            logger.info(f"Skipping context recording. Elapsed time: {elapsed_seconds} seconds.")
+            logger.info(
+                f"Skipping DB context recording. "
+                f"Elapsed time since last FIM cache: {timedelta(seconds=elapsed_seconds)}."
+            )
             return False
 
     async def record_context(self, context: Optional[PipelineContext]) -> None:
