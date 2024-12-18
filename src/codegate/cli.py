@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import click
-import structlog
 from uvicorn.config import Config as UvicornConfig
 from uvicorn.server import Server
 
@@ -20,6 +19,7 @@ from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.copilot.provider import CopilotProvider
 from codegate.server import init_app
 from codegate.storage.utils import restore_storage_backup
+from codegate.logger.logger import OriginLogger
 
 
 class UvicornServer:
@@ -33,7 +33,9 @@ class UvicornServer:
         self._startup_complete = asyncio.Event()
         self._shutdown_event = asyncio.Event()
         self._should_exit = False
-        self.logger = structlog.get_logger("codegate")
+
+        logger_obj = OriginLogger("generic_server")
+        self.logger = logger_obj.logger
 
     async def serve(self) -> None:
         """Start the uvicorn server and handle shutdown gracefully."""
@@ -84,8 +86,10 @@ class UvicornServer:
 
 def validate_port(ctx: click.Context, param: click.Parameter, value: int) -> int:
     """Validate the port number is in valid range."""
-    logger = structlog.get_logger("codegate")
-    logger.debug(f"Validating port number: {value}")
+    cli_logger_obj = OriginLogger("cli")
+    cli_logger = cli_logger_obj.logger
+
+    cli_logger.debug(f"Validating port number: {value}")
     if value is not None and not (1 <= value <= 65535):
         raise click.BadParameter("Port must be between 1 and 65535")
     return value
@@ -296,7 +300,8 @@ def serve(
 
         # Set up logging first
         setup_logging(cfg.log_level, cfg.log_format)
-        logger = structlog.get_logger("codegate")
+        cli_logger_obj = OriginLogger("cli")
+        logger = cli_logger_obj.logger
 
         init_db_sync(cfg.db_path)
 
@@ -327,7 +332,9 @@ def serve(
         click.echo(f"Configuration error: {e}", err=True)
         sys.exit(1)
     except Exception as e:
-        logger = structlog.get_logger("codegate")
+        cli_logger_obj = OriginLogger("cli")
+        logger = cli_logger_obj.logger
+
         logger.exception("Unexpected error occurred")
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
@@ -336,7 +343,9 @@ def serve(
 async def run_servers(cfg: Config, app) -> None:
     """Run the codegate server."""
     try:
-        logger = structlog.get_logger("codegate")
+        cli_logger_obj = OriginLogger("cli")
+        logger = cli_logger_obj.logger
+
         logger.info(
             "Starting server",
             extra={

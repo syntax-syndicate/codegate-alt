@@ -48,6 +48,15 @@ class LogFormat(str, Enum):
             )
 
 
+def add_origin(logger, log_method, event_dict):
+    # Add 'origin' if it's bound to the logger but not explicitly in the event dict
+    if 'origin' not in event_dict and hasattr(logger, '_context'):
+        origin = logger._context.get('origin')
+        if origin:
+            event_dict['origin'] = origin
+    return event_dict
+
+
 def setup_logging(
     log_level: Optional[LogLevel] = None, log_format: Optional[LogFormat] = None
 ) -> logging.Logger:
@@ -74,6 +83,7 @@ def setup_logging(
     shared_processors = [
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="%Y-%m-%dT%H:%M:%S.%03dZ", utc=True),
+        add_origin,
         structlog.processors.CallsiteParameterAdder(
             [
                 structlog.processors.CallsiteParameter.MODULE,
