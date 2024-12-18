@@ -195,13 +195,8 @@ def test_serve_default_options(cli_runner):
     # Use patches for run_servers and logging setup
     with (
         patch("src.codegate.cli.run_servers") as mock_run,
-        patch("src.codegate.cli.OriginLogger") as mock_origin_logger,
         patch("src.codegate.cli.setup_logging") as mock_setup_logging,
     ):
-
-        logger_instance = MagicMock()
-        mock_origin_logger.return_value = logger_instance
-
         # Invoke the CLI command
         result = cli_runner.invoke(cli, ["serve"])
 
@@ -211,9 +206,6 @@ def test_serve_default_options(cli_runner):
         # Check if the logging setup was called with expected defaults
         mock_setup_logging.assert_called_once_with(LogLevel.INFO, LogFormat.JSON)
 
-        # Check if logging was done correctly
-        mock_origin_logger.assert_called_with("cli")
-
         # Validate run_servers was called once
         mock_run.assert_called_once()
 
@@ -222,13 +214,8 @@ def test_serve_custom_options(cli_runner):
     """Test serve command with custom options."""
     with (
         patch("src.codegate.cli.run_servers") as mock_run,
-        patch("src.codegate.cli.OriginLogger") as mock_origin_logger,
         patch("src.codegate.cli.setup_logging") as mock_setup_logging,
     ):
-
-        logger_instance = MagicMock()
-        mock_origin_logger.return_value = logger_instance
-
         # Invoke the CLI command with custom options
         result = cli_runner.invoke(
             cli,
@@ -260,9 +247,6 @@ def test_serve_custom_options(cli_runner):
 
         # Assert logging setup was called with the provided log level and format
         mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.TEXT)
-
-        # Assert logger got called with the expected module name
-        mock_origin_logger.assert_called_with("cli")
 
         # Validate run_servers was called once
         mock_run.assert_called_once()
@@ -322,20 +306,14 @@ def test_serve_with_config_file(cli_runner, temp_config_file):
     """Test serve command with config file."""
     with (
         patch("src.codegate.cli.run_servers") as mock_run,
-        patch("src.codegate.cli.OriginLogger") as mock_origin_logger,
         patch("src.codegate.cli.setup_logging") as mock_setup_logging,
     ):
-
-        logger_instance = MagicMock()
-        mock_origin_logger.return_value = logger_instance
-
         # Invoke the CLI command with the configuration file
         result = cli_runner.invoke(cli, ["serve", "--config", str(temp_config_file)])
 
         # Assertions to ensure the CLI ran successfully
         assert result.exit_code == 0
         mock_setup_logging.assert_called_once_with(LogLevel.DEBUG, LogFormat.JSON)
-        mock_origin_logger.assert_called_with("cli")
 
         # Validate that run_servers was called with the expected configuration
         mock_run.assert_called_once()
@@ -370,13 +348,8 @@ def test_serve_priority_resolution(cli_runner: CliRunner, temp_config_file: Path
     with (
         patch.dict(os.environ, {"LOG_LEVEL": "INFO", "PORT": "9999"}, clear=True),
         patch("src.codegate.cli.run_servers") as mock_run,
-        patch("src.codegate.cli.OriginLogger") as mock_origin_logger,
         patch("src.codegate.cli.setup_logging") as mock_setup_logging,
     ):
-        # Set up mock logger
-        logger_instance = MagicMock()
-        mock_origin_logger.return_value = logger_instance
-
         # Execute CLI command with specific options overriding environment and config file settings
         result = cli_runner.invoke(
             cli,
@@ -410,7 +383,6 @@ def test_serve_priority_resolution(cli_runner: CliRunner, temp_config_file: Path
 
         # Ensure logging setup was called with the highest priority settings (CLI arguments)
         mock_setup_logging.assert_called_once_with("ERROR", "TEXT")
-        mock_origin_logger.assert_called_with("cli")
 
         # Verify that the run_servers was called with the overridden settings
         config_arg = mock_run.call_args[0][0]  # Assuming Config is the first positional arg
@@ -438,13 +410,8 @@ def test_serve_certificate_options(cli_runner: CliRunner) -> None:
     """Test serve command with certificate options."""
     with (
         patch("src.codegate.cli.run_servers") as mock_run,
-        patch("src.codegate.cli.OriginLogger") as mock_origin_logger,
         patch("src.codegate.cli.setup_logging") as mock_setup_logging,
     ):
-        # Set up mock logger
-        logger_instance = MagicMock()
-        mock_origin_logger.return_value = logger_instance
-
         # Execute CLI command with certificate options
         result = cli_runner.invoke(
             cli,
@@ -468,7 +435,6 @@ def test_serve_certificate_options(cli_runner: CliRunner) -> None:
 
         # Ensure logging setup was called with expected arguments
         mock_setup_logging.assert_called_once_with("INFO", "JSON")
-        mock_origin_logger.assert_called_with("cli")
 
         # Verify that run_servers was called with the provided certificate options
         config_arg = mock_run.call_args[0][0]  # Assuming Config is the first positional arg

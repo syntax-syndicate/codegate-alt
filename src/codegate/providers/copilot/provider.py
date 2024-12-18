@@ -1,11 +1,12 @@
 import asyncio
 import re
 import ssl
+from src.codegate.codegate_logging import setup_logging
+import structlog
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse
 
-from src.codegate.logger.logger import OriginLogger
 from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
 from codegate.ca.codegate_ca import CertificateAuthority
@@ -22,8 +23,8 @@ from codegate.providers.copilot.pipeline import (
 )
 from codegate.providers.copilot.streaming import SSEProcessor
 
-logger_obj = OriginLogger("copilot_proxy")
-logger = logger_obj.logger
+setup_logging()
+logger = structlog.get_logger("codegate").bind(origin="copilot_proxy")
 
 # Constants
 MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 10MB
