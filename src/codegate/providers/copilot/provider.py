@@ -1,11 +1,12 @@
 import asyncio
 import re
 import ssl
+from src.codegate.codegate_logging import setup_logging
+import structlog
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse
 
-import structlog
 from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
 from codegate.ca.codegate_ca import CertificateAuthority
@@ -22,7 +23,8 @@ from codegate.providers.copilot.pipeline import (
 )
 from codegate.providers.copilot.streaming import SSEProcessor
 
-logger = structlog.get_logger("codegate")
+setup_logging()
+logger = structlog.get_logger("codegate").bind(origin="copilot_proxy")
 
 # Constants
 MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 10MB
@@ -637,7 +639,7 @@ class CopilotProvider(asyncio.Protocol):
         # Check for prefix match
         for route in VALIDATED_ROUTES:
             # For prefix matches, keep the rest of the path
-            remaining_path = path[len(route.path) :]
+            remaining_path = path[len(route.path):]
             logger.debug(f"Remaining path: {remaining_path}")
             # Make sure we don't end up with double slashes
             if remaining_path and remaining_path.startswith("/"):
@@ -791,7 +793,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                     self._proxy_transport_write(headers)
                     logger.debug(f"Headers sent: {headers}")
 
-                    data = data[header_end + 4 :]
+                    data = data[header_end + 4:]
 
             self._process_chunk(data)
 

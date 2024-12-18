@@ -33,7 +33,7 @@ class UvicornServer:
         self._startup_complete = asyncio.Event()
         self._shutdown_event = asyncio.Event()
         self._should_exit = False
-        self.logger = structlog.get_logger("codegate")
+        self.logger = structlog.get_logger("codegate").bind(origin="generic_server")
 
     async def serve(self) -> None:
         """Start the uvicorn server and handle shutdown gracefully."""
@@ -84,8 +84,8 @@ class UvicornServer:
 
 def validate_port(ctx: click.Context, param: click.Parameter, value: int) -> int:
     """Validate the port number is in valid range."""
-    logger = structlog.get_logger("codegate")
-    logger.debug(f"Validating port number: {value}")
+    cli_logger = structlog.get_logger("codegate").bind(origin="cli")
+    cli_logger.debug(f"Validating port number: {value}")
     if value is not None and not (1 <= value <= 65535):
         raise click.BadParameter("Port must be between 1 and 65535")
     return value
@@ -296,7 +296,7 @@ def serve(
 
         # Set up logging first
         setup_logging(cfg.log_level, cfg.log_format)
-        logger = structlog.get_logger("codegate")
+        logger = structlog.get_logger("codegate").bind(origin="cli")
 
         init_db_sync(cfg.db_path)
 
@@ -327,7 +327,7 @@ def serve(
         click.echo(f"Configuration error: {e}", err=True)
         sys.exit(1)
     except Exception as e:
-        logger = structlog.get_logger("codegate")
+        logger = structlog.get_logger("codegate").bind(origin="cli")
         logger.exception("Unexpected error occurred")
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
@@ -336,7 +336,7 @@ def serve(
 async def run_servers(cfg: Config, app) -> None:
     """Run the codegate server."""
     try:
-        logger = structlog.get_logger("codegate")
+        logger = structlog.get_logger("codegate").bind(origin="cli")
         logger.info(
             "Starting server",
             extra={
