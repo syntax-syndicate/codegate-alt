@@ -138,8 +138,22 @@ sudo route add -net 128.0.0.0/1 <public_ip_gateway>
 
 ### Testing
 
+To run the unit tests, execute this command:
 ```bash
 pytest
+```
+
+To run the integration tests, create a `.env` file in the repo root directory and add the
+following properties to it:
+```
+ENV_OPENAI_KEY=<YOUR_KEY>
+ENV_VLLM_KEY=<YOUR_KEY>
+ENV_ANTHROPIC_KEY=<YOUR_KEY>
+```
+
+Then the integration tests can be executed by running:
+```bash
+python tests/integration/integration_tests.py
 ```
 
 ## 🐳 Docker deployment
