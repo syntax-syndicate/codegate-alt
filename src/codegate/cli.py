@@ -303,7 +303,12 @@ def serve(
         # Check certificates and create CA if necessary
         logger.info("Checking certificates and creating CA if needed")
         ca = CertificateAuthority.get_instance()
-        ca.ensure_certificates_exist()
+
+        certs_check = ca.check_and_ensure_certificates()
+        if certs_check:
+            click.echo("New Certificates generated successfully.")
+        else:
+            click.echo("Existing Certificates are already present.")
 
         # Initialize secrets manager and pipeline factory
         secrets_manager = SecretsManager()
@@ -452,7 +457,10 @@ def restore_backup(backup_path: Path, backup_name: str) -> None:
     "--force-certs",
     is_flag=True,
     default=False,
-    help="Force the generation of certificates even if they already exist.",
+    help=(
+        "Force the generation of certificates even if they already exist. "
+        "Warning: this will overwrite existing certificates."
+    ),
 )
 @click.option(
     "--log-level",
@@ -488,17 +496,20 @@ def generate_certs(
         cli_log_format=log_format,
     )
     setup_logging(cfg.log_level, cfg.log_format)
+    logger = structlog.get_logger("codegate").bind(origin="cli")
 
     ca = CertificateAuthority.get_instance()
-    should_generate = force_certs or not ca.check_certificates_exist()
 
-    if should_generate:
-        ca.generate_certificates()
-        click.echo("Certificates generated successfully.")
-        click.echo(f"Certificates saved to: {cfg.certs_dir}")
-        click.echo("Make sure to add the new CA certificate to the operating system trust store.")
+    # Remove and regenerate certificates if forced; otherwise, just ensure they exist
+    logger.info("Checking certificates and creating certs if needed")
+    if force_certs:
+        ca.remove_certificates()
+
+    certs_check = ca.check_and_ensure_certificates()
+    if certs_check:
+        logger.info("New Certificates generated successfully.")
     else:
-        click.echo("Certificates already exist. Skipping generation...")
+        logger.info("Existing Certificates are already present.")
 
 
 def main() -> None:
