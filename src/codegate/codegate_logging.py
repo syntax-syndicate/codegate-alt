@@ -50,10 +50,10 @@ class LogFormat(str, Enum):
 
 def add_origin(logger, log_method, event_dict):
     # Add 'origin' if it's bound to the logger but not explicitly in the event dict
-    if 'origin' not in event_dict and hasattr(logger, '_context'):
-        origin = logger._context.get('origin')
+    if "origin" not in event_dict and hasattr(logger, "_context"):
+        origin = logger._context.get("origin")
         if origin:
-            event_dict['origin'] = origin
+            event_dict["origin"] = origin
     return event_dict
 
 

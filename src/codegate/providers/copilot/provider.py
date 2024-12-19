@@ -1,12 +1,11 @@
 import asyncio
 import re
 import ssl
-from src.codegate.codegate_logging import setup_logging
-import structlog
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse
 
+import structlog
 from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
 from codegate.ca.codegate_ca import CertificateAuthority
@@ -22,6 +21,7 @@ from codegate.providers.copilot.pipeline import (
     CopilotPipeline,
 )
 from codegate.providers.copilot.streaming import SSEProcessor
+from src.codegate.codegate_logging import setup_logging
 
 setup_logging()
 logger = structlog.get_logger("codegate").bind(origin="copilot_proxy")
@@ -206,7 +206,7 @@ class CopilotProvider(asyncio.Protocol):
         logger.debug("=" * 40)
 
         for i in range(0, len(body), CHUNK_SIZE):
-            chunk = body[i: i + CHUNK_SIZE]
+            chunk = body[i : i + CHUNK_SIZE]
             self.target_transport.write(chunk)
 
     def connection_made(self, transport: asyncio.Transport) -> None:
@@ -269,9 +269,7 @@ class CopilotProvider(asyncio.Protocol):
         """Check if adding new data would exceed buffer size limit"""
         return len(self.buffer) + len(new_data) <= MAX_BUFFER_SIZE
 
-    async def _forward_data_through_pipeline(
-        self, data: bytes
-    ) -> Union[HttpRequest, HttpResponse]:
+    async def _forward_data_through_pipeline(self, data: bytes) -> Union[HttpRequest, HttpResponse]:
         http_request = http_request_from_bytes(data)
         if not http_request:
             # we couldn't parse this into an HTTP request, so we just pass through
@@ -287,7 +285,7 @@ class CopilotProvider(asyncio.Protocol):
 
         if context and context.shortcut_response:
             # Send shortcut response
-            data_prefix = b'data:'
+            data_prefix = b"data:"
             http_response = HttpResponse(
                 http_request.version,
                 200,
@@ -299,7 +297,7 @@ class CopilotProvider(asyncio.Protocol):
                     "Content-Type: application/json",
                     "Transfer-Encoding: chunked",
                 ],
-                data_prefix + body
+                data_prefix + body,
             )
             return http_response
 
@@ -639,7 +637,7 @@ class CopilotProvider(asyncio.Protocol):
         # Check for prefix match
         for route in VALIDATED_ROUTES:
             # For prefix matches, keep the rest of the path
-            remaining_path = path[len(route.path):]
+            remaining_path = path[len(route.path) :]
             logger.debug(f"Remaining path: {remaining_path}")
             # Make sure we don't end up with double slashes
             if remaining_path and remaining_path.startswith("/"):
@@ -793,7 +791,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                     self._proxy_transport_write(headers)
                     logger.debug(f"Headers sent: {headers}")
 
-                    data = data[header_end + 4:]
+                    data = data[header_end + 4 :]
 
             self._process_chunk(data)
 
