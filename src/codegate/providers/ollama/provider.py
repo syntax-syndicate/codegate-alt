@@ -1,7 +1,9 @@
 import json
 from typing import Optional
 
-from fastapi import Request
+from fastapi import Request, HTTPException
+import httpx
+import structlog
 
 from codegate.config import Config
 from codegate.pipeline.base import SequentialPipelineProcessor
@@ -58,5 +60,20 @@ class OllamaProvider(BaseProvider):
             data["base_url"] = self.base_url
 
             is_fim_request = self._is_fim_request(request, data)
-            stream = await self.complete(data, api_key=None, is_fim_request=is_fim_request)
+            try:
+                stream = await self.complete(data, api_key=None, is_fim_request=is_fim_request)
+            except httpx.ConnectError as e:
+                logger = structlog.get_logger("codegate")
+                logger.error("Error in OllamaProvider completion", error=str(e))
+                raise HTTPException(status_code=503, detail="Ollama service is unavailable")
+            except Exception as e:
+                #  check if we have an status code there
+                if hasattr(e, "status_code"):
+                    # log the exception
+                    logger = structlog.get_logger("codegate")
+                    logger.error("Error in OllamaProvider completion", error=str(e))
+                    raise HTTPException(status_code=e.status_code, detail=str(e))  # type: ignore
+                else:
+                    # just continue raising the exception
+                    raise e
             return self._completion_handler.create_response(stream)

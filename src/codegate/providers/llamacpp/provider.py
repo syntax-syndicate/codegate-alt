@@ -1,7 +1,8 @@
 import json
+import structlog
 from typing import Optional
 
-from fastapi import Request
+from fastapi import Request, HTTPException
 
 from codegate.pipeline.base import SequentialPipelineProcessor
 from codegate.pipeline.output import OutputPipelineProcessor
@@ -10,7 +11,7 @@ from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHan
 from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLamaCppOutputNormalizer
 
 
-class LlamaCppProvider(BaseProvider):
+class LlamaCppProvider(BaseProvider):    
     def __init__(
         self,
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
@@ -46,7 +47,24 @@ class LlamaCppProvider(BaseProvider):
         ):
             body = await request.body()
             data = json.loads(body)
+            logger = structlog.get_logger("codegate")
 
             is_fim_request = self._is_fim_request(request, data)
-            stream = await self.complete(data, None, is_fim_request=is_fim_request)
+            try:
+                stream = await self.complete(data, None, is_fim_request=is_fim_request)
+            except RuntimeError as e:
+                # propagate as error 500
+                logger.error("Error in LlamaCppProvider completion", error=str(e))
+                raise HTTPException(status_code=500, detail=str(e))
+            except ValueError as e:
+                # capture well known exceptions
+                logger.error("Error in LlamaCppProvider completion", error=str(e))
+                if str(e).startswith("Model path does not exist") or \
+                        str(e).startswith("No file found"):
+                    raise HTTPException(status_code=404, detail=str(e))
+                elif "exceed" in str(e):
+                    raise HTTPException(status_code=429, detail=str(e))
+                else:
+                    # just continue raising the exception
+                    raise e
             return self._completion_handler.create_response(stream)

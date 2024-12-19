@@ -1,4 +1,5 @@
 import json
+import structlog
 from typing import Optional
 
 import httpx
@@ -52,7 +53,10 @@ class VLLMProvider(BaseProvider):
 
             token = authorization.split(" ")[1]
             config = Config.get_config()
-            base_url = config.provider_urls.get("vllm")
+            if config:
+                base_url = config.provider_urls.get("vllm")
+            else:
+                base_url = ""
 
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -76,8 +80,22 @@ class VLLMProvider(BaseProvider):
 
             # Add the vLLM base URL to the request
             config = Config.get_config()
-            data["base_url"] = config.provider_urls.get("vllm")
+            if config:
+                data["base_url"] = config.provider_urls.get("vllm")
+            else:
+                data["base_url"] = ""
 
             is_fim_request = self._is_fim_request(request, data)
-            stream = await self.complete(data, api_key, is_fim_request=is_fim_request)
+            try:
+                stream = await self.complete(data, api_key, is_fim_request=is_fim_request)
+            except Exception as e:
+                #  check if we have an status code there
+                if hasattr(e, "status_code"):
+                    logger = structlog.get_logger("codegate")
+                    logger.error("Error in VLLMProvider completion", error=str(e))
+
+                    raise HTTPException(status_code=e.status_code, detail=str(e))  # type: ignore
+                else:
+                    # just continue raising the exception
+                    raise e
             return self._completion_handler.create_response(stream)
