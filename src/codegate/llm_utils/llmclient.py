@@ -149,4 +149,4 @@ class LLMClient:
 
         except Exception as e:
             logger.error(f"LiteLLM completion failed {model} ({content}): {e}")
-            return {}
+            raise e

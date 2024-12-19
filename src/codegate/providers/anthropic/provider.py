@@ -1,4 +1,5 @@
 import json
+import structlog
 from typing import Optional
 
 from fastapi import Header, HTTPException, Request
@@ -53,5 +54,16 @@ class AnthropicProvider(BaseProvider):
             data = json.loads(body)
 
             is_fim_request = self._is_fim_request(request, data)
-            stream = await self.complete(data, x_api_key, is_fim_request)
+            try:
+                stream = await self.complete(data, x_api_key, is_fim_request)
+            except Exception as e:
+                #  check if we have an status code there
+                if hasattr(e, "status_code"):
+                    # log the exception
+                    logger = structlog.get_logger("codegate")
+                    logger.error("Error in AnthropicProvider completion", error=str(e))
+                    raise HTTPException(status_code=e.status_code, detail=str(e))  # type: ignore
+                else:
+                    # just continue raising the exception
+                    raise e
             return self._completion_handler.create_response(stream)
