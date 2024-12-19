@@ -81,7 +81,7 @@ class FimCache:
 
         logger.debug(f"Message to hash: {message_to_hash}")
         hashed_content = hashlib.sha256(message_to_hash.encode("utf-8")).hexdigest()
-        logger.debug(f"Hashed contnet: {hashed_content}")
+        logger.debug(f"Hashed content: {hashed_content}")
         return hashed_content
 
     def _add_cache_entry(self, hash_key: str, context: PipelineContext):
@@ -132,5 +132,5 @@ class FimCache:
             self._add_cache_entry(hash_key, context)
             return True
 
-        logger.info(f"FIM entry already in cache: {hash_key}.")
+        logger.debug(f"FIM entry already in cache: {hash_key}.")
         return False
