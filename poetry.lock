@@ -2856,13 +2856,13 @@ crypto-eth-addresses = ["eth-hash[pycryptodome] (>=0.7.0)"]
 
 [[package]]
 name = "weaviate-client"
-version = "4.10.1"
+version = "4.10.2"
 description = "A python native Weaviate client"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "weaviate_client-4.10.1-py3-none-any.whl", hash = "sha256:eedd693b2bbd02279109f9a37d2c33492bb460e480f4c5a4297530d4ad78469e"},
-    {file = "weaviate_client-4.10.1.tar.gz", hash = "sha256:7a1513d0ce7d918100d255224da52fcfe3d0834a2d22069853ab95a2a17f102c"},
+    {file = "weaviate_client-4.10.2-py3-none-any.whl", hash = "sha256:e1706438aa7b57be5443bbdebff206cc6688110d1669d54c2721b3aa640b2c4c"},
+    {file = "weaviate_client-4.10.2.tar.gz", hash = "sha256:fde5ad8e36604674d26b115288b58a7e182c91e36c2b41a00d18a36fe4ec7e3f"},
 ]
 
 [package.dependencies]
