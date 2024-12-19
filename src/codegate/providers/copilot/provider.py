@@ -9,6 +9,7 @@ import structlog
 from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
 from codegate.ca.codegate_ca import CertificateAuthority
+from codegate.codegate_logging import setup_logging
 from codegate.config import Config
 from codegate.pipeline.base import PipelineContext
 from codegate.pipeline.factory import PipelineFactory
@@ -21,7 +22,6 @@ from codegate.providers.copilot.pipeline import (
     CopilotPipeline,
 )
 from codegate.providers.copilot.streaming import SSEProcessor
-from src.codegate.codegate_logging import setup_logging
 
 setup_logging()
 logger = structlog.get_logger("codegate").bind(origin="copilot_proxy")
