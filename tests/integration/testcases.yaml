@@ -1,0 +1,302 @@
+headers:
+  vllm:
+    Authorization: Bearer ENV_VLLM_KEY
+  openai:
+    Authorization: Bearer ENV_OPENAI_KEY
+  ollama:
+  llamacpp:
+  anthropic:
+    x-api-key: ENV_ANTHROPIC_KEY
+
+testcases:
+  llamacpp_chat:
+    name: LlamaCPP Chat
+    provider: llamacpp
+    url: http://127.0.0.1:8989/llamacpp/chat/completions
+    data: |
+      {
+        "max_tokens":4096,
+        "messages":[
+            {
+              "content":"You are a coding assistant.",
+              "role":"system"
+            },
+            {
+              "content":"Hello",
+              "role":"user"
+            }
+        ],
+        "model":"qwen2.5-coder-1.5b-instruct-q5_k_m",
+        "stream":true,
+        "temperature":0
+      }
+    expected: |
+      Hello! How can I assist you today?
+
+  llamacpp_fim:
+    name: LlamaCPP FIM
+    provider: llamacpp
+    url: http://127.0.0.1:8989/llamacpp/completions
+    data: |
+      {
+        "model": "qwen2.5-coder-1.5b-instruct-q5_k_m",
+        "max_tokens": 4096,
+        "temperature": 0,
+        "stream": true,
+        "stop": ["<|endoftext|>", "<|fim_prefix|>", "<|fim_middle|>", "<|fim_suffix|>", "<|fim_pad|>", "<|repo_name|>", "<|file_sep|>", "<|im_start|>", "<|im_end|>", "/src/", "#- coding: utf-8", "```"],
+        "prompt":"<|fim_prefix|>\n# codegate/test.py\nimport invokehttp\nimport requests\n\nkey = \"mysecret-key\"\n\ndef call_api():\n    <|fim_suffix|>\n\n\ndata = {'key1': 'test1', 'key2': 'test2'}\nresponse = call_api('http://localhost:8080', method='post', data='data')\n<|fim_middle|>"
+      }
+    expected: |
+      url = 'http://localhost:8080'
+      headers = {'Authorization': f'Bearer {key}'}
+      response = requests.get(url, headers=headers)
+      return response.json()
+
+  openai_chat:
+    name: OpenAI Chat
+    provider: openai
+    url: http://127.0.0.1:8989/openai/chat/completions
+    data: |
+      {
+        "max_tokens":4096,
+        "messages":[
+            {
+              "content":"You are a coding assistant.",
+              "role":"system"
+            },
+            {
+              "content":"Hello",
+              "role":"user"
+            }
+        ],
+        "model":"gpt-4o-mini",
+        "stream":true,
+        "temperature":0
+      }
+    expected: |
+      Hello! How can I assist you today?
+
+  openai_fim:
+    name: OpenAI FIM
+    provider: openai
+    url: http://127.0.0.1:8989/openai/chat/completions
+    data: |
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": "You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{HOLE_NAME}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.\n\n## EXAMPLE QUERY:\n\n<QUERY>\nfunction sum_evens(lim) {\n  var sum = 0;\n  for (var i = 0; i < lim; ++i) {\n    {{FILL_HERE}}\n  }\n  return sum;\n}\n</QUERY>\n\nTASK: Fill the {{FILL_HERE}} hole.\n\n## CORRECT COMPLETION\n\n<COMPLETION>if (i % 2 === 0) {\n      sum += i;\n    }</COMPLETION>\n\n## EXAMPLE QUERY:\n\n<QUERY>\ndef sum_list(lst):\n  total = 0\n  for x in lst:\n  {{FILL_HERE}}\n  return total\n\nprint sum_list([1, 2, 3])\n</QUERY>\n\n## CORRECT COMPLETION:\n\n<COMPLETION>  total += x</COMPLETION>\n\n## EXAMPLE QUERY:\n\n<QUERY>\n// data Tree a = Node (Tree a) (Tree a) | Leaf a\n\n// sum :: Tree Int -> Int\n// sum (Node lft rgt) = sum lft + sum rgt\n// sum (Leaf val)     = val\n\n// convert to TypeScript:\n{{FILL_HERE}}\n</QUERY>\n\n## CORRECT COMPLETION:\n\n<COMPLETION>type Tree<T>\n  = {$:\"Node\", lft: Tree<T>, rgt: Tree<T>}\n  | {$:\"Leaf\", val: T};\n\nfunction sum(tree: Tree<number>): number {\n  switch (tree.$) {\n    case \"Node\":\n      return sum(tree.lft) + sum(tree.rgt);\n    case \"Leaf\":\n      return tree.val;\n  }\n}</COMPLETION>\n\n## EXAMPLE QUERY:\n\nThe 5th {{FILL_HERE}} is Jupiter.\n\n## CORRECT COMPLETION:\n\n<COMPLETION>planet from the Sun</COMPLETION>\n\n## EXAMPLE QUERY:\n\nfunction hypothenuse(a, b) {\n  return Math.sqrt({{FILL_HERE}}b ** 2);\n}\n\n## CORRECT COMPLETION:\n\n<COMPLETION>a ** 2 + </COMPLETION>\n\n<QUERY>\n# Path: Untitled.txt\n# {\"messages\":[{\"role\":\"user\",\"content\":\"You are a HOLE FILLER. You are provided with a file containing holes, formatted as \\'{{HOLE_NAME}}\\'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.\\\\n\\\\n## EXAMPLE QUERY:\\\\n\\\\n<QUERY>\\\\nfunction sum_evens(lim) {\\\\n  var sum = 0;\\\\n  for (var i = 0; i < lim; ++i) {\\\\n    {{FILL_HERE}}\\\\n  }\\\\n  return sum;\\\\n}\\\\n</QUERY>\\\\n\\\\nTASK: Fill the {{FILL_HERE}} hole.\\\\n\\\\n## CORRECT COMPLETION\\\\n\\\\n<COMPLETION>if (i % 2 === 0) {\\\\n      sum += i;\\\\n    }</COMPLETION>\\\\n\\\\n## EXAMPLE QUERY:\\\\n\\\\n<QUERY>\\\\ndef sum_list(lst):\\\\n  total = 0\\\\n  for x in lst:\\\\n  {{FILL_HERE}}\\\\n  return total\\\\n\\\\nprint sum_list([1, 2, 3])\\\\n</QUERY>\\\\n\\\\n## CORRECT COMPLETION:\\\\n\\\\n<COMPLETION>  total += x</COMPLETION>\\\\n\\\\n## EXAMPLE QUERY:\\\\n\\\\n<QUERY>\\\\n// data Tree a = Node (Tree a) (Tree a) | Leaf a\\\\n\\\\n// sum :: Tree Int -> Int\\\\n// sum (Node lft rgt) = sum lft + sum rgt\\\\n// sum (Leaf val)     = val\\\\n\\\\n// convert to TypeScript:\\\\n{{FILL_HERE}}\\\\n</QUERY>\\\\n\\\\n## CORRECT COMPLETION:\\\\n\\\\n<COMPLETION>type Tree<T>\\\\n  = {$:\\\\\"Node\\\\\", lft: Tree<T>, rgt: Tree<T>}\\\\n  | {$:\\\\\"Leaf\\\\\", val: T};\\\\n\\\\nfunction sum(tree: Tree<number>): number {\\\\n  switch (tree.$) {\\\\n    case \\\\\"Node\\\\\":\\\\n      return sum(tree.lft) + sum(tree.rgt);\\\\n    case \\\\\"Leaf\\\\\":\\\\n      return tree.val;\\\\n  }\\\\n}</COMPLETION>\\\\n\\\\n## EXAMPLE QUERY:\\\\n\\\\nThe 5th {{FILL_HERE}} is Jupiter.\\\\n\\\\n## CORRECT COMPLETION:\\\\n\\\\n<COMPLETION>planet from the Sun</COMPLETION>\\\\n\\\\n## EXAMPLE QUERY:\\\\n\\\\nfunction hypothenuse(a, b) {\\\\n  return Math.sqrt({{FILL_HERE}}b ** 2);\\\\n}\\\\n\\\\n## CORRECT COMPLETION:\\\\n\\\\n<COMPLETION>a ** 2 + </COMPLETION>\\\\n\\\\n<QUERY>\\\\n\\\\n# codegate/test.py\\\\nimport invokehttp\\\\nimport requests\\\\n\\\\nkey = \\\\\"mysecret-key\\\\\"\\\\n\\\\ndef call_api():\\\\n    {{FILL_HERE}}\\\\n\\\\n\\\\n\\\\n\\\\ndata = {\\'key1\\': \\'test1\\', \\'key2\\': \\'test2\\'}\\\\nresponse = call_api(\\'http://localhost:8080\\', method=\\'post\\', data=\\'data\\')\\\\n</QUERY>\\\\nTASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.\\\\n<COMPLETION>\"}],\"model\":\"gpt-4o\",\"max_tokens\":4096,\"temperature\":0,\"stream\":true,\"stop\":[\"</COMPLETION>\",\"/src/\",\"#- coding: utf-8\",\"```\"]}\n# codegate/test.py\nimport invokehttp\nimport requests\n\nkey = \"mysecret-key\"\n\ndef call_api():\n    {{FILL_HERE}}\n\n\n\n\ndata = {'key1': 'test1', 'key2': 'test2'}\nresponse = call_api('http://localhost:8080', method='post', data='data')\n</QUERY>\nTASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.\n<COMPLETION>"
+          }
+        ],
+        "model": "gpt-4o-mini",
+        "max_tokens": 4096,
+        "temperature": 0,
+        "stream": true,
+        "stop": [
+          "</COMPLETION>",
+          "/src/",
+          "#- coding: utf-8",
+          "```"
+        ]
+      }
+    expected: |
+      <COMPLETION>    response = requests.post('http://localhost:8080', json=data, headers={'Authorization': f'Bearer {key}'})
+
+  vllm_chat:
+    name: VLLM Chat
+    provider: vllm
+    url: http://127.0.0.1:8989/vllm/chat/completions
+    data: |
+      {
+        "max_tokens":4096,
+        "messages":[
+            {
+              "content":"You are a coding assistant.",
+              "role":"system"
+            },
+            {
+              "content":"Hello",
+              "role":"user"
+            }
+        ],
+        "model":"Qwen/Qwen2.5-Coder-14B-Instruct",
+        "stream":true,
+        "temperature":0
+      }
+    expected: |
+      Hello! How can I assist you today? If you have any questions about software security, package analysis, or need guidance on secure coding practices, feel free to ask.
+
+  vllm_fim:
+    name: VLLM FIM
+    provider: vllm
+    url: http://127.0.0.1:8989/vllm/completions
+    data: |
+      {
+        "model": "Qwen/Qwen2.5-Coder-14B",
+        "max_tokens": 4096,
+        "temperature": 0,
+        "stream": true,
+        "stop": ["<|endoftext|>", "<|fim_prefix|>", "<|fim_middle|>", "<|fim_suffix|>", "<|fim_pad|>", "<|repo_name|>", "<|file_sep|>", "<|im_start|>", "<|im_end|>", "/src/", "#- coding: utf-8", "```"],
+        "prompt":"<|fim_prefix|>\n# codegate/test.py\nimport invokehttp\nimport requests\n\nkey = \"mysecret-key\"\n\ndef call_api():\n    <|fim_suffix|>\n\n\ndata = {'key1': 'test1', 'key2': 'test2'}\nresponse = call_api('http://localhost:8080', method='post', data='data')\n<|fim_middle|>"
+      }
+    expected: |
+      # Create an instance of the InvokeHTTP class
+      invoke = invokehttp.InvokeHTTP(key)
+
+      # Call the API using the invoke_http method
+      response = invoke.invoke_http(url, method='get', data=data)
+
+      # Check the response status code
+      if response.status_code == 200:
+          # The API call was successful
+          print(response.json())
+      else:
+          # The API call failed
+          print('Error:', response.status_code)
+
+  anthropic_chat:
+    name: Anthropic Chat
+    provider: anthropic
+    url: http://127.0.0.1:8989/anthropic/messages
+    data: |
+      {
+        "max_tokens":4096,
+        "messages":[
+            {
+              "content":"You are a coding assistant.",
+              "role":"system"
+            },
+            {
+              "content":"Hello",
+              "role":"user"
+            }
+        ],
+        "model":"claude-3-5-sonnet-20241022",
+        "stream":true,
+        "temperature":0
+      }
+    expected: |
+      Hello! I'm CodeGate, your security-focused AI assistant. I can help you with:
+
+      - Software security analysis and reviews
+      - Package security assessments
+      - Secure coding practices and guidance
+      - Security vulnerability analysis
+      - Best practices for secure implementations
+
+      How can I assist you with your security needs today?
+
+  anthropic_fim:
+    name: Anthropic FIM
+    provider: anthropic
+    url: http://127.0.0.1:8989/anthropic/messages
+    data: |
+      {
+        "top_k": 50,
+        "temperature": 0,
+        "max_tokens": 4096,
+        "model": "claude-3-5-sonnet-20241022",
+        "stop_sequences": [
+          "</COMPLETION>",
+          "/src/",
+          "#- coding: utf-8",
+          "```"
+        ],
+        "stream": true,
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{HOLE_NAME}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.\n\n## EXAMPLE QUERY:\n\n<QUERY>\nfunction sum_evens(lim) {\n  var sum = 0;\n  for (var i = 0; i < lim; ++i) {\n    {{FILL_HERE}}\n  }\n  return sum;\n}\n</QUERY>\n\nTASK: Fill the {{FILL_HERE}} hole.\n\n## CORRECT COMPLETION\n\n<COMPLETION>if (i % 2 === 0) {\n      sum += i;\n    }</COMPLETION>\n\n## EXAMPLE QUERY:\n\n<QUERY>\ndef sum_list(lst):\n  total = 0\n  for x in lst:\n  {{FILL_HERE}}\n  return total\n\nprint sum_list([1, 2, 3])\n</QUERY>\n\n## CORRECT COMPLETION:\n\n<COMPLETION>  total += x</COMPLETION>\n\n## EXAMPLE QUERY:\n\n<QUERY>\n// data Tree a = Node (Tree a) (Tree a) | Leaf a\n\n// sum :: Tree Int -> Int\n// sum (Node lft rgt) = sum lft + sum rgt\n// sum (Leaf val)     = val\n\n// convert to TypeScript:\n{{FILL_HERE}}\n</QUERY>\n\n## CORRECT COMPLETION:\n\n<COMPLETION>type Tree<T>\n  = {$:\"Node\", lft: Tree<T>, rgt: Tree<T>}\n  | {$:\"Leaf\", val: T};\n\nfunction sum(tree: Tree<number>): number {\n  switch (tree.$) {\n    case \"Node\":\n      return sum(tree.lft) + sum(tree.rgt);\n    case \"Leaf\":\n      return tree.val;\n  }\n}</COMPLETION>\n\n## EXAMPLE QUERY:\n\nThe 5th {{FILL_HERE}} is Jupiter.\n\n## CORRECT COMPLETION:\n\n<COMPLETION>planet from the Sun</COMPLETION>\n\n## EXAMPLE QUERY:\n\nfunction hypothenuse(a, b) {\n  return Math.sqrt({{FILL_HERE}}b ** 2);\n}\n\n## CORRECT COMPLETION:\n\n<COMPLETION>a ** 2 + </COMPLETION>\n\n<QUERY>\n# Path: Untitled.txt\n# http://127.0.0.1:8989/vllm/completions\n# codegate/test.py\nimport requests\n\ndef call_api():\n    {{FILL_HERE}}\n\n\ndata = {'key1': 'test1', 'key2': 'test2'}\nresponse = call_api('http://localhost:8080', method='post', data='data')\n</QUERY>\nTASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.\n<COMPLETION>"
+              }
+            ]
+          }
+        ],
+        "system": ""
+      }
+    expected: |
+      <COMPLETION>def call_api(url, method='get', data=None):
+        if method.lower() == 'get':
+            return requests.get(url)
+        elif method.lower() == 'post':
+            return requests.post(url, json=data)
+        else:
+            raise ValueError("Unsupported HTTP method")
+
+  ollama_chat:
+    name: Ollama Chat
+    provider: ollama
+    url: http://127.0.0.1:8989/ollama/chat/completions
+    data: |
+      {
+        "max_tokens":4096,
+        "messages":[
+            {
+              "content":"You are a coding assistant.",
+              "role":"system"
+            },
+            {
+              "content":"Hello",
+              "role":"user"
+            }
+        ],
+        "model":"qwen2.5-coder:latest",
+        "stream":true,
+        "temperature":0
+      }
+    expected: |
+      Hello! How can I assist you today? If you have any questions or need guidance on secure coding practices, software security, package analysis, or anything else related to cybersecurity, feel free to ask!
+
+  ollama_fim:
+    name: Ollama FIM
+    provider: ollama
+    url: http://127.0.0.1:8989/ollama/api/generate
+    data: |
+      {
+        "model": "qwen2.5-coder:latest",
+        "max_tokens": 4096,
+        "temperature": 0,
+        "stream": true,
+        "stop": [
+          "<fim_prefix>",
+          "<fim_suffix>",
+          "<fim_middle>",
+          "<file_sep>",
+          "</fim_middle>",
+          "</code>",
+          "/src/",
+          "#- coding: utf-8",
+          "```",
+          ""
+        ],
+        "prompt":"<|fim_prefix|>\n# codegate/test.py\nimport invokehttp\nimport requests\n\nkey = \"mysecret-key\"\n\ndef call_api():\n    <|fim_suffix|>\n\n\ndata = {'key1': 'test1', 'key2': 'test2'}\nresponse = call_api('http://localhost:8080', method='post', data='data')\n<|fim_middle|>"
+      }
+    expected: |
+      ```python
+      import invokehttp
+      import requests
+
+      key = "mysecret-key"
+
+      def call_api(url, method='get', data=None):
+          headers = {
+              'Authorization': f'Bearer {key}'
+          }
+
+          if method == 'get':
+              response = requests.get(url, headers=headers)
+          elif method == 'post':
+              response = requests.post(url, headers=headers, json=data)
+          else:
+              raise ValueError("Unsupported HTTP method")
+
+          return response
+
+      data = {'key1': 'test1', 'key2': 'test2'}
+      response = call_api('http://localhost:8080', method='post', data=data)
+
+      print(response.status_code)
+      print(response.json())
+      ```
