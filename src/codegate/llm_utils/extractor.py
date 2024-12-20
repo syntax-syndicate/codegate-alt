@@ -30,7 +30,7 @@ class PackageExtractor:
         system_prompt = Config.get_config().prompts.lookup_packages
 
         result = await LLMClient.complete(
-            content=content,
+            content=content.lower(),
             system_prompt=system_prompt,
             provider=provider,
             model=model,
@@ -41,6 +41,9 @@ class PackageExtractor:
 
         # Handle both formats: {"packages": [...]} and direct list [...]
         packages = result if isinstance(result, list) else result.get("packages", [])
+
+        # Filter packages based on the content
+        packages = [package.lower() for package in packages if package.lower() in content]
         logger.info(f"Extracted packages: {packages}")
         return packages
 

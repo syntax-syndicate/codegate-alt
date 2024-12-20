@@ -29,12 +29,12 @@ class CodegateContextRetriever(PipelineStep):
         """
         return "codegate-context-retriever"
 
-    async def get_objects_from_search(
-        self, search: str, ecosystem, packages: list[str] = None
+    async def get_objects_from_db(
+        self, ecosystem, packages: list[str] = None
     ) -> list[object]:
         storage_engine = StorageEngine()
         objects = await storage_engine.search(
-            search, distance=0.8, ecosystem=ecosystem, packages=packages
+            distance=0.8, ecosystem=ecosystem, packages=packages
         )
         return objects
 
@@ -103,39 +103,25 @@ class CodegateContextRetriever(PipelineStep):
         # Extract packages from the user message
         ecosystem = await self.__lookup_ecosystem(user_messages, context)
         packages = await self.__lookup_packages(user_messages, context)
-        packages = [pkg.lower() for pkg in packages]
 
-        # If user message does not reference any packages, then just return
-        if len(packages) == 0:
-            return PipelineResult(request=request)
+        context_str = "CodeGate did not find any malicious or archived packages."
 
-        # Look for matches in vector DB using list of packages as filter
-        searched_objects = await self.get_objects_from_search(user_messages, ecosystem, packages)
+        if len(packages) > 0:
+            # Look for matches in DB using packages and ecosystem
+            searched_objects = await self.get_objects_from_db(ecosystem, packages)
 
-        logger.info(
-            f"Found {len(searched_objects)} matches in the database",
-            searched_objects=searched_objects,
-        )
+            logger.info(
+                f"Found {len(searched_objects)} matches in the database",
+                searched_objects=searched_objects,
+            )
 
-        # Remove searched objects that are not in packages. This is needed
-        # since Weaviate performs substring match in the filter.
-        updated_searched_objects = []
-        for searched_object in searched_objects:
-            if searched_object.properties["name"].lower() in packages:
-                updated_searched_objects.append(searched_object)
-        searched_objects = updated_searched_objects
+            # Generate context string using the searched objects
+            logger.info(f"Adding {len(searched_objects)} packages to the context")
 
-        # Generate context string using the searched objects
-        logger.info(f"Adding {len(searched_objects)} packages to the context")
-
-        if len(searched_objects) > 0:
-            context_str = self.generate_context_str(searched_objects, context)
-        else:
-            context_str = "CodeGate did not find any malicious or archived packages."
+            if len(searched_objects) > 0:
+                context_str = self.generate_context_str(searched_objects, context)
 
         last_user_idx = self.get_last_user_message_idx(request)
-        if last_user_idx == -1:
-            return PipelineResult(request=request, context=context)
 
         # Make a copy of the request
         new_request = request.copy()

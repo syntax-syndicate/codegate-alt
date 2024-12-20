@@ -52,7 +52,7 @@ async def test_search(mock_weaviate_client, mock_inference_engine):
             storage_engine = StorageEngine.recreate_instance(data_path="./weaviate_data")
 
             # Invoke the search method
-            results = await storage_engine.search("test query", 5, 0.3)
+            results = await storage_engine.search(query="test query", limit=5, distance=0.3)
 
             # Assertions to validate the expected behavior
             assert len(results) == 1  # Assert that one result is returned

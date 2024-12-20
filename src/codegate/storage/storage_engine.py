@@ -121,7 +121,6 @@ class StorageEngine:
             return []
 
         try:
-
             packages = self.weaviate_client.collections.get("Package")
             response = packages.query.fetch_objects(
                 filters=Filter.by_property(name).contains_any(properties),
@@ -145,10 +144,19 @@ class StorageEngine:
             return []
 
     async def search(
-        self, query: str, limit=5, distance=0.3, ecosystem=None, packages=None
+        self,
+        query: str = None,
+        ecosystem: str = None,
+        packages: List[str] = None,
+        limit: int = 5,
+        distance: float = 0.3,
     ) -> list[object]:
         """
-        Search the 'Package' collection based on a query string.
+        Search the 'Package' collection based on a query string, ecosystem and packages.
+        If packages and ecosystem are both not none, then filter the objects using them.
+        If packages is not none and ecosystem is none, then filter the objects using
+        package names.
+        If packages is none, then perform vector search.
 
         Args:
             query (str): The text query for which to search.
@@ -160,26 +168,40 @@ class StorageEngine:
         Returns:
             list: A list of matching results with their properties and distances.
         """
-        # Generate the vector for the query
-        query_vector = await self.inference_engine.embed(self.model_path, [query])
 
-        # Perform the vector search
         try:
             collection = self.weaviate_client.collections.get("Package")
-            if packages:
-                # filter by packages and ecosystem if present
-                filters = []
-                if ecosystem and ecosystem in VALID_ECOSYSTEMS:
-                    filters.append(wvc.query.Filter.by_property("type").equal(ecosystem))
-                filters.append(wvc.query.Filter.by_property("name").contains_any(packages))
-                response = collection.query.near_vector(
-                    query_vector[0],
-                    limit=limit,
-                    distance=distance,
-                    filters=wvc.query.Filter.all_of(filters),
-                    return_metadata=MetadataQuery(distance=True),
+
+            response = None
+            if packages and ecosystem and ecosystem in VALID_ECOSYSTEMS:
+                response = collection.query.fetch_objects(
+                    filters=wvc.query.Filter.all_of([
+                        wvc.query.Filter.by_property("name").contains_any(packages),
+                        wvc.query.Filter.by_property("type").equal(ecosystem)
+                    ]),
                 )
-            else:
+                response.objects = [
+                    obj
+                    for obj in response.objects
+                    if obj.properties["name"].lower() in packages
+                    and obj.properties["type"].lower() == ecosystem.lower()
+                ]
+            elif packages and not ecosystem:
+                response = collection.query.fetch_objects(
+                    filters=wvc.query.Filter.all_of([
+                        wvc.query.Filter.by_property("name").contains_any(packages),
+                    ]),
+                )
+                response.objects = [
+                    obj
+                    for obj in response.objects
+                    if obj.properties["name"].lower() in packages
+                ]
+            elif query:
+                # Perform the vector search
+                # Generate the vector for the query
+                query_vector = await self.inference_engine.embed(self.model_path, [query])
+
                 response = collection.query.near_vector(
                     query_vector[0],
                     limit=limit,
