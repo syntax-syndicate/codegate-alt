@@ -9,6 +9,7 @@ import structlog
 from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
 from codegate.ca.codegate_ca import CertificateAuthority, TLSCertDomainManager
+from codegate.codegate_logging import setup_logging
 from codegate.config import Config
 from codegate.pipeline.base import PipelineContext
 from codegate.pipeline.factory import PipelineFactory
@@ -20,8 +21,7 @@ from codegate.providers.copilot.pipeline import (
     CopilotFimPipeline,
     CopilotPipeline,
 )
-from codegate.providers.copilot.streaming import SSEProcessor
-from src.codegate.codegate_logging import setup_logging
+from codegate.providers.copilot.streaming import SSEProcessor4
 
 setup_logging()
 logger = structlog.get_logger("codegate").bind(origin="copilot_proxy")
@@ -160,7 +160,7 @@ class CopilotProvider(asyncio.Protocol):
             logger.debug("Selected CopilotChatStrategy")
             return CopilotChatPipeline(self.pipeline_factory)
 
-        logger.debug("No pipeline strategy selected")
+        logger.debug("No pipeline selected")
         return None
 
     async def _body_through_pipeline(
@@ -170,12 +170,12 @@ class CopilotProvider(asyncio.Protocol):
         headers: list[str],
         body: bytes,
     ) -> Tuple[bytes, PipelineContext]:
-        logger.debug(f"Processing body through pipeline: {len(body)} bytes")
         strategy = self._select_pipeline(method, path)
         if len(body) == 0 or strategy is None:
             # if we didn't select any strategy that would change the request
             # let's just pass through the body as-is
             return body, None
+        logger.debug(f"Processing body through pipeline: {len(body)} bytes")
         return await strategy.process_body(headers, body)
 
     async def _request_to_target(self, headers: list[str], body: bytes):

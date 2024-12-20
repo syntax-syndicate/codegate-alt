@@ -1,8 +1,5 @@
 import asyncio
-import hashlib
 import json
-import re
-from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional
 
@@ -11,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from codegate.config import Config
+from codegate.db.fim_cache import FimCache
 from codegate.db.models import Alert, Output, Prompt
 from codegate.db.queries import (
     AsyncQuerier,
@@ -22,7 +19,7 @@ from codegate.pipeline.base import PipelineContext
 
 logger = structlog.get_logger("codegate")
 alert_queue = asyncio.Queue()
-fim_entries = {}
+fim_cache = FimCache()
 
 
 class DbCodeGate:
@@ -184,47 +181,6 @@ class DbRecorder(DbCodeGate):
         logger.debug(f"Recorded alerts: {recorded_alerts}")
         return recorded_alerts
 
-    def _extract_request_message(self, request: str) -> Optional[dict]:
-        """Extract the user message from the FIM request"""
-        try:
-            parsed_request = json.loads(request)
-        except Exception as e:
-            logger.exception(f"Failed to extract request message: {request}", error=str(e))
-            return None
-
-        messages = [message for message in parsed_request["messages"] if message["role"] == "user"]
-        if len(messages) != 1:
-            logger.warning(f"Expected one user message, found {len(messages)}.")
-            return None
-
-        content_message = messages[0].get("content")
-        return content_message
-
-    def _create_hash_key(self, message: str, provider: str) -> str:
-        """Creates a hash key from the message and includes the provider"""
-        # Try to extract the path from the FIM message. The path is in FIM request in these formats:
-        # folder/testing_file.py
-        # Path: file3.py
-        pattern = r"^#.*?\b([a-zA-Z0-9_\-\/]+\.\w+)\b"
-        matches = re.findall(pattern, message, re.MULTILINE)
-        # If no path is found, hash the entire prompt message.
-        if not matches:
-            logger.warning("No path found in messages. Creating hash cache from message.")
-            message_to_hash = f"{message}-{provider}"
-        else:
-            # Copilot puts the path at the top of the file. Continue providers contain
-            # several paths, the one in which the fim is triggered is the last one.
-            if provider == "copilot":
-                filepath = matches[0]
-            else:
-                filepath = matches[-1]
-            message_to_hash = f"{filepath}-{provider}"
-
-        logger.debug(f"Message to hash: {message_to_hash}")
-        hashed_content = hashlib.sha256(message_to_hash.encode("utf-8")).hexdigest()
-        logger.debug(f"Hashed contnet: {hashed_content}")
-        return hashed_content
-
     def _should_record_context(self, context: Optional[PipelineContext]) -> bool:
         """Check if the context should be recorded in DB"""
         if context is None or context.metadata.get("stored_in_db", False):
@@ -238,37 +194,22 @@ class DbRecorder(DbCodeGate):
         if context.input_request.type != "fim":
             return True
 
-        # Couldn't process the user message. Skip creating a mapping entry.
-        message = self._extract_request_message(context.input_request.request)
-        if message is None:
-            logger.warning(f"Couldn't read FIM message: {message}. Will not record to DB.")
-            return False
-
-        hash_key = self._create_hash_key(message, context.input_request.provider)
-        old_timestamp = fim_entries.get(hash_key, None)
-        if old_timestamp is None:
-            fim_entries[hash_key] = context.input_request.timestamp
-            return True
-
-        elapsed_seconds = (context.input_request.timestamp - old_timestamp).total_seconds()
-        if elapsed_seconds < Config.get_config().max_fim_hash_lifetime:
-            logger.info(
-                f"Skipping DB context recording. "
-                f"Elapsed time since last FIM cache: {timedelta(seconds=elapsed_seconds)}."
-            )
-            return False
+        return fim_cache.could_store_fim_request(context)
 
     async def record_context(self, context: Optional[PipelineContext]) -> None:
-        if not self._should_record_context(context):
-            return
-        await self.record_request(context.input_request)
-        await self.record_outputs(context.output_responses)
-        await self.record_alerts(context.alerts_raised)
-        context.metadata["stored_in_db"] = True
-        logger.info(
-            f"Recorded context in DB. Output chunks: {len(context.output_responses)}. "
-            f"Alerts: {len(context.alerts_raised)}."
-        )
+        try:
+            if not self._should_record_context(context):
+                return
+            await self.record_request(context.input_request)
+            await self.record_outputs(context.output_responses)
+            await self.record_alerts(context.alerts_raised)
+            context.metadata["stored_in_db"] = True
+            logger.info(
+                f"Recorded context in DB. Output chunks: {len(context.output_responses)}. "
+                f"Alerts: {len(context.alerts_raised)}."
+            )
+        except Exception as e:
+            logger.error(f"Failed to record context: {context}.", error=str(e))
 
 
 class DbReader(DbCodeGate):

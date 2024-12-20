@@ -1,6 +1,6 @@
 import re
 from abc import abstractmethod
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import structlog
 from litellm import ChatCompletionRequest, ChatCompletionSystemMessage, ModelResponse
@@ -44,12 +44,11 @@ class SecretsModifier:
         pass
 
     @abstractmethod
-    def _notify_secret(self, secret):
+    def _notify_secret(self, match: Match, protected_text: List[str]) -> None:
         """
         Notify about a found secret
-        TODO: We should probably not notify about a secret value but rather
-        an obfuscated string. It might be nice to report the context as well
-        (e.g. the file or a couple of lines before and after)
+        TODO: If the secret came from a CodeSnippet we should notify about that. This would
+        involve using the CodeSnippetExtractor step that is further down the pipeline.
         """
         pass
 
@@ -92,6 +91,21 @@ class SecretsModifier:
 
         return start, end
 
+    def _get_surrounding_secret_lines(
+        self, protected_text: List[str], secret_line: int, surrounding_lines: int = 3
+    ) -> str:
+        """
+        Get the lines before and after the secret line to provide context.
+
+        Args:
+            protected_text: The text with secrets replaced
+            secret_line: The line number of the secret
+        """
+        lines = "".join(protected_text).split("\n")
+        start_line = max(secret_line - surrounding_lines, 0)
+        end_line = min(secret_line + surrounding_lines, len(lines))
+        return "\n".join(lines[start_line:end_line])
+
     def obfuscate(self, text: str) -> tuple[str, int]:
         matches = CodegateSignatures.find_in_string(text)
         if not matches:
@@ -100,7 +114,7 @@ class SecretsModifier:
         logger.debug(f"Found {len(matches)} secrets in the user message")
 
         # Convert line positions to absolute positions and extend boundaries
-        absolute_matches = []
+        absolute_matches: List[Tuple[int, int, Match]] = []
         for match in matches:
             start = self._get_absolute_position(match.line_number, match.start_index, text)
             end = self._get_absolute_position(match.line_number, match.end_index, text)
@@ -119,37 +133,30 @@ class SecretsModifier:
         protected_text = list(text)
 
         # Store matches for logging
-        found_secrets = []
+        found_secrets = 0
 
         # Replace each match with its encrypted value
+        logger.info("\nFound secrets:")
         for start, end, match in absolute_matches:
             hidden_secret = self._hide_secret(match)
-            self._notify_secret(hidden_secret)
+            self._notify_secret(match, protected_text)
 
             # Replace the secret in the text
             protected_text[start:end] = hidden_secret
-            # Store for logging
-            found_secrets.append(
-                {
-                    "service": match.service,
-                    "type": match.type,
-                    "original": match.value,
-                    "encrypted": hidden_secret,
-                }
-            )
 
-        # Log the findings
-        logger.info("\nFound secrets:")
-        for secret in found_secrets:
-            logger.info(f"\nService: {secret['service']}")
-            logger.info(f"Type: {secret['type']}")
-            logger.info(f"Original: {secret['original']}")
-            logger.info(f"Encrypted: {secret['encrypted']}")
+            found_secrets += 1
+            # Log the findings
+            logger.info(
+                f"\nService: {match.service}"
+                f"\nType: {match.type}"
+                f"\nOriginal: {match.value}"
+                f"\nEncrypted: {hidden_secret}"
+            )
 
         # Convert back to string
         protected_string = "".join(protected_text)
         print(f"\nProtected text:\n{protected_string}")
-        return protected_string, len(found_secrets)
+        return protected_string, found_secrets
 
 
 class SecretsEncryptor(SecretsModifier):
@@ -175,7 +182,9 @@ class SecretsEncryptor(SecretsModifier):
         )
         return f"REDACTED<${encrypted_value}>"
 
-    def _notify_secret(self, notify_string):
+    def _notify_secret(self, match: Match, protected_text: List[str]) -> None:
+        secret_lines = self._get_surrounding_secret_lines(protected_text, match.line_number)
+        notify_string = f"{match.service} - {match.type}:\n{secret_lines}"
         self._context.add_alert(
             self._name, trigger_string=notify_string, severity_category=AlertSeverity.CRITICAL
         )
@@ -194,7 +203,7 @@ class SecretsObfuscator(SecretsModifier):
         """
         return "*" * 32
 
-    def _notify_secret(self, secret):
+    def _notify_secret(self, match: Match, protected_text: List[str]) -> None:
         pass
 
 
