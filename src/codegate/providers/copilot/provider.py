@@ -8,7 +8,7 @@ from urllib.parse import unquote, urljoin, urlparse
 import structlog
 from litellm.types.utils import Delta, ModelResponse, StreamingChoices
 
-from codegate.ca.codegate_ca import CertificateAuthority
+from codegate.ca.codegate_ca import CertificateAuthority, TLSCertDomainManager
 from codegate.codegate_logging import setup_logging
 from codegate.config import Config
 from codegate.pipeline.base import PipelineContext
@@ -147,6 +147,7 @@ class CopilotProvider(asyncio.Protocol):
         self.ssl_context: Optional[ssl.SSLContext] = None
         self.proxy_ep: Optional[str] = None
         self.ca = CertificateAuthority.get_instance()
+        self.cert_manager = TLSCertDomainManager(self.ca)
         self._closing = False
         self.pipeline_factory = PipelineFactory(SecretsManager())
         self.context_tracking: Optional[PipelineContext] = None
@@ -494,8 +495,8 @@ class CopilotProvider(asyncio.Protocol):
             self.target_host, port = path.split(":")
             self.target_port = int(port)
 
-            cert_path, key_path = self.ca.get_domain_certificate(self.target_host)
-            self.ssl_context = self._create_ssl_context(cert_path, key_path)
+            # Get SSL context through the TLS handler
+            self.ssl_context = self.cert_manager.get_domain_context(self.target_host)
 
             self.is_connect = True
             asyncio.create_task(self.connect_to_target())
@@ -504,13 +505,6 @@ class CopilotProvider(asyncio.Protocol):
         except Exception as e:
             logger.error(f"Error handling CONNECT: {e}")
             self.send_error_response(502, str(e).encode())
-
-    def _create_ssl_context(self, cert_path: str, key_path: str) -> ssl.SSLContext:
-        """Create SSL context for CONNECT tunneling"""
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(cert_path, key_path)
-        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-        return ssl_context
 
     async def connect_to_target(self) -> None:
         """Establish connection to target for CONNECT requests"""
@@ -616,7 +610,7 @@ class CopilotProvider(asyncio.Protocol):
         """Run the proxy server"""
         try:
             ca = CertificateAuthority.get_instance()
-            ssl_context = ca.create_ssl_context()
+            ssl_context = ca.create_server_ssl_context()
             config = Config.get_config()
             server = await cls.create_proxy_server(config.host, config.proxy_port, ssl_context)
 

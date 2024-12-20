@@ -113,7 +113,8 @@ class DbRecorder(DbCodeGate):
                 """
         )
         recorded_request = await self._insert_pydantic_model(prompt_params, sql)
-        logger.debug(f"Recorded request: {recorded_request}")
+        # Uncomment to debug the recorded request
+        # logger.debug(f"Recorded request: {recorded_request}")
         return recorded_request
 
     async def record_outputs(self, outputs: List[Output]) -> Optional[Output]:

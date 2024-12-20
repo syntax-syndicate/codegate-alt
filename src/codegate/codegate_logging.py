@@ -146,7 +146,7 @@ def setup_logging(
     root_logger.addHandler(stderr_handler)
 
     # Set explicitly the log level for other modules
-    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy").disabled = True
     logging.getLogger("uvicorn.error").disabled = True
 
     # Create a logger for our package

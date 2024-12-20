@@ -133,7 +133,8 @@ class PipelineContext:
                 type="fim" if is_fim_request else "chat",
                 request=request_str,
             )
-            logger.debug(f"Added input request to context: {self.input_request}")
+            # Uncomment the below to debug the input
+            # logger.debug(f"Added input request to context: {self.input_request}")
         except Exception as e:
             logger.warning(f"Failed to serialize input request: {normalized_request}", error=str(e))
 
