@@ -41,14 +41,9 @@ class TLSCertDomainManager:
         self._context_cache: Dict[str, ssl.SSLContext] = {}
 
     def get_domain_context(self, server_name: str) -> ssl.SSLContext:
-        logger.debug(f"Getting domain context for server_name: {server_name}")
-        if server_name not in self._context_cache:
-            logger.debug(f"No cached SSL context for {server_name}, creating new one.")
-            cert_path, key_path = self._ca.get_domain_certificate(server_name)
-            context = self._create_domain_ssl_context(cert_path, key_path, server_name)
-            self._context_cache[server_name] = context
-            logger.debug(f"Created new SSL context for {server_name}")
-        return self._context_cache[server_name]
+        cert_path, key_path = self._ca.get_domain_certificate(server_name)
+        context = self._create_domain_ssl_context(cert_path, key_path, server_name)
+        return context
 
     def _create_domain_ssl_context(
         self, cert_path: str, key_path: str, domain: str
@@ -56,6 +51,7 @@ class TLSCertDomainManager:
         """
         Domain SNI Context Setting
         """
+
         logger.debug(f"Loading cert chain from {cert_path} for domain {domain}")
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         try:
@@ -364,8 +360,7 @@ class CertificateAuthority:
                     )
                 # Check if certificate is still valid beyond the grace period
                 expiry_date = datetime.now(timezone.utc) + timedelta(days=TLS_GRACE_PERIOD_DAYS)
-                logger.debug(f"Expiry date: {expiry_date}")
-                logger.debug(f"Certificate expiry: {domain_cert.not_valid_after}")
+                logger.debug(f"Certificate expiry: {domain_cert.not_valid_after_utc}")
                 if domain_cert.not_valid_after_utc > expiry_date:
                     logger.debug(
                         f"Using cached certificate for {domain} from {cached.cert_path}"
