@@ -1,6 +1,5 @@
 import os
 import ssl
-import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
@@ -10,7 +9,7 @@ from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 from codegate.config import Config
@@ -41,20 +40,15 @@ class TLSCertDomainManager:
         self._cert_cache: Dict[str, CachedCertificate] = {}
         self._context_cache: Dict[str, ssl.SSLContext] = {}
 
-        # Add lock for thread-safe operations, save anything bad happening with
-        # cache race conditions!!!
-        self._cache_lock = threading.Lock()
-
     def get_domain_context(self, server_name: str) -> ssl.SSLContext:
         logger.debug(f"Getting domain context for server_name: {server_name}")
-        with self._cache_lock:
-            if server_name not in self._context_cache:
-                logger.debug(f"No cached SSL context for {server_name}, creating new one.")
-                cert_path, key_path = self._ca.get_domain_certificate(server_name)
-                context = self._create_domain_ssl_context(cert_path, key_path, server_name)
-                self._context_cache[server_name] = context
-                logger.debug(f"Created new SSL context for {server_name}")
-            return self._context_cache[server_name]
+        if server_name not in self._context_cache:
+            logger.debug(f"No cached SSL context for {server_name}, creating new one.")
+            cert_path, key_path = self._ca.get_domain_certificate(server_name)
+            context = self._create_domain_ssl_context(cert_path, key_path, server_name)
+            self._context_cache[server_name] = context
+            logger.debug(f"Created new SSL context for {server_name}")
+        return self._context_cache[server_name]
 
     def _create_domain_ssl_context(
         self, cert_path: str, key_path: str, domain: str
@@ -116,8 +110,6 @@ class CertificateAuthority:
         # Use a separate cache for SSL contexts
         self._context_cache: Dict[str, Tuple[ssl.SSLContext, datetime]] = {}
 
-        # Add a lock for thread-safe cache operations
-        self._cache_lock = threading.Lock()
         CertificateAuthority._instance = self
 
         # Load existing certificates into cache
@@ -147,7 +139,10 @@ class CertificateAuthority:
         expiry_date = current_time + timedelta(days=TLS_GRACE_PERIOD_DAYS)
 
         for filename in os.listdir(certs_dir):
-            if filename.endswith('.crt') and not filename in [Config.get_config().ca_cert, Config.get_config().server_cert]:
+            if (
+                filename.endswith('.crt') and
+                filename not in [Config.get_config().ca_cert, Config.get_config().server_cert]
+            ):
                 cert_path = os.path.join(certs_dir, filename)
                 key_path = os.path.join(certs_dir, filename.replace('.crt', '.key'))
 
@@ -179,12 +174,11 @@ class CertificateAuthority:
                     # Check if certificate is still valid
                     if cert.not_valid_after_utc > expiry_date:
                         logger.debug(f"Loading valid certificate for {common_name}")
-                        with self._cache_lock:
-                            self._cert_cache[common_name] = CachedCertificate(
-                                cert_path=cert_path,
-                                key_path=key_path,
-                                creation_time=datetime.utcnow(),
-                            )
+                        self._cert_cache[common_name] = CachedCertificate(
+                            cert_path=cert_path,
+                            key_path=key_path,
+                            creation_time=datetime.utcnow(),
+                        )
                     else:
                         logger.debug(f"Skipping expired certificate for {common_name}")
 
@@ -196,45 +190,44 @@ class CertificateAuthority:
 
     def _get_cached_ca_certificates(self) -> Tuple[x509.Certificate, rsa.RSAPrivateKey]:
         """Get CA certificates from cache or load them if needed."""
-        with self._cache_lock:
-            current_time = datetime.now(timezone.utc)
+        current_time = datetime.now(timezone.utc)
 
-            # Check if certificates are loaded and not expired
-            if (
-                self._ca_cert is not None
-                and self._ca_key is not None
-                and self._ca_cert_expiry is not None
-                and current_time < self._ca_cert_expiry
-            ):
-                return self._ca_cert, self._ca_key
+        # Check if certificates are loaded and not expired
+        if (
+            self._ca_cert is not None
+            and self._ca_key is not None
+            and self._ca_cert_expiry is not None
+            and current_time < self._ca_cert_expiry
+        ):
+            return self._ca_cert, self._ca_key
 
-            # Load certificates from disk
-            logger.debug("Loading CA certificates from disk")
-            ca_cert_path = self.get_cert_path(Config.get_config().ca_cert)
-            ca_key_path = self.get_cert_path(Config.get_config().ca_key)
+        # Load certificates from disk
+        logger.debug("Loading CA certificates from disk")
+        ca_cert_path = self.get_cert_path(Config.get_config().ca_cert)
+        ca_key_path = self.get_cert_path(Config.get_config().ca_key)
 
-            try:
-                with open(ca_cert_path, "rb") as f:
-                    self._ca_cert = x509.load_pem_x509_certificate(f.read(), default_backend())
-                    self._ca_cert_expiry = self._ca_cert.not_valid_after_utc
+        try:
+            with open(ca_cert_path, "rb") as f:
+                self._ca_cert = x509.load_pem_x509_certificate(f.read(), default_backend())
+                self._ca_cert_expiry = self._ca_cert.not_valid_after_utc
 
-                with open(ca_key_path, "rb") as f:
-                    self._ca_key = serialization.load_pem_private_key(
-                        f.read(), password=None, backend=default_backend()
-                    )
+            with open(ca_key_path, "rb") as f:
+                self._ca_key = serialization.load_pem_private_key(
+                    f.read(), password=None, backend=default_backend()
+                )
 
-                self._ca_last_load_time = current_time
-                logger.debug("Successfully loaded and cached CA certificates")
-                return self._ca_cert, self._ca_key
+            self._ca_last_load_time = current_time
+            logger.debug("Successfully loaded and cached CA certificates")
+            return self._ca_cert, self._ca_key
 
-            except Exception as e:
-                logger.error(f"Failed to load CA certificates: {e}")
-                # Clear cached values on error
-                self._ca_cert = None
-                self._ca_key = None
-                self._ca_cert_expiry = None
-                self._ca_last_load_time = None
-                raise
+        except Exception as e:
+            logger.error(f"Failed to load CA certificates: {e}")
+            # Clear cached values on error
+            self._ca_cert = None
+            self._ca_key = None
+            self._ca_cert_expiry = None
+            self._ca_last_load_time = None
+            raise
 
     def remove_certificates(self) -> None:
         """Remove all cached certificates and contexts"""
@@ -246,11 +239,10 @@ class CertificateAuthority:
             os.rmdir(self.certs_dir)
             os.makedirs(self.certs_dir)
             # Clear CA certificate cache
-            with self._cache_lock:
-                self._ca_cert = None
-                self._ca_key = None
-                self._ca_cert_expiry = None
-                self._ca_last_load_time = None
+            self._ca_cert = None
+            self._ca_key = None
+            self._ca_cert_expiry = None
+            self._ca_last_load_time = None
         except OSError as e:
             logger.error(f"Failed to remove certs directory: {e}")
             raise
@@ -362,103 +354,95 @@ class CertificateAuthority:
         # Use cached CA certificates
         ca_cert, ca_key = self._get_cached_ca_certificates()
 
-        with self._cache_lock:
-            cached = self._cert_cache.get(domain)
-            if cached:
-                # Validate the cached certificate's expiry
-                try:
-                    with open(cached.cert_path, "rb") as domain_cert_file:
-                        domain_cert = x509.load_pem_x509_certificate(
-                            domain_cert_file.read(), default_backend()
-                        )
-                    # Check if certificate is still valid beyond the grace period
-                    expiry_date = datetime.now(timezone.utc) + timedelta(days=TLS_GRACE_PERIOD_DAYS)
-                    logger.debug(f"Expiry date: {expiry_date}")
-                    logger.debug(f"Certificate expiry: {domain_cert.not_valid_after}")
-                    if domain_cert.not_valid_after_utc > expiry_date:
-                        logger.debug(
-                            f"Using cached certificate for {domain} from {cached.cert_path}"
-                        )  # noqa: E501
-                        return cached.cert_path, cached.key_path
-                    else:
-                        logger.debug(f"Cached certificate for {domain} is expiring soon, renewing.")
-                except Exception as e:
-                    logger.error(f"Failed to validate cached certificate for {domain}: {e}")
-
-            logger.debug(f"Generating new certificate for domain: {domain}")
-            key = rsa.generate_private_key(
-                public_exponent=65537,
-                key_size=2048,
-            )
-
-            # Nothing is in the cache or its expired, generate a new one!
-
-            name = x509.Name(
-                [
-                    x509.NameAttribute(NameOID.COMMON_NAME, domain),
-                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate Generated"),
-                ]
-            )
-
-            builder = x509.CertificateBuilder()
-            builder = builder.subject_name(name)
-            builder = builder.issuer_name(ca_cert.subject)
-            builder = builder.public_key(key.public_key())
-            builder = builder.serial_number(x509.random_serial_number())
-            builder = builder.not_valid_before(datetime.now(timezone.utc))
-            builder = builder.not_valid_after(datetime.now(timezone.utc) + timedelta(days=365))
-            builder = builder.add_extension(
-                x509.SubjectAlternativeName([x509.DNSName(domain)]), critical=False
-            )
-            builder = builder.add_extension(
-                x509.ExtendedKeyUsage(
-                    [ExtendedKeyUsageOID.SERVER_AUTH, ExtendedKeyUsageOID.CLIENT_AUTH]
-                ),
-                critical=False,
-            )
-            builder = builder.add_extension(
-                x509.BasicConstraints(ca=False, path_length=None), critical=False
-            )
-
-            certificate = builder.sign(private_key=ca_key, algorithm=hashes.SHA256())
-
-            cert_dir = Config.get_config().certs_dir
-            domain_cert_path = os.path.join(cert_dir, f"{domain}.crt")
-            domain_key_path = os.path.join(cert_dir, f"{domain}.key")
-
+        cached = self._cert_cache.get(domain)
+        if cached:
+            # Validate the cached certificate's expiry
             try:
-                os.makedirs(cert_dir, exist_ok=True)
-            except OSError as e:
-                logger.error(f"Failed to create directory {cert_dir} for {domain}: {e}")
-                raise
-
-            try:
-                logger.debug(f"Saving certificate to {domain_cert_path} for domain {domain}")
-                with open(domain_cert_path, "wb") as f:
-                    f.write(certificate.public_bytes(serialization.Encoding.PEM))
-
-                logger.debug(f"Saving key to {domain_key_path} for domain {domain}")
-                with open(domain_key_path, "wb") as f:
-                    f.write(
-                        key.private_bytes(
-                            encoding=serialization.Encoding.PEM,
-                            format=serialization.PrivateFormat.PKCS8,
-                            encryption_algorithm=serialization.NoEncryption(),
-                        )
+                with open(cached.cert_path, "rb") as domain_cert_file:
+                    domain_cert = x509.load_pem_x509_certificate(
+                        domain_cert_file.read(), default_backend()
                     )
-            except OSError as e:
-                logger.error(f"Failed to save certificate or key for {domain}: {e}")
-                raise
+                # Check if certificate is still valid beyond the grace period
+                expiry_date = datetime.now(timezone.utc) + timedelta(days=TLS_GRACE_PERIOD_DAYS)
+                logger.debug(f"Expiry date: {expiry_date}")
+                logger.debug(f"Certificate expiry: {domain_cert.not_valid_after}")
+                if domain_cert.not_valid_after_utc > expiry_date:
+                    logger.debug(
+                        f"Using cached certificate for {domain} from {cached.cert_path}"
+                    )  # noqa: E501
+                    return cached.cert_path, cached.key_path
+                else:
+                    logger.debug(f"Cached certificate for {domain} is expiring soon, renewing.")
+            except Exception as e:
+                logger.error(f"Failed to validate cached certificate for {domain}: {e}")
 
-            with self._cache_lock:
-                self._cert_cache[domain] = CachedCertificate(
-                    cert_path=domain_cert_path,
-                    key_path=domain_key_path,
-                    creation_time=datetime.utcnow(),
+        logger.debug(f"Generating new certificate for domain: {domain}")
+        key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+
+        # Nothing is in the cache or its expired, generate a new one!
+
+        name = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, domain),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "CodeGate Generated"),
+            ]
+        )
+
+        builder = x509.CertificateBuilder()
+        builder = builder.subject_name(name)
+        builder = builder.issuer_name(ca_cert.subject)
+        builder = builder.public_key(key.public_key())
+        builder = builder.serial_number(x509.random_serial_number())
+        builder = builder.not_valid_before(datetime.now(timezone.utc))
+        builder = builder.not_valid_after(datetime.now(timezone.utc) + timedelta(days=365))
+        builder = builder.add_extension(
+            x509.SubjectAlternativeName([x509.DNSName(domain)]), critical=False
+        )
+        builder = builder.add_extension(
+            x509.ExtendedKeyUsage(
+                [ExtendedKeyUsageOID.SERVER_AUTH, ExtendedKeyUsageOID.CLIENT_AUTH]
+            ),
+            critical=False,
+        )
+        builder = builder.add_extension(
+            x509.BasicConstraints(ca=False, path_length=None), critical=False
+        )
+
+        certificate = builder.sign(private_key=ca_key, algorithm=hashes.SHA256())
+
+        cert_dir = Config.get_config().certs_dir
+        domain_cert_path = os.path.join(cert_dir, f"{domain}.crt")
+        domain_key_path = os.path.join(cert_dir, f"{domain}.key")
+
+        try:
+            os.makedirs(cert_dir, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create directory {cert_dir} for {domain}: {e}")
+            raise
+
+        try:
+            logger.debug(f"Saving certificate to {domain_cert_path} for domain {domain}")
+            with open(domain_cert_path, "wb") as f:
+                f.write(certificate.public_bytes(serialization.Encoding.PEM))
+
+            logger.debug(f"Saving key to {domain_key_path} for domain {domain}")
+            with open(domain_key_path, "wb") as f:
+                f.write(
+                    key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption(),
+                    )
                 )
+        except OSError as e:
+            logger.error(f"Failed to save certificate or key for {domain}: {e}")
+            raise
 
-            logger.debug(f"Generated and cached new certificate for {domain}")
-            return domain_cert_path, domain_key_path
+        logger.debug(f"Generated and cached new certificate for {domain}")
+        return domain_cert_path, domain_key_path
 
     def load_ca_certificates(self) -> Tuple[x509.Certificate, rsa.RSAPrivateKey]:
         """Load CA certificates for HTTPS proxy"""
@@ -622,11 +606,11 @@ class CertificateAuthority:
                 "CA certificates missing or invalid, generating new CA and server certificates."
             )
             # Clear the CA certificate cache before regenerating
-            with self._cache_lock:
-                self._ca_cert = None
-                self._ca_key = None
-                self._ca_cert_expiry = None
-                self._ca_last_load_time = None
+            # with self._cache_lock:
+            self._ca_cert = None
+            self._ca_key = None
+            self._ca_cert_expiry = None
+            self._ca_last_load_time = None
 
             self.generate_ca_certificates()
             self.generate_server_certificates()

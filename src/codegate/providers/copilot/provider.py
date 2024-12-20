@@ -21,7 +21,7 @@ from codegate.providers.copilot.pipeline import (
     CopilotFimPipeline,
     CopilotPipeline,
 )
-from codegate.providers.copilot.streaming import SSEProcessor4
+from codegate.providers.copilot.streaming import SSEProcessor
 
 setup_logging()
 logger = structlog.get_logger("codegate").bind(origin="copilot_proxy")
