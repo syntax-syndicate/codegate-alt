@@ -3,14 +3,16 @@ import asyncio
 import json
 import os
 import sqlite3
+
 import numpy as np
 import sqlite_vec
 
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
 from codegate.utils.utils import generate_vector_string
 
+
 class PackageImporter:
-    def __init__(self, jsonl_dir="data", db_path="./sqlite_data/packages.db"):
+    def __init__(self, jsonl_dir="data", db_path="./sqlite_data/vectordb.db"):
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.db_path = db_path
         self.json_files = [
@@ -41,19 +43,19 @@ class PackageImporter:
                 embedding BLOB
             )
         """)
-        
+
         # Create indexes for faster querying
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_name ON packages(name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_type ON packages(type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON packages(status)")
-        
+
         self.conn.commit()
 
     async def process_package(self, package):
         vector_str = generate_vector_string(package)
         vector = await self.inference_engine.embed(self.model_path, [vector_str])
         vector_array = np.array(vector[0], dtype=np.float32)
-        
+
         cursor = self.conn.cursor()
         cursor.execute("""
             INSERT INTO packages (name, type, status, description, embedding)
@@ -69,7 +71,7 @@ class PackageImporter:
 
     async def add_data(self):
         cursor = self.conn.cursor()
-        
+
         # Get existing packages
         cursor.execute("""
             SELECT name, type, status, description

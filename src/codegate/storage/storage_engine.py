@@ -1,9 +1,10 @@
-from typing import List
 import os
 import sqlite3
-import structlog
+from typing import List
+
 import numpy as np
 import sqlite_vec
+import structlog
 
 from codegate.config import Config
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
@@ -31,12 +32,16 @@ class StorageEngine:
         self.initialized = True
         self.data_path = data_path
         os.makedirs(data_path, exist_ok=True)
-        self.db_path = os.path.join(data_path, "packages.db")
+
+        # Use vec_db_path from config if available, otherwise fallback to default
+        config = Config.get_config()
+        self.db_path = config.vec_db_path if config and hasattr(config, 'vec_db_path') else os.path.join(data_path, "packages.db")
+
         self.inference_engine = LlamaCppInferenceEngine()
         self.model_path = (
             f"{Config.get_config().model_base_path}/{Config.get_config().embedding_model}"
         )
-        
+
         self.conn = self._get_connection()
         self._setup_schema()
 
@@ -70,12 +75,12 @@ class StorageEngine:
                 embedding BLOB
             )
         """)
-        
+
         # Create indexes for faster querying
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_name ON packages(name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_type ON packages(type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON packages(status)")
-        
+
         self.conn.commit()
 
     async def search_by_property(self, name: str, properties: List[str]) -> list[object]:
@@ -90,7 +95,7 @@ class StorageEngine:
                 FROM packages
                 WHERE LOWER({name}) IN ({placeholders})
             """
-            
+
             cursor.execute(query, [prop.lower() for prop in properties])
             results = []
             for row in cursor.fetchall():
@@ -120,7 +125,7 @@ class StorageEngine:
         """
         try:
             cursor = self.conn.cursor()
-            
+
             if packages and ecosystem and ecosystem in VALID_ECOSYSTEMS:
                 placeholders = ','.join('?' * len(packages))
                 query_sql = f"""
@@ -138,7 +143,7 @@ class StorageEngine:
                     params=params
                 )
                 cursor.execute(query_sql, params)
-                
+
             elif packages and not ecosystem:
                 placeholders = ','.join('?' * len(packages))
                 query_sql = f"""
@@ -154,13 +159,13 @@ class StorageEngine:
                     params=params
                 )
                 cursor.execute(query_sql, params)
-                
+
             elif query:
                 # Generate embedding for the query
                 query_vector = await self.inference_engine.embed(self.model_path, [query])
                 query_embedding = np.array(query_vector[0], dtype=np.float32)
                 query_embedding_bytes = query_embedding.tobytes()
-                
+
                 query_sql = """
                     WITH distances AS (
                         SELECT name, type, status, description,
@@ -213,7 +218,7 @@ class StorageEngine:
                 if query:  # Add distance for vector searches
                     result["metadata"] = {"distance": row[4]}
                 results.append(result)
-                
+
             return results
 
         except Exception as e:
