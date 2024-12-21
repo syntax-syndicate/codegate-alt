@@ -44,7 +44,7 @@ server_key: "server.key"   # Server key file name
 #    CODEGATE_SERVER_KEY
 
 # Storage configuration
-db_path: "./sqlite_data/packages.db"  # Path to SQLite database file
+vec_db_path: "./sqlite_data/vectordb.db"  # Path to SQLite vector database file for similarity search
 
 # Embedding model configuration
 model_base_path: "./codegate_volume/models"  # Base path for model files

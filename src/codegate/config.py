@@ -43,6 +43,7 @@ class Config:
     chat_model_n_gpu_layers: int = -1
     embedding_model: str = "all-minilm-L6-v2-q5_k_m.gguf"
     db_path: Optional[str] = None
+    vec_db_path: Optional[str] = "./sqlite_data/vectordb.db"  # Vector database
 
     # Certificate configuration
     certs_dir: str = "./codegate_volume/certs"
@@ -140,6 +141,8 @@ class Config:
                     "chat_model_n_gpu_layers", cls.chat_model_n_gpu_layers
                 ),
                 embedding_model=config_data.get("embedding_model", cls.embedding_model),
+                db_path=config_data.get("db_path", cls.db_path),
+                vec_db_path=config_data.get("vec_db_path", cls.vec_db_path),
                 certs_dir=config_data.get("certs_dir", cls.certs_dir),
                 ca_cert=config_data.get("ca_cert", cls.ca_cert),
                 ca_key=config_data.get("ca_key", cls.ca_key),
@@ -193,6 +196,10 @@ class Config:
                 config.server_key = os.environ["CODEGATE_SERVER_KEY"]
             if "CODEGATE_FORCE_CERTS" in os.environ:
                 config.force_certs = os.environ["CODEGATE_FORCE_CERTS"]
+            if "CODEGATE_DB_PATH" in os.environ:
+                config.db_path = os.environ["CODEGATE_DB_PATH"]
+            if "CODEGATE_VEC_DB_PATH" in os.environ:
+                config.vec_db_path = os.environ["CODEGATE_VEC_DB_PATH"]
 
             # Load provider URLs from environment variables
             for provider in DEFAULT_PROVIDER_URLS.keys():
@@ -224,6 +231,7 @@ class Config:
         server_key: Optional[str] = None,
         force_certs: Optional[bool] = None,
         db_path: Optional[str] = None,
+        vec_db_path: Optional[str] = None,
     ) -> "Config":
         """Load configuration with priority resolution.
 
@@ -250,7 +258,8 @@ class Config:
             server_cert: Optional path to server certificate
             server_key: Optional path to server key
             force_certs: Optional flag to force certificate generation
-            db_path: Optional path to the SQLite database file
+            db_path: Optional path to the main SQLite database file
+            vec_db_path: Optional path to the vector SQLite database file
 
         Returns:
             Config: Resolved configuration
@@ -299,6 +308,10 @@ class Config:
             config.server_key = env_config.server_key
         if "CODEGATE_FORCE_CERTS" in os.environ:
             config.force_certs = env_config.force_certs
+        if "CODEGATE_DB_PATH" in os.environ:
+            config.db_path = env_config.db_path
+        if "CODEGATE_VEC_DB_PATH" in os.environ:
+            config.vec_db_path = env_config.vec_db_path
 
         # Override provider URLs from environment
         for provider, url in env_config.provider_urls.items():
@@ -335,6 +348,8 @@ class Config:
             config.server_key = server_key
         if db_path is not None:
             config.db_path = db_path
+        if vec_db_path is not None:
+            config.vec_db_path = vec_db_path
         if force_certs is not None:
             config.force_certs = force_certs
 

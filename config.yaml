@@ -15,3 +15,6 @@ embedding_model: "all-minilm-L6-v2-q5_k_m.gguf"
 # Chat model configuration
 chat_model_n_ctx: 32768
 chat_model_n_gpu_layers: -1
+
+# Storage configuration
+vec_db_path: "./sqlite_data/vectordb.db"  # Path to SQLite vector database for similarity search
