@@ -6,26 +6,12 @@ host: "localhost"      # Host to bind to (use localhost for all interfaces)
 
 # Logging configuration
 log_level: "INFO"  # One of: ERROR, WARNING, INFO, DEBUG
+log_format: "JSON"  # One of: JSON, TEXT
 
-# Note: This configuration can be overridden by:
-# 1. CLI arguments (--port, --host, --log-level)
-# 2. Environment variables (CODEGATE_APP_PORT, CODEGATE_APP_HOST, CODEGATE_APP_LOG_LEVEL)
-
-
-# Embedding model configuration
-
-####
-# Inference model configuration
-##
-
-# Model to use for chatting
+# Model configuration
 model_base_path: "./codegate_volume/models"
-
-# Context length of the model
-chat_model_n_ctx: 32768
-
-# Number of layers to offload to GPU. If -1, all layers are offloaded.
-chat_model_n_gpu_layers: -1
-
-# Embedding model
 embedding_model: "all-minilm-L6-v2-q5_k_m.gguf"
+
+# Chat model configuration
+chat_model_n_ctx: 32768
+chat_model_n_gpu_layers: -1

@@ -1,30 +1,15 @@
 from typing import List
-
+import os
+import sqlite3
 import structlog
-import weaviate
-import weaviate.classes as wvc
-from weaviate.classes.config import DataType
-from weaviate.classes.query import Filter, MetadataQuery
-from weaviate.embedded import EmbeddedOptions
+import numpy as np
+import sqlite_vec
 
 from codegate.config import Config
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
 
 logger = structlog.get_logger("codegate")
 VALID_ECOSYSTEMS = ["npm", "pypi", "crates", "maven", "go"]
-
-schema_config = [
-    {
-        "name": "Package",
-        "properties": [
-            {"name": "name", "data_type": DataType.TEXT},
-            {"name": "type", "data_type": DataType.TEXT},
-            {"name": "status", "data_type": DataType.TEXT},
-            {"name": "description", "data_type": DataType.TEXT},
-        ],
-    },
-]
-
 
 class StorageEngine:
     __storage_engine = None
@@ -34,113 +19,92 @@ class StorageEngine:
             cls.__storage_engine = super().__new__(cls)
         return cls.__storage_engine
 
-    # This function is needed only for the unit testing for the
-    # mocks to work.
     @classmethod
     def recreate_instance(cls, *args, **kwargs):
         cls.__storage_engine = None
         return cls(*args, **kwargs)
 
-    def __init__(self, data_path="./weaviate_data"):
+    def __init__(self, data_path="./sqlite_data"):
         if hasattr(self, "initialized"):
             return
 
         self.initialized = True
         self.data_path = data_path
+        os.makedirs(data_path, exist_ok=True)
+        self.db_path = os.path.join(data_path, "packages.db")
         self.inference_engine = LlamaCppInferenceEngine()
         self.model_path = (
             f"{Config.get_config().model_base_path}/{Config.get_config().embedding_model}"
         )
-        self.schema_config = schema_config
-
-        # setup schema for weaviate
-        self.weaviate_client = self.get_client(self.data_path)
-        if self.weaviate_client is not None:
-            try:
-                self.weaviate_client.connect()
-                self.setup_schema(self.weaviate_client)
-            except Exception as e:
-                logger.error(f"Failed to connect or setup schema: {str(e)}")
+        
+        self.conn = self._get_connection()
+        self._setup_schema()
 
     def __del__(self):
         try:
-            self.weaviate_client.close()
+            if hasattr(self, 'conn'):
+                self.conn.close()
         except Exception as e:
-            logger.error(f"Failed to close client: {str(e)}")
+            logger.error(f"Failed to close connection: {str(e)}")
 
-    def get_client(self, data_path):
+    def _get_connection(self):
         try:
-            # Configure Weaviate logging
-            additional_env_vars = {
-                # Basic logging configuration
-                "LOG_FORMAT": Config.get_config().log_format.value.lower(),
-                "LOG_LEVEL": Config.get_config().log_level.value.lower(),
-                # Disable colored output
-                "LOG_FORCE_COLOR": "false",
-                # Configure JSON format
-                "LOG_JSON_FIELDS": "timestamp, level,message",
-                # Configure text format
-                "LOG_METHOD": Config.get_config().log_format.value.lower(),
-                "LOG_LEVEL_IN_UPPER": "false",  # Keep level lowercase like codegate format
-                # Disable additional fields
-                "LOG_GIT_HASH": "false",
-                "LOG_VERSION": "false",
-                "LOG_BUILD_INFO": "false",
-            }
-
-            client = weaviate.WeaviateClient(
-                embedded_options=EmbeddedOptions(
-                    persistence_data_path=data_path,
-                    additional_env_vars=additional_env_vars,
-                ),
-            )
-            return client
+            conn = sqlite3.connect(self.db_path)
+            conn.enable_load_extension(True)
+            sqlite_vec.load(conn)
+            conn.enable_load_extension(False)
+            return conn
         except Exception as e:
-            logger.error(f"Error during client creation: {str(e)}")
-            return None
+            logger.error("Failed to initialize database connection", error=str(e))
+            raise
 
-    def setup_schema(self, client):
-        for class_config in self.schema_config:
-            if not client.collections.exists(class_config["name"]):
-                client.collections.create(
-                    class_config["name"], properties=class_config["properties"]
-                )
-            logger.info(f"Weaviate schema for class {class_config['name']} setup complete.")
+    def _setup_schema(self):
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS packages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                description TEXT,
+                embedding BLOB
+            )
+        """)
+        
+        # Create indexes for faster querying
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_name ON packages(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_type ON packages(type)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON packages(status)")
+        
+        self.conn.commit()
 
     async def search_by_property(self, name: str, properties: List[str]) -> list[object]:
         if len(properties) == 0:
             return []
 
-        # Perform the vector search
-        if self.weaviate_client is None:
-            logger.error("Could not find client, not returning results.")
-            return []
-
-        if not self.weaviate_client:
-            logger.error("Invalid client, cannot perform search.")
-            return []
-
         try:
-            packages = self.weaviate_client.collections.get("Package")
-            response = packages.query.fetch_objects(
-                filters=Filter.by_property(name).contains_any(properties),
-            )
-
-            if not response:
-                return []
-
-            # Weaviate performs substring matching of the properties. So
-            # we need to double check the response.
-            properties = [prop.lower() for prop in properties]
-            filterd_objects = []
-            for object in response.objects:
-                if object.properties[name].lower() in properties:
-                    filterd_objects.append(object)
-            response.objects = filterd_objects
-
-            return response.objects
+            cursor = self.conn.cursor()
+            placeholders = ','.join('?' * len(properties))
+            query = f"""
+                SELECT name, type, status, description
+                FROM packages
+                WHERE LOWER({name}) IN ({placeholders})
+            """
+            
+            cursor.execute(query, [prop.lower() for prop in properties])
+            results = []
+            for row in cursor.fetchall():
+                results.append({
+                    "properties": {
+                        "name": row[0],
+                        "type": row[1],
+                        "status": row[2],
+                        "description": row[3]
+                    }
+                })
+            return results
         except Exception as e:
-            logger.error(f"An error occurred: {str(e)}")
+            logger.error(f"An error occurred during property search: {str(e)}")
             return []
 
     async def search(
@@ -152,66 +116,105 @@ class StorageEngine:
         distance: float = 0.3,
     ) -> list[object]:
         """
-        Search the 'Package' collection based on a query string, ecosystem and packages.
-        If packages and ecosystem are both not none, then filter the objects using them.
-        If packages is not none and ecosystem is none, then filter the objects using
-        package names.
-        If packages is none, then perform vector search.
-
-        Args:
-            query (str): The text query for which to search.
-            limit (int): The number of results to return.
-            distance (float): The distance threshold for the search.
-            ecosystem (str): The ecosystem to search in.
-            packages (list): The list of packages to filter the search.
-
-        Returns:
-            list: A list of matching results with their properties and distances.
+        Search packages based on vector similarity or direct property matches.
         """
-
         try:
-            collection = self.weaviate_client.collections.get("Package")
-
-            response = None
+            cursor = self.conn.cursor()
+            
             if packages and ecosystem and ecosystem in VALID_ECOSYSTEMS:
-                response = collection.query.fetch_objects(
-                    filters=wvc.query.Filter.all_of([
-                        wvc.query.Filter.by_property("name").contains_any(packages),
-                        wvc.query.Filter.by_property("type").equal(ecosystem)
-                    ]),
+                placeholders = ','.join('?' * len(packages))
+                query_sql = f"""
+                    SELECT name, type, status, description
+                    FROM packages
+                    WHERE LOWER(name) IN ({placeholders})
+                    AND LOWER(type) = ?
+                """
+                params = [p.lower() for p in packages] + [ecosystem.lower()]
+                logger.debug(
+                    "Searching by package names and ecosystem",
+                    packages=packages,
+                    ecosystem=ecosystem,
+                    sql=query_sql,
+                    params=params
                 )
-                response.objects = [
-                    obj
-                    for obj in response.objects
-                    if obj.properties["name"].lower() in packages
-                    and obj.properties["type"].lower() == ecosystem.lower()
-                ]
+                cursor.execute(query_sql, params)
+                
             elif packages and not ecosystem:
-                response = collection.query.fetch_objects(
-                    filters=wvc.query.Filter.all_of([
-                        wvc.query.Filter.by_property("name").contains_any(packages),
-                    ]),
+                placeholders = ','.join('?' * len(packages))
+                query_sql = f"""
+                    SELECT name, type, status, description
+                    FROM packages
+                    WHERE LOWER(name) IN ({placeholders})
+                """
+                params = [p.lower() for p in packages]
+                logger.debug(
+                    "Searching by package names only",
+                    packages=packages,
+                    sql=query_sql,
+                    params=params
                 )
-                response.objects = [
-                    obj
-                    for obj in response.objects
-                    if obj.properties["name"].lower() in packages
-                ]
+                cursor.execute(query_sql, params)
+                
             elif query:
-                # Perform the vector search
-                # Generate the vector for the query
+                # Generate embedding for the query
                 query_vector = await self.inference_engine.embed(self.model_path, [query])
-
-                response = collection.query.near_vector(
-                    query_vector[0],
-                    limit=limit,
-                    distance=distance,
-                    return_metadata=MetadataQuery(distance=True),
+                query_embedding = np.array(query_vector[0], dtype=np.float32)
+                query_embedding_bytes = query_embedding.tobytes()
+                
+                query_sql = """
+                    WITH distances AS (
+                        SELECT name, type, status, description,
+                               vss_distance(embedding, ?) as distance
+                        FROM packages
+                    )
+                    SELECT name, type, status, description, distance
+                    FROM distances
+                    WHERE distance <= ?
+                    ORDER BY distance ASC
+                    LIMIT ?
+                """
+                logger.debug(
+                    "Performing vector similarity search",
+                    query=query,
+                    distance_threshold=distance,
+                    limit=limit
                 )
-
-            if not response:
+                cursor.execute(query_sql, (
+                    query_embedding_bytes,
+                    distance,
+                    limit
+                ))
+            else:
                 return []
-            return response.objects
+
+            # Log the raw SQL results
+            rows = cursor.fetchall()
+            logger.debug(
+                "Raw SQL results",
+                row_count=len(rows),
+                rows=[{
+                    "name": row[0],
+                    "type": row[1],
+                    "status": row[2],
+                    "description": row[3]
+                } for row in rows]
+            )
+
+            results = []
+            for row in rows:
+                result = {
+                    "properties": {
+                        "name": row[0],
+                        "type": row[1],
+                        "status": row[2],
+                        "description": row[3]
+                    }
+                }
+                if query:  # Add distance for vector searches
+                    result["metadata"] = {"distance": row[4]}
+                results.append(result)
+                
+            return results
 
         except Exception as e:
             logger.error(f"Error during search: {str(e)}")
