@@ -7,6 +7,8 @@
 
 ## Introduction
 
+[CodeGate Animated Gif]("./assets/codegate.gif"
+
 CodeGate is a local gateway that makes AI coding assistants safer. CodeGate
 ensures AI-generated recommendations adhere to best practices, while
 safeguarding your code's integrity, and protecting your individual privacy. With
