@@ -143,7 +143,7 @@ async def test_search_by_query(storage_engine):
         storage_engine.conn.commit()
 
         # Test search by query
-        results = await storage_engine.search(query="test")
+        results = await storage_engine.search(query="test invokehttp")
         assert len(results) == 1
         assert results[0]["properties"]["name"] == "invokehttp"
         assert results[0]["properties"]["type"] == "pypi"

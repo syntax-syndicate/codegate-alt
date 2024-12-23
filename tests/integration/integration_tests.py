@@ -76,9 +76,9 @@ class CodegateTestRunner:
         return response_message
 
     async def calculate_string_similarity(self, str1, str2):
-        vector1 = await self.inference_engine.embed(self.embedding_model, str1)
-        vector2 = await self.inference_engine.embed(self.embedding_model, str2)
-        similarity = cosine_similarity([vector1], [vector2])
+        vector1 = await self.inference_engine.embed(self.embedding_model, [str1])
+        vector2 = await self.inference_engine.embed(self.embedding_model, [str2])
+        similarity = cosine_similarity(vector1, vector2)
         return similarity[0]
 
     @staticmethod
