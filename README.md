@@ -7,6 +7,8 @@
 
 ## Introduction
 
+<img src="./assets/codegate.gif" style="width: 70%; height: 70%;" />
+
 CodeGate is a local gateway that makes AI coding assistants safer. CodeGate
 ensures AI-generated recommendations adhere to best practices, while
 safeguarding your code's integrity, and protecting your individual privacy. With
