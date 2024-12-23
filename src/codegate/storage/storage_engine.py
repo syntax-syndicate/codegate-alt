@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 from typing import List
 
@@ -90,7 +91,7 @@ class StorageEngine:
 
         self.conn.commit()
 
-    async def search_by_property(self, name: str, properties: List[str]) -> list[object]:
+    async def search_by_property(self, name: str, properties: List[str]) -> list[dict]:
         if len(properties) == 0:
             return []
 
@@ -126,7 +127,7 @@ class StorageEngine:
         query: str = None,
         ecosystem: str = None,
         packages: List[str] = None,
-        limit: int = 5,
+        limit: int = 50,
         distance: float = 0.3,
     ) -> list[object]:
         """
@@ -209,7 +210,23 @@ class StorageEngine:
             )
 
             results = []
+            query_words = None
+            if query:
+                # Remove all non alphanumeric characters at the end of the string
+                cleaned_query = re.sub(r"[^\w\s]*$", "", query.lower())
+
+                # Remove all non alphanumeric characters in the middle of the string
+                # except @, /, . and -
+                cleaned_query = re.sub(r"[^\w@\/\.-]", " ", cleaned_query)
+
+                # Tokenize the cleaned query
+                query_words = cleaned_query.split()
+
             for row in rows:
+                # Only keep the packages that explicitly appear in the query
+                if query_words and (row[0].lower() not in query_words):
+                    continue
+
                 result = {
                     "properties": {
                         "name": row[0],
