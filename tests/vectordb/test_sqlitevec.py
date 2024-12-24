@@ -25,16 +25,16 @@ def mock_sqlite_vec():
             # Insert a mock distance value that will be used in searches
             cursor.execute("INSERT INTO vector_distances (distance) VALUES (0.1)")
 
-            # Create a view that simulates the vss_distance function
+            # Create a view that simulates the vec_distance_cosine function
             cursor.execute(
                 """
-            CREATE VIEW IF NOT EXISTS vss_distance_view AS
+            CREATE VIEW IF NOT EXISTS vec_distance_cosine_view AS
             SELECT distance FROM vector_distances WHERE id = 1
             """
             )
 
             # Create a function that returns the mock distance
-            conn.create_function("vss_distance", 2, lambda x, y: 0.1)
+            conn.create_function("vec_distance_cosine", 2, lambda x, y: 0.1)
 
         mock_load.side_effect = setup_vector_similarity
         yield mock_load

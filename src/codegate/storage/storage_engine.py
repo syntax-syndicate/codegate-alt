@@ -178,7 +178,7 @@ class StorageEngine:
                 query_sql = """
                     WITH distances AS (
                         SELECT name, type, status, description,
-                               vss_distance(embedding, ?) as distance
+                               vec_distance_cosine(embedding, ?) as distance
                         FROM packages
                     )
                     SELECT name, type, status, description, distance
