@@ -135,12 +135,12 @@ class CertificateAuthority:
         expiry_date = current_time + timedelta(days=TLS_GRACE_PERIOD_DAYS)
 
         for filename in os.listdir(certs_dir):
-            if (
-                filename.endswith('.crt') and
-                filename not in [Config.get_config().ca_cert, Config.get_config().server_cert]
-            ):
+            if filename.endswith(".crt") and filename not in [
+                Config.get_config().ca_cert,
+                Config.get_config().server_cert,
+            ]:
                 cert_path = os.path.join(certs_dir, filename)
-                key_path = os.path.join(certs_dir, filename.replace('.crt', '.key'))
+                key_path = os.path.join(certs_dir, filename.replace(".crt", ".key"))
 
                 # Skip if key file doesn't exist
                 if not os.path.exists(key_path):
@@ -319,7 +319,6 @@ class CertificateAuthority:
         # Set expiry time for cache
         self._ca_cert_expiry = self._ca_cert.not_valid_after_utc
         self._ca_last_load_time = datetime.now(timezone.utc)
-
 
         # Define file paths for certificate and key
         ca_cert_path = self.get_cert_path(Config.get_config().ca_cert)

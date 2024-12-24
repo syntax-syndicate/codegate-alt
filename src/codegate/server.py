@@ -18,6 +18,7 @@ from codegate.providers.vllm.provider import VLLMProvider
 
 logger = structlog.get_logger("codegate")
 
+
 async def custom_error_handler(request, exc: Exception):
     """This is a Middleware to handle exceptions and log them."""
     # Capture the stack trace

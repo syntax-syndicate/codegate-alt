@@ -43,8 +43,9 @@ htmlcov/
 # Weaviate
 weaviate_data/
 
-# CodeGate Dashboard DB
+# CodeGate Dashboard DB & VectoroDB
 codegate.db
+sqlite_data/vectordb.db
 
 # certificate directory
 *certs/

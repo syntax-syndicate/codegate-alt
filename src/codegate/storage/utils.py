@@ -1,22 +1,29 @@
-import weaviate
-from weaviate.embedded import EmbeddedOptions
+import os
+import shutil
 
 
 def restore_storage_backup(backup_path: str, backup_name: str):
-    client = weaviate.WeaviateClient(
-        embedded_options=EmbeddedOptions(
-            persistence_data_path="./weaviate_data",
-            grpc_port=50052,
-            additional_env_vars={
-                "ENABLE_MODULES": "backup-filesystem",
-                "BACKUP_FILESYSTEM_PATH": backup_path,
-            },
-        )
-    )
-    client.connect()
+    """
+    Restore a SQLite database backup.
+
+    Args:
+        backup_path: The directory containing the backup
+        backup_name: The name of the backup file
+    """
+    backup_file = os.path.join(backup_path, backup_name)
+    target_dir = "./sqlite_data"
+    target_file = os.path.join(target_dir, "vectordb.db")
+
+    if not os.path.exists(backup_file):
+        print(f"Backup file not found: {backup_file}")
+        return
+
     try:
-        client.backup.restore(backup_id=backup_name, backend="filesystem", wait_for_completion=True)
+        # Create target directory if it doesn't exist
+        os.makedirs(target_dir, exist_ok=True)
+
+        # Copy the backup file to the target location
+        shutil.copy2(backup_file, target_file)
+        print(f"Successfully restored backup from {backup_file}")
     except Exception as e:
         print(f"Failed to restore backup: {e}")
-    finally:
-        client.close()

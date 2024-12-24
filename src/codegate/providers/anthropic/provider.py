@@ -1,7 +1,7 @@
 import json
-import structlog
 from typing import Optional
 
+import structlog
 from fastapi import Header, HTTPException, Request
 
 from codegate.pipeline.base import SequentialPipelineProcessor

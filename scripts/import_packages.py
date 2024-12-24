@@ -2,152 +2,125 @@ import argparse
 import asyncio
 import json
 import os
-import shutil
+import sqlite3
 
-import weaviate
-from weaviate.classes.config import DataType, Property
-from weaviate.embedded import EmbeddedOptions
-from weaviate.util import generate_uuid5
+import numpy as np
+import sqlite_vec
 
 from codegate.inference.inference_engine import LlamaCppInferenceEngine
 from codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
-    def __init__(self, jsonl_dir="data", take_backup=True, restore_backup=True):
-        self.take_backup_flag = take_backup
-        self.restore_backup_flag = restore_backup
-
-        self.client = weaviate.WeaviateClient(
-            embedded_options=EmbeddedOptions(
-                persistence_data_path="./weaviate_data",
-                grpc_port=50052,
-                additional_env_vars={
-                    "ENABLE_MODULES": "backup-filesystem",
-                    "BACKUP_FILESYSTEM_PATH": os.getenv("BACKUP_FILESYSTEM_PATH", "/tmp"),
-                },
-            )
-        )
+    def __init__(self, jsonl_dir="data", db_path="./sqlite_data/vectordb.db"):
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self.db_path = db_path
         self.json_files = [
             os.path.join(jsonl_dir, "archived.jsonl"),
             os.path.join(jsonl_dir, "deprecated.jsonl"),
             os.path.join(jsonl_dir, "malicious.jsonl"),
         ]
-        self.client.connect()
+        self.conn = self._get_connection()
         self.inference_engine = LlamaCppInferenceEngine()
         self.model_path = "./codegate_volume/models/all-minilm-L6-v2-q5_k_m.gguf"
 
-    def restore_backup(self):
-        if os.getenv("BACKUP_FOLDER"):
-            try:
-                self.client.backup.restore(
-                    backup_id=os.getenv("BACKUP_FOLDER"),
-                    backend="filesystem",
-                    wait_for_completion=True,
-                )
-            except Exception as e:
-                print(f"Failed to restore backup: {e}")
-
-    def take_backup(self):
-        # if backup folder exists, remove it
-        backup_path = os.path.join(
-            os.getenv("BACKUP_FILESYSTEM_PATH", "/tmp"), os.getenv("BACKUP_TARGET_ID", "backup")
-        )
-        if os.path.exists(backup_path):
-            shutil.rmtree(backup_path)
-
-        #  take a backup of the data
-        try:
-            self.client.backup.create(
-                backup_id=os.getenv("BACKUP_TARGET_ID", "backup"),
-                backend="filesystem",
-                wait_for_completion=True,
-            )
-        except Exception as e:
-            print(f"Failed to take backup: {e}")
+    def _get_connection(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.enable_load_extension(True)
+        sqlite_vec.load(conn)
+        conn.enable_load_extension(False)
+        return conn
 
     def setup_schema(self):
-        if not self.client.collections.exists("Package"):
-            self.client.collections.create(
-                "Package",
-                properties=[
-                    Property(name="name", data_type=DataType.TEXT),
-                    Property(name="type", data_type=DataType.TEXT),
-                    Property(name="status", data_type=DataType.TEXT),
-                    Property(name="description", data_type=DataType.TEXT),
-                ],
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS packages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                description TEXT,
+                embedding BLOB
             )
+        """
+        )
 
-    async def process_package(self, batch, package):
+        # Create indexes for faster querying
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_name ON packages(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_type ON packages(type)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON packages(status)")
+
+        self.conn.commit()
+
+    async def process_package(self, package):
         vector_str = generate_vector_string(package)
         vector = await self.inference_engine.embed(self.model_path, [vector_str])
-        # This is where the synchronous call is made
-        batch.add_object(properties=package, vector=vector[0])
+        vector_array = np.array(vector[0], dtype=np.float32)
+
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO packages (name, type, status, description, embedding)
+            VALUES (?, ?, ?, ?, ?)
+        """,
+            (
+                package["name"],
+                package["type"],
+                package["status"],
+                package["description"],
+                vector_array,  # sqlite-vec will handle numpy arrays directly
+            ),
+        )
+        self.conn.commit()
 
     async def add_data(self):
-        collection = self.client.collections.get("Package")
-        existing_packages = list(collection.iterator())
-        packages_dict = {
-            f"{package.properties['name']}/{package.properties['type']}": {
-                "status": package.properties["status"],
-                "description": package.properties["description"],
-            }
-            for package in existing_packages
+        cursor = self.conn.cursor()
+
+        # Get existing packages
+        cursor.execute(
+            """
+            SELECT name, type, status, description
+            FROM packages
+        """
+        )
+        existing_packages = {
+            f"{row[0]}/{row[1]}": {"status": row[2], "description": row[3]}
+            for row in cursor.fetchall()
         }
 
         for json_file in self.json_files:
+            print("Adding data from", json_file)
             with open(json_file, "r") as f:
-                print("Adding data from", json_file)
-                packages_to_insert = []
                 for line in f:
                     package = json.loads(line)
                     package["status"] = json_file.split("/")[-1].split(".")[0]
                     key = f"{package['name']}/{package['type']}"
 
-                    if key in packages_dict and packages_dict[key] == {
+                    if key in existing_packages and existing_packages[key] == {
                         "status": package["status"],
                         "description": package["description"],
                     }:
                         print("Package already exists", key)
                         continue
 
-                    vector_str = generate_vector_string(package)
-                    vector = await self.inference_engine.embed(self.model_path, [vector_str])
-                    packages_to_insert.append((package, vector[0]))
-
-                # Synchronous batch insert after preparing all data
-                with collection.batch.dynamic() as batch:
-                    for package, vector in packages_to_insert:
-                        batch.add_object(
-                            properties=package, vector=vector, uuid=generate_uuid5(package)
-                        )
+                    await self.process_package(package)
 
     async def run_import(self):
-        if self.restore_backup_flag:
-            self.restore_backup()
         self.setup_schema()
         await self.add_data()
-        if self.take_backup_flag:
-            self.take_backup()
+
+    def __del__(self):
+        try:
+            if hasattr(self, "conn"):
+                self.conn.close()
+        except Exception as e:
+            print(f"Failed to close connection: {e}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run the package importer with optional backup flags."
-    )
-    parser.add_argument(
-        "--take-backup",
-        type=lambda x: x.lower() == "true",
-        default=True,
-        help="Specify whether to take a backup after "
-        "data import (True or False). Default is True.",
-    )
-    parser.add_argument(
-        "--restore-backup",
-        type=lambda x: x.lower() == "true",
-        default=True,
-        help="Specify whether to restore a backup before "
-        "data import (True or False). Default is True.",
+        description="Import packages into SQLite database with vector search capabilities."
     )
     parser.add_argument(
         "--jsonl-dir",
@@ -155,14 +128,13 @@ if __name__ == "__main__":
         default="data",
         help="Directory containing JSONL files. Default is 'data'.",
     )
+    parser.add_argument(
+        "--db-path",
+        type=str,
+        default="./sqlite_data/vectordb.db",
+        help="Path to SQLite database file. Default is './sqlite_data/vectordb.db'.",
+    )
     args = parser.parse_args()
 
-    importer = PackageImporter(
-        jsonl_dir=args.jsonl_dir, take_backup=args.take_backup, restore_backup=args.restore_backup
-    )
+    importer = PackageImporter(jsonl_dir=args.jsonl_dir, db_path=args.db_path)
     asyncio.run(importer.run_import())
-    try:
-        assert importer.client.is_live()
-        pass
-    finally:
-        importer.client.close()

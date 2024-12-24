@@ -43,7 +43,12 @@ server_key: "server.key"   # Server key file name
 #    CODEGATE_SERVER_CERT
 #    CODEGATE_SERVER_KEY
 
+# Storage configuration
+vec_db_path: "./sqlite_data/vectordb.db"  # Path to SQLite vector database file for similarity search
+
 # Embedding model configuration
+model_base_path: "./codegate_volume/models"  # Base path for model files
+embedding_model: "all-minilm-L6-v2-q5_k_m.gguf"  # Model to use for embeddings
 
 ####
 # Inference model configuration

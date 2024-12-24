@@ -238,7 +238,13 @@ def show_prompts(prompts: Optional[Path]) -> None:
     "--db-path",
     type=str,
     default=None,
-    help="Path to the SQLite database file",
+    help="Path to the main SQLite database file (default: ./codegate_volume/db/codegate.db)",
+)
+@click.option(
+    "--vec-db-path",
+    type=str,
+    default=None,
+    help="Path to the vector SQLite database file (default: ./sqlite_data/vectordb.db)",
 )
 def serve(
     port: Optional[int],
@@ -255,6 +261,7 @@ def serve(
     model_base_path: Optional[str],
     embedding_model: Optional[str],
     db_path: Optional[str],
+    vec_db_path: Optional[str],
     certs_dir: Optional[str],
     ca_cert: Optional[str],
     ca_key: Optional[str],
@@ -292,6 +299,7 @@ def serve(
             server_cert=server_cert,
             server_key=server_key,
             db_path=db_path,
+            vec_db_path=vec_db_path,
         )
 
         # Set up logging first
@@ -356,6 +364,7 @@ async def run_servers(cfg: Config, app) -> None:
                 "embedding_model": cfg.embedding_model,
                 "certs_dir": cfg.certs_dir,
                 "db_path": cfg.db_path,
+                "vec_db_path": cfg.vec_db_path,
             },
         )
 

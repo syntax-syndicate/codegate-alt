@@ -77,5 +77,20 @@ class LlamaCppInferenceEngine:
         """
         Generates an embedding for the given content using the specified model.
         """
+        logger.debug(
+            "Generating embedding",
+            model=model_path.split("/")[-1],
+            content=content,
+            content_length=len(content[0]) if content else 0,
+        )
+
         model = await self.__get_model(model_path=model_path, embedding=True)
-        return model.embed(content)
+        embedding = model.embed(content)
+
+        logger.debug(
+            "Generated embedding",
+            model=model_path.split("/")[-1],
+            vector_length=len(embedding[0]) if embedding else 0,
+        )
+
+        return embedding
