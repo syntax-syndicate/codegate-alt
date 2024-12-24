@@ -29,22 +29,14 @@ class CodegateContextRetriever(PipelineStep):
         """
         return "codegate-context-retriever"
 
-    async def get_objects_from_db(
-        self, ecosystem, packages: list[str] = None
-    ) -> list[object]:
-        logger.debug(
-            "Searching database for packages",
-            ecosystem=ecosystem,
-            packages=packages
-        )
+    async def get_objects_from_db(self, ecosystem, packages: list[str] = None) -> list[object]:
+        logger.debug("Searching database for packages", ecosystem=ecosystem, packages=packages)
         storage_engine = StorageEngine()
-        objects = await storage_engine.search(
-            distance=0.8, ecosystem=ecosystem, packages=packages
-        )
+        objects = await storage_engine.search(distance=0.8, ecosystem=ecosystem, packages=packages)
         logger.debug(
             "Database search results",
             result_count=len(objects),
-            results=[obj['properties'] for obj in objects] if objects else None
+            results=[obj["properties"] for obj in objects] if objects else None,
         )
         return objects
 
@@ -53,7 +45,7 @@ class CodegateContextRetriever(PipelineStep):
         matched_packages = []
         for obj in objects:
             # The object is already a dictionary with 'properties'
-            package_obj = obj['properties']
+            package_obj = obj["properties"]
             matched_packages.append(f"{package_obj['name']} ({package_obj['type']})")
             # Add one alert for each package found
             context.add_alert(
@@ -66,8 +58,7 @@ class CodegateContextRetriever(PipelineStep):
 
         if matched_packages:
             logger.debug(
-                "Found matching packages in sqlite-vec database",
-                matched_packages=matched_packages
+                "Found matching packages in sqlite-vec database", matched_packages=matched_packages
             )
         return context_str
 
@@ -96,11 +87,7 @@ class CodegateContextRetriever(PipelineStep):
             extra_headers=context.metadata.get("extra_headers", None),
         )
 
-        logger.debug(
-            "Extracted ecosystem from query",
-            ecosystem=ecosystem,
-            query=user_query
-        )
+        logger.debug("Extracted ecosystem from query", ecosystem=ecosystem, query=user_query)
         return ecosystem
 
     async def process(
@@ -125,7 +112,7 @@ class CodegateContextRetriever(PipelineStep):
             "Processing request",
             user_messages=user_messages,
             extracted_ecosystem=ecosystem,
-            extracted_packages=packages
+            extracted_packages=packages,
         )
 
         context_str = "CodeGate did not find any malicious or archived packages."
@@ -156,9 +143,6 @@ class CodegateContextRetriever(PipelineStep):
         context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
         message["content"] = context_msg
 
-        logger.debug(
-            "Final context message",
-            context_message=context_msg
-        )
+        logger.debug("Final context message", context_message=context_msg)
 
         return PipelineResult(request=new_request, context=context)

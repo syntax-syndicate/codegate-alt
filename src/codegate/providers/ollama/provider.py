@@ -1,9 +1,9 @@
 import json
 from typing import Optional
 
-from fastapi import Request, HTTPException
 import httpx
 import structlog
+from fastapi import HTTPException, Request
 
 from codegate.config import Config
 from codegate.pipeline.base import SequentialPipelineProcessor

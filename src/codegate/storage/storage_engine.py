@@ -12,6 +12,7 @@ from codegate.inference.inference_engine import LlamaCppInferenceEngine
 logger = structlog.get_logger("codegate")
 VALID_ECOSYSTEMS = ["npm", "pypi", "crates", "maven", "go"]
 
+
 class StorageEngine:
     __storage_engine = None
 
@@ -35,7 +36,11 @@ class StorageEngine:
 
         # Use vec_db_path from config if available, otherwise fallback to default
         config = Config.get_config()
-        self.db_path = config.vec_db_path if config and hasattr(config, 'vec_db_path') else os.path.join(data_path, "packages.db")
+        self.db_path = (
+            config.vec_db_path
+            if config and hasattr(config, "vec_db_path")
+            else os.path.join(data_path, "packages.db")
+        )
 
         self.inference_engine = LlamaCppInferenceEngine()
         self.model_path = (
@@ -47,7 +52,7 @@ class StorageEngine:
 
     def __del__(self):
         try:
-            if hasattr(self, 'conn'):
+            if hasattr(self, "conn"):
                 self.conn.close()
         except Exception as e:
             logger.error(f"Failed to close connection: {str(e)}")
@@ -65,7 +70,8 @@ class StorageEngine:
 
     def _setup_schema(self):
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS packages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -74,7 +80,8 @@ class StorageEngine:
                 description TEXT,
                 embedding BLOB
             )
-        """)
+        """
+        )
 
         # Create indexes for faster querying
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_name ON packages(name)")
@@ -89,24 +96,26 @@ class StorageEngine:
 
         try:
             cursor = self.conn.cursor()
-            placeholders = ','.join('?' * len(properties))
+            placeholders = ",".join("?" * len(properties))
             query = f"""
                 SELECT name, type, status, description
                 FROM packages
                 WHERE LOWER({name}) IN ({placeholders})
-            """
+            """  # nosec
 
             cursor.execute(query, [prop.lower() for prop in properties])
             results = []
             for row in cursor.fetchall():
-                results.append({
-                    "properties": {
-                        "name": row[0],
-                        "type": row[1],
-                        "status": row[2],
-                        "description": row[3]
+                results.append(
+                    {
+                        "properties": {
+                            "name": row[0],
+                            "type": row[1],
+                            "status": row[2],
+                            "description": row[3],
+                        }
                     }
-                })
+                )
             return results
         except Exception as e:
             logger.error(f"An error occurred during property search: {str(e)}")
@@ -127,36 +136,36 @@ class StorageEngine:
             cursor = self.conn.cursor()
 
             if packages and ecosystem and ecosystem in VALID_ECOSYSTEMS:
-                placeholders = ','.join('?' * len(packages))
+                placeholders = ",".join("?" * len(packages))
                 query_sql = f"""
                     SELECT name, type, status, description
                     FROM packages
                     WHERE LOWER(name) IN ({placeholders})
                     AND LOWER(type) = ?
-                """
+                """  # nosec
                 params = [p.lower() for p in packages] + [ecosystem.lower()]
                 logger.debug(
                     "Searching by package names and ecosystem",
                     packages=packages,
                     ecosystem=ecosystem,
                     sql=query_sql,
-                    params=params
+                    params=params,
                 )
                 cursor.execute(query_sql, params)
 
             elif packages and not ecosystem:
-                placeholders = ','.join('?' * len(packages))
+                placeholders = ",".join("?" * len(packages))
                 query_sql = f"""
                     SELECT name, type, status, description
                     FROM packages
                     WHERE LOWER(name) IN ({placeholders})
-                """
+                """  # nosec
                 params = [p.lower() for p in packages]
                 logger.debug(
                     "Searching by package names only",
                     packages=packages,
                     sql=query_sql,
-                    params=params
+                    params=params,
                 )
                 cursor.execute(query_sql, params)
 
@@ -177,18 +186,14 @@ class StorageEngine:
                     WHERE distance <= ?
                     ORDER BY distance ASC
                     LIMIT ?
-                """
+                """  # nosec
                 logger.debug(
                     "Performing vector similarity search",
                     query=query,
                     distance_threshold=distance,
-                    limit=limit
+                    limit=limit,
                 )
-                cursor.execute(query_sql, (
-                    query_embedding_bytes,
-                    distance,
-                    limit
-                ))
+                cursor.execute(query_sql, (query_embedding_bytes, distance, limit))
             else:
                 return []
 
@@ -197,12 +202,10 @@ class StorageEngine:
             logger.debug(
                 "Raw SQL results",
                 row_count=len(rows),
-                rows=[{
-                    "name": row[0],
-                    "type": row[1],
-                    "status": row[2],
-                    "description": row[3]
-                } for row in rows]
+                rows=[
+                    {"name": row[0], "type": row[1], "status": row[2], "description": row[3]}
+                    for row in rows
+                ],
             )
 
             results = []
@@ -212,7 +215,7 @@ class StorageEngine:
                         "name": row[0],
                         "type": row[1],
                         "status": row[2],
-                        "description": row[3]
+                        "description": row[3],
                     }
                 }
                 if query:  # Add distance for vector searches

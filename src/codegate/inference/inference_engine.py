@@ -79,9 +79,9 @@ class LlamaCppInferenceEngine:
         """
         logger.debug(
             "Generating embedding",
-            model=model_path.split('/')[-1],
+            model=model_path.split("/")[-1],
             content=content,
-            content_length=len(content[0]) if content else 0
+            content_length=len(content[0]) if content else 0,
         )
 
         model = await self.__get_model(model_path=model_path, embedding=True)
@@ -89,8 +89,8 @@ class LlamaCppInferenceEngine:
 
         logger.debug(
             "Generated embedding",
-            model=model_path.split('/')[-1],
-            vector_length=len(embedding[0]) if embedding else 0
+            model=model_path.split("/")[-1],
+            vector_length=len(embedding[0]) if embedding else 0,
         )
 
         return embedding

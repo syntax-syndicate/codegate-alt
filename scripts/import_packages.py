@@ -33,7 +33,8 @@ class PackageImporter:
 
     def setup_schema(self):
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS packages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -42,7 +43,8 @@ class PackageImporter:
                 description TEXT,
                 embedding BLOB
             )
-        """)
+        """
+        )
 
         # Create indexes for faster querying
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_name ON packages(name)")
@@ -57,31 +59,33 @@ class PackageImporter:
         vector_array = np.array(vector[0], dtype=np.float32)
 
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO packages (name, type, status, description, embedding)
             VALUES (?, ?, ?, ?, ?)
-        """, (
-            package['name'],
-            package['type'],
-            package['status'],
-            package['description'],
-            vector_array  # sqlite-vec will handle numpy arrays directly
-        ))
+        """,
+            (
+                package["name"],
+                package["type"],
+                package["status"],
+                package["description"],
+                vector_array,  # sqlite-vec will handle numpy arrays directly
+            ),
+        )
         self.conn.commit()
 
     async def add_data(self):
         cursor = self.conn.cursor()
 
         # Get existing packages
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT name, type, status, description
             FROM packages
-        """)
+        """
+        )
         existing_packages = {
-            f"{row[0]}/{row[1]}": {
-                "status": row[2],
-                "description": row[3]
-            }
+            f"{row[0]}/{row[1]}": {"status": row[2], "description": row[3]}
             for row in cursor.fetchall()
         }
 
@@ -95,7 +99,7 @@ class PackageImporter:
 
                     if key in existing_packages and existing_packages[key] == {
                         "status": package["status"],
-                        "description": package["description"]
+                        "description": package["description"],
                     }:
                         print("Package already exists", key)
                         continue
@@ -108,10 +112,11 @@ class PackageImporter:
 
     def __del__(self):
         try:
-            if hasattr(self, 'conn'):
+            if hasattr(self, "conn"):
                 self.conn.close()
         except Exception as e:
             print(f"Failed to close connection: {e}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

@@ -1,8 +1,8 @@
 import json
-import structlog
 from typing import Optional
 
-from fastapi import Request, HTTPException
+import structlog
+from fastapi import HTTPException, Request
 
 from codegate.pipeline.base import SequentialPipelineProcessor
 from codegate.pipeline.output import OutputPipelineProcessor
@@ -11,7 +11,7 @@ from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHan
 from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLamaCppOutputNormalizer
 
 
-class LlamaCppProvider(BaseProvider):    
+class LlamaCppProvider(BaseProvider):
     def __init__(
         self,
         pipeline_processor: Optional[SequentialPipelineProcessor] = None,
@@ -59,8 +59,9 @@ class LlamaCppProvider(BaseProvider):
             except ValueError as e:
                 # capture well known exceptions
                 logger.error("Error in LlamaCppProvider completion", error=str(e))
-                if str(e).startswith("Model path does not exist") or \
-                        str(e).startswith("No file found"):
+                if str(e).startswith("Model path does not exist") or str(e).startswith(
+                    "No file found"
+                ):
                     raise HTTPException(status_code=404, detail=str(e))
                 elif "exceed" in str(e):
                     raise HTTPException(status_code=429, detail=str(e))

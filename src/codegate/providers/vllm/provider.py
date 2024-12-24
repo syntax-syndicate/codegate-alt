@@ -1,8 +1,8 @@
 import json
-import structlog
 from typing import Optional
 
 import httpx
+import structlog
 from fastapi import Header, HTTPException, Request
 from litellm import atext_completion
 
