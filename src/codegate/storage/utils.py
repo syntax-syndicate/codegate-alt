@@ -12,7 +12,7 @@ def restore_storage_backup(backup_path: str, backup_name: str):
     """
     backup_file = os.path.join(backup_path, backup_name)
     target_dir = "./sqlite_data"
-    target_file = os.path.join(target_dir, "packages.db")
+    target_file = os.path.join(target_dir, "vectordb.db")
 
     if not os.path.exists(backup_file):
         print(f"Backup file not found: {backup_file}")

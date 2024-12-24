@@ -131,8 +131,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--db-path",
         type=str,
-        default="./sqlite_data/packages.db",
-        help="Path to SQLite database file. Default is './sqlite_data/packages.db'.",
+        default="./sqlite_data/vectordb.db",
+        help="Path to SQLite database file. Default is './sqlite_data/vectordb.db'.",
     )
     args = parser.parse_args()
 

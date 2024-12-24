@@ -4,7 +4,7 @@
 {"name":"malicious-pypi-dummy","type":"pypi","description":"Dummy malicious to test with simple package name on pypi"}
 {"name":"@prefix/malicious-maven-dummy","type":"maven","description":"Dummy malicious to test with encoded package name on maven"}
 {"name":"malicious-maven-dummy","type":"maven","description":"Dummy malicious to test with simple package name on maven"}
-{"name":"github.com/malicious-go-dummy","type":"npm","description":"Dummy malicious to test with encoded package name on go"}
-{"name":"malicious-go-dummy","type":"npm","description":"Dummy malicious to test with simple package name on go"}
-{"name":"@prefix/malicious-crates-dummy","type":"npm","description":"Dummy malicious to test with encoded package name on crates"}
-{"name":"malicious-crates-dummy","type":"npm","description":"Dummy malicious to test with simple package name on crates"}
+{"name":"github.com/malicious-go-dummy","type":"go","description":"Dummy malicious to test with encoded package name on go"}
+{"name":"malicious-go-dummy","type":"go","description":"Dummy malicious to test with simple package name on go"}
+{"name":"@prefix/malicious-crates-dummy","type":"crates","description":"Dummy malicious to test with encoded package name on crates"}
+{"name":"malicious-crates-dummy","type":"crates","description":"Dummy malicious to test with simple package name on crates"}

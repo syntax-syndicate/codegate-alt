@@ -39,7 +39,7 @@ class StorageEngine:
         self.db_path = (
             config.vec_db_path
             if config and hasattr(config, "vec_db_path")
-            else os.path.join(data_path, "packages.db")
+            else os.path.join(data_path, "vectordb.db")
         )
 
         self.inference_engine = LlamaCppInferenceEngine()
