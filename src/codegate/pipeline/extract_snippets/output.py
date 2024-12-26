@@ -1,15 +1,15 @@
 from typing import Optional
+from urllib.parse import quote
 
 import structlog
 from litellm import ModelResponse
 from litellm.types.utils import Delta, StreamingChoices
 
-from codegate.llm_utils.extractor import PackageExtractor
 from codegate.pipeline.base import CodeSnippet, PipelineContext
 from codegate.pipeline.extract_snippets.extract_snippets import extract_snippets
 from codegate.pipeline.output import OutputPipelineContext, OutputPipelineStep
-from codegate.pipeline.secrets.secrets import SecretsObfuscator
 from codegate.storage import StorageEngine
+from codegate.utils.package_extractor import PackageExtractor
 
 logger = structlog.get_logger("codegate")
 
@@ -42,18 +42,14 @@ class CodeCommentStep(OutputPipelineStep):
 
     async def _snippet_comment(self, snippet: CodeSnippet, context: PipelineContext) -> str:
         """Create a comment for a snippet"""
-        # make sure we don't accidentally leak a secret in the output snippet
-        obfuscator = SecretsObfuscator()
-        obfuscated_code, _ = obfuscator.obfuscate(snippet.code)
 
-        snippet.libraries = await PackageExtractor.extract_packages(
-            content=obfuscated_code,
-            provider=context.sensitive.provider if context.sensitive else None,
-            model=context.sensitive.model if context.sensitive else None,
-            api_key=context.sensitive.api_key if context.sensitive else None,
-            base_url=context.sensitive.api_base if context.sensitive else None,
-            extra_headers=context.metadata.get("extra_headers", None),
-        )
+        # extract imported libs
+        snippet.libraries = PackageExtractor.extract_packages(snippet.code, snippet.language)
+
+        # If no libraries are found, just return empty comment
+        if len(snippet.libraries) == 0:
+            return ""
+
         # Check if any of the snippet libraries is a bad package
         storage_engine = StorageEngine()
         libobjects = await storage_engine.search_by_property("name", snippet.libraries)
@@ -67,12 +63,15 @@ class CodeCommentStep(OutputPipelineStep):
         warnings = []
 
         # Use libobjects to generate a CSV list of bad libraries
-        libobjects_text = ", ".join([f"""`{lib.properties["name"]}`""" for lib in libobjects])
+        libobjects_text = ", ".join([f"""`{lib["properties"]["name"]}`""" for lib in libobjects])
 
         for lib in libobjects:
-            lib_name = lib.properties["name"]
-            lib_status = lib.properties["status"]
-            lib_url = f"https://www.insight.stacklok.com/report/{lib.properties['type']}/{lib_name}"
+            lib_name = lib["properties"]["name"]
+            lib_type = lib["properties"]["type"]
+            lib_status = lib["properties"]["status"]
+            lib_url = (
+                f"https://www.insight.stacklok.com/report/{lib_type}/{quote(lib_name, safe='')}"
+            )
 
             warnings.append(
                 f"- The package `{lib_name}` is marked as **{lib_status}**.\n"
