@@ -51,33 +51,18 @@ jobs:
         github_token: ${{ github.token }}
         workflow: ".github/workflows/import_packages.yml"
         workflow_conclusion: success
-        name: backup_weaviate
+        name: sqlite_vectordb_file
         path: /tmp/
         name_is_regexp: true
         skip_unpack: false
-        if_no_artifact_found: ignore
+        if_no_artifact_found: ignore      
 
-    - name: Create folder if artifact download is not enabled
-      if: ${{ github.event.inputs.enable_artifact_download == 'false' }}
+    - name: 'Run import_packages.py'
       run: |
-        mkdir -p /tmp/backup_weaviate
-        echo "Folder ./backup_weaviate created because artifact download is disabled."        
+        python scripts/import_packages.py --jsonl-dir /tmp --vec-db-path /tmp/sqlite_data/vectordb.db
 
-    - name: Run sync
-      run: |
-        export PYTHONPATH=$PYTHONPATH:./
-        export BACKUP_FILESYSTEM_PATH=/tmp/backup_weaviate/
-        export BACKUP_FOLDER=backup
-        # Conditionally export the variables only if artifact download is enabled
-        if [ "${{ github.event.inputs.enable_artifact_download }}" == "true" ]; then
-          python scripts/import_packages.py --jsonl-dir /tmp/jsonl-files/
-        else
-          python scripts/import_packages.py --restore-backup False --jsonl-dir /tmp/jsonl-files/
-        fi
-
-    - name: 'Upload Backup Files'
+    - name: 'Upload SQLite Vector DB File'
       uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
       with:
-        name: backup_weaviate
-        path: /tmp/backup_weaviate/backup*
-        retention-days: 90
+        name: sqlite_vectordb_file
+        path: /tmp/sqlite_data/vectordb.db
