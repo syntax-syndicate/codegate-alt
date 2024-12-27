@@ -32,6 +32,11 @@ class SystemPrompt(PipelineStep):
         Add system prompt if not present, otherwise prepend codegate system prompt
         to the existing system prompt
         """
+
+        # Nothing to do if no secrets or bad_packages are found
+        if not (context.secrets_found or context.bad_packages_found):
+            return PipelineResult(request=request, context=context)
+
         new_request = request.copy()
 
         if "messages" not in new_request:

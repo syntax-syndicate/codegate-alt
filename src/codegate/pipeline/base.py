@@ -78,6 +78,8 @@ class PipelineContext:
     input_request: Optional[Prompt] = field(default_factory=lambda: None)
     output_responses: List[Output] = field(default_factory=list)
     shortcut_response: bool = False
+    bad_packages_found: bool = False
+    secrets_found: bool = False
 
     def add_code_snippet(self, snippet: CodeSnippet):
         self.code_snippets.append(snippet)
