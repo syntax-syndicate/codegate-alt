@@ -288,6 +288,7 @@ class CodegateSecrets(PipelineStep):
                 if i > last_assistant_idx:
                     total_redacted += redacted_count
 
+        context.secrets_found = total_redacted > 0
         logger.info(f"Total secrets redacted since last assistant message: {total_redacted}")
 
         # Store the count in context metadata

@@ -80,20 +80,25 @@ class CodegateContextRetriever(PipelineStep):
         # Generate context string using the searched objects
         logger.info(f"Adding {len(searched_objects)} packages to the context")
 
-        if len(searched_objects) > 0:
+        # Nothing to do if no bad packages are found
+        if len(searched_objects) == 0:
+            return PipelineResult(request=request, context=context)
+        else:
+            # Add context for bad packages
             context_str = self.generate_context_str(searched_objects, context)
+            context.bad_packages_found = True
 
-        last_user_idx = self.get_last_user_message_idx(request)
+            last_user_idx = self.get_last_user_message_idx(request)
 
-        # Make a copy of the request
-        new_request = request.copy()
+            # Make a copy of the request
+            new_request = request.copy()
 
-        # Add the context to the last user message
-        # Format: "Context: {context_str} \n Query: {last user message content}"
-        message = new_request["messages"][last_user_idx]
-        context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
-        message["content"] = context_msg
+            # Add the context to the last user message
+            # Format: "Context: {context_str} \n Query: {last user message content}"
+            message = new_request["messages"][last_user_idx]
+            context_msg = f'Context: {context_str} \n\n Query: {message["content"]}'
+            message["content"] = context_msg
 
-        logger.debug("Final context message", context_message=context_msg)
+            logger.debug("Final context message", context_message=context_msg)
 
-        return PipelineResult(request=new_request, context=context)
+            return PipelineResult(request=new_request, context=context)

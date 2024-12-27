@@ -29,8 +29,8 @@ class PipelineFactory:
             CodegateSecrets(),
             CodegateVersion(),
             CodeSnippetExtractor(),
-            SystemPrompt(Config.get_config().prompts.default_chat),
             CodegateContextRetriever(),
+            SystemPrompt(Config.get_config().prompts.default_chat),
         ]
         return SequentialPipelineProcessor(input_steps, self.secrets_manager, is_fim=False)
 
