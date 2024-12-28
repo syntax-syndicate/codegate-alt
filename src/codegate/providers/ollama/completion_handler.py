@@ -20,19 +20,27 @@ async def ollama_stream_generator(
             try:
                 # First get the raw dict from the chunk
                 chunk_dict = chunk.model_dump()
-                # Create response dictionary, preserving existing type if present
+                # Create response dictionary in OpenAI-like format
                 response = {
+                    "id": f"chatcmpl-{chunk_dict.get('created_at', '')}",
+                    "object": "chat.completion.chunk",
+                    "created": chunk_dict.get("created_at"),
                     "model": chunk_dict.get("model"),
-                    "created_at": chunk_dict.get("created_at"),
-                    "message": chunk_dict.get("message"),
-                    "done": chunk_dict.get("done", False)
+                    "choices": [{
+                        "index": 0,
+                        "delta": {
+                            "content": chunk_dict.get("message", {}).get("content", ""),
+                            "role": chunk_dict.get("message", {}).get("role", "assistant")
+                        },
+                        "finish_reason": chunk_dict.get("done_reason") if chunk_dict.get("done", False) else None
+                    }]
                 }
                 # Preserve existing type or add default if missing
                 response["type"] = chunk_dict.get("type", "stream")
                 
                 # Add optional fields that might be present in the final message
                 optional_fields = [
-                    "done_reason", "total_duration", "load_duration",
+                    "total_duration", "load_duration",
                     "prompt_eval_count", "prompt_eval_duration",
                     "eval_count", "eval_duration"
                 ]
@@ -43,10 +51,10 @@ async def ollama_stream_generator(
                 yield f"data: {json.dumps(response)}\n\n"
             except Exception as e:
                 logger.error(f"Error in stream generator: {str(e)}")
-                yield f"data: {json.dumps({'error': str(e), 'type': 'error'})}\n\n"
+                yield f"data: {json.dumps({'error': str(e), 'type': 'error', 'choices': []})}\n\n"
     except Exception as e:
         logger.error(f"Stream error: {str(e)}")
-        yield f"data: {json.dumps({'error': str(e), 'type': 'error'})}\n\n"
+        yield f"data: {json.dumps({'error': str(e), 'type': 'error', 'choices': []})}\n\n"
 
 
 class OllamaShim(BaseCompletionHandler):
