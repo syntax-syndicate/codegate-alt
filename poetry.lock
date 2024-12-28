@@ -585,6 +585,7 @@ files = [
     {file = "cryptography-44.0.0-cp37-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:761817a3377ef15ac23cd7834715081791d4ec77f9297ee694ca1ee9c2c7e5eb"},
     {file = "cryptography-44.0.0-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:3c672a53c0fb4725a29c303be906d3c1fa99c32f58abe008a82705f9ee96f40b"},
     {file = "cryptography-44.0.0-cp37-abi3-manylinux_2_34_aarch64.whl", hash = "sha256:4ac4c9f37eba52cb6fbeaf5b59c152ea976726b865bd4cf87883a7e7006cc543"},
+    {file = "cryptography-44.0.0-cp37-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:60eb32934076fa07e4316b7b2742fa52cbb190b42c2df2863dbc4230a0a9b385"},
     {file = "cryptography-44.0.0-cp37-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:ed3534eb1090483c96178fcb0f8893719d96d5274dfde98aa6add34614e97c8e"},
     {file = "cryptography-44.0.0-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:f3f6fdfa89ee2d9d496e2c087cebef9d4fcbb0ad63c40e821b39f74bf48d9c5e"},
     {file = "cryptography-44.0.0-cp37-abi3-win32.whl", hash = "sha256:eb33480f1bad5b78233b0ad3e1b0be21e8ef1da745d8d2aecbb20671658b9053"},
@@ -595,6 +596,7 @@ files = [
     {file = "cryptography-44.0.0-cp39-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:c5eb858beed7835e5ad1faba59e865109f3e52b3783b9ac21e7e47dc5554e289"},
     {file = "cryptography-44.0.0-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:f53c2c87e0fb4b0c00fa9571082a057e37690a8f12233306161c8f4b819960b7"},
     {file = "cryptography-44.0.0-cp39-abi3-manylinux_2_34_aarch64.whl", hash = "sha256:9e6fc8a08e116fb7c7dd1f040074c9d7b51d74a8ea40d4df2fc7aa08b76b9e6c"},
+    {file = "cryptography-44.0.0-cp39-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:9abcc2e083cbe8dde89124a47e5e53ec38751f0d7dfd36801008f316a127d7ba"},
     {file = "cryptography-44.0.0-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:d2436114e46b36d00f8b72ff57e598978b37399d2786fd39793c36c6d5cb1c64"},
     {file = "cryptography-44.0.0-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a01956ddfa0a6790d594f5b34fc1bfa6098aca434696a03cfdbe469b8ed79285"},
     {file = "cryptography-44.0.0-cp39-abi3-win32.whl", hash = "sha256:eca27345e1214d1b9f9490d200f9db5a874479be914199194e746c893788d417"},
@@ -1194,13 +1196,13 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "litellm"
-version = "1.56.2"
+version = "1.56.3"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.56.2-py3-none-any.whl", hash = "sha256:0e59a6f95b4c7fdbc934d9c58c7e0b964978c22af19b9ffd355160efd4424b8f"},
-    {file = "litellm-1.56.2.tar.gz", hash = "sha256:49fc487e2d90ce63a7c2ea8cb16580856e55fb6aedb3f5c553d072a6b6beaf8d"},
+    {file = "litellm-1.56.3-py3-none-any.whl", hash = "sha256:5a861aa1ff4b75d5390516864add7f02d434887d1662a35c11f6a9ecfe45b872"},
+    {file = "litellm-1.56.3.tar.gz", hash = "sha256:9aa475b6ef000f58da7aa44135b58a3834a104b9b02d13cb0d3c8f16c029de7b"},
 ]
 
 [package.dependencies]
@@ -2545,17 +2547,17 @@ pymysql = ["pymysql"]
 sqlcipher = ["sqlcipher3_binary"]
 
 [[package]]
-name = "sqlite-vec"
-version = "0.1.6"
+name = "sqlite-vec-sl-tmp"
+version = "0.0.3"
 description = ""
 optional = false
 python-versions = "*"
 files = [
-    {file = "sqlite_vec-0.1.6-py3-none-macosx_10_6_x86_64.whl", hash = "sha256:77491bcaa6d496f2acb5cc0d0ff0b8964434f141523c121e313f9a7d8088dee3"},
-    {file = "sqlite_vec-0.1.6-py3-none-macosx_11_0_arm64.whl", hash = "sha256:fdca35f7ee3243668a055255d4dee4dea7eed5a06da8cad409f89facf4595361"},
-    {file = "sqlite_vec-0.1.6-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7b0519d9cd96164cd2e08e8eed225197f9cd2f0be82cb04567692a0a4be02da3"},
-    {file = "sqlite_vec-0.1.6-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux1_x86_64.whl", hash = "sha256:823b0493add80d7fe82ab0fe25df7c0703f4752941aee1c7b2b02cec9656cb24"},
-    {file = "sqlite_vec-0.1.6-py3-none-win_amd64.whl", hash = "sha256:c65bcfd90fa2f41f9000052bcb8bb75d38240b2dae49225389eca6c3136d3f0c"},
+    {file = "sqlite_vec_sl_tmp-0.0.3-py3-none-macosx_10_6_x86_64.whl", hash = "sha256:6d578f4e10a534ea1e17494513089a0699e0b09291f6c61a7df02e2c46319fe0"},
+    {file = "sqlite_vec_sl_tmp-0.0.3-py3-none-macosx_11_0_arm64.whl", hash = "sha256:e18f6583146046c9851e5d17ca5549345da8a601f144834b4b7497f82a0dbb99"},
+    {file = "sqlite_vec_sl_tmp-0.0.3-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9eb3bc3410a5307a05d6f01cff342537fa3891af84509600424a87e83a4524b9"},
+    {file = "sqlite_vec_sl_tmp-0.0.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux1_x86_64.whl", hash = "sha256:48512c1f95c474491027eaa69cf8daaad1c58a960bdc6a1b42542f29eb3490c7"},
+    {file = "sqlite_vec_sl_tmp-0.0.3-py3-none-win_amd64.whl", hash = "sha256:6089b8a6b3342bc6893e24f1c3e35c289da4c1cba517b9edb58da6b75688ae69"},
 ]
 
 [[package]]
@@ -3049,4 +3051,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "b1a3eaf7ae6a6ad51d464447b11897acbac1e26d491aaffab2172116f6f2edb0"
+content-hash = "af3a7c9fd8787e440cc00f53fd238971faee0b4223d08ecdc1e148e780e6cc3c"
