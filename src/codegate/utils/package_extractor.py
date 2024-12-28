@@ -3,6 +3,7 @@ import tree_sitter_go as tsgo
 import tree_sitter_java as tsjava
 import tree_sitter_javascript as tsjavascript
 import tree_sitter_python as tspython
+import tree_sitter_rust as tsrust
 from tree_sitter import Language, Parser
 
 logger = structlog.get_logger("codegate")
@@ -14,12 +15,14 @@ class PackageExtractor:
         "go": Language(tsgo.language()),
         "python": Language(tspython.language()),
         "java": Language(tsjava.language()),
+        "rust": Language(tsrust.language()),
     }
     __parsers = {
         "javascript": Parser(__languages["javascript"]),
         "go": Parser(__languages["go"]),
         "python": Parser(__languages["python"]),
         "java": Parser(__languages["java"]),
+        "rust": Parser(__languages["rust"]),
     }
     __queries = {
         "javascript": """
@@ -50,11 +53,23 @@ class PackageExtractor:
                         name: (dotted_name) @import_name)
                     (import_from_statement
                         module_name: (dotted_name) @import_name)
+                    (import_statement
+                        (aliased_import (dotted_name) @import_name (identifier)))
                 """,
         "java": """
                     (import_declaration
                         (scoped_identifier) @import_name)
                 """,
+        "rust": """
+                    (use_declaration
+                        (scoped_identifier) @import_name)
+                    (use_declaration
+                        (identifier) @import_name)
+                    (use_declaration
+                        (use_wildcard) @import_name)
+                    (use_declaration
+                        (use_as_clause (scoped_identifier) @import_name))
+                """
     }
 
     @staticmethod
@@ -90,9 +105,12 @@ class PackageExtractor:
                 # Remove quotes from the import string
                 import_lib = import_lib.strip("'\"")
 
-                # In case of python, get the root library name
+                # Get the root library name
                 if language_name == "python":
                     import_lib = import_lib.split(".")[0]
+
+                if language_name == "rust":
+                    import_lib = import_lib.split("::")[0]
 
                 imports.add(import_lib)
 

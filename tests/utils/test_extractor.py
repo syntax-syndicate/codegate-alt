@@ -44,9 +44,10 @@ def test_extractor_python():
     python_code = """
     import pandas
     from codegate.utils import test
+    import numpy as np
     """
     packages = PackageExtractor.extract_packages(python_code, "python")
-    assert sorted(packages) == ["codegate", "pandas"]
+    assert sorted(packages) == ["codegate", "numpy", "pandas"]
 
 
 def test_extractor_java():
@@ -57,3 +58,13 @@ def test_extractor_java():
     """
     packages = PackageExtractor.extract_packages(java_code, "java")
     assert sorted(packages) == ["com.example.project.MyClass", "java.io.File", "java.util.List"]
+
+
+def test_extractor_rust():
+    rust_code = """
+    use rust_decimal_macros::dec;
+    use rust_decimal::prelude::*;
+    use inner::foo as bar;
+    """
+    packages = PackageExtractor.extract_packages(rust_code, "rust")
+    assert sorted(packages) == ["inner", "rust_decimal", "rust_decimal_macros"]
