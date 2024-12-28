@@ -60,10 +60,10 @@ jobs:
     - name: Install Poetry
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
-
+    
     - name: Add Poetry to PATH
       run: |
-        echo "source $HOME/.poetry/env" >> $GITHUB_ENV
+        echo "PATH=$HOME/.poetry/bin:$PATH" >> $GITHUB_ENV
 
     - name: Install dependencies with Poetry
       run: |
@@ -71,7 +71,7 @@ jobs:
 
     - name: 'Run import_packages.py with poetry'
       run: |
-        poetry run python scripts/import_packages.py --jsonl-dir /tmp --vec-db-path /tmp/sqlite_data/vectordb.db
+        poetry run python scripts/import_packages.py --jsonl-dir /tmp/jsonl-files --db-path /tmp/sqlite_data/vectordb.db
 
     - name: 'Upload SQLite Vector DB File'
       uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
@@ -79,3 +79,4 @@ jobs:
         name: sqlite_vectordb_file
         path: /tmp/sqlite_data/vectordb.db
         retention-days: 90
+
