@@ -50,8 +50,18 @@ def add_or_update_system_message(
         context.add_alert("add-system-message", trigger_string=json.dumps(system_message))
         new_request["messages"].insert(0, system_message)
     else:
+        # Handle both string and list content types (needed for Cline, which sends a list of strings)
+        existing_content = request_system_message["content"]
+        new_content = system_message["content"]
+
+        # Convert list to string if necessary (needed for Cline, which sends a list of strings)
+        if isinstance(existing_content, list):
+            existing_content = "\n".join(str(item) for item in existing_content)
+        if isinstance(new_content, list):
+            new_content = "\n".join(str(item) for item in new_content)
+
         # Update existing system message
-        updated_content = request_system_message["content"] + "\n\n" + system_message["content"]
+        updated_content = existing_content + "\n\n" + new_content
         context.add_alert("update-system-message", trigger_string=updated_content)
         request_system_message["content"] = updated_content
 

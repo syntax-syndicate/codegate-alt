@@ -157,7 +157,7 @@ class PipelineContext:
                     output=output_str,
                 )
             )
-            logger.debug(f"Added output to context: {self.output_responses[-1]}")
+            # logger.debug(f"Added output to context: {self.output_responses[-1]}")
         except Exception as e:
             logger.error(f"Failed to serialize output: {model_response}", error=str(e))
             return

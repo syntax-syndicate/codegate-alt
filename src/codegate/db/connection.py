@@ -178,7 +178,7 @@ class DbRecorder(DbCodeGate):
             if alert_result and alert_result.trigger_category == "critical":
                 await alert_queue.put(f"New alert detected: {alert.timestamp}")
 
-        logger.debug(f"Recorded alerts: {recorded_alerts}")
+        # logger.debug(f"Recorded alerts: {recorded_alerts}")
         return recorded_alerts
 
     def _should_record_context(self, context: Optional[PipelineContext]) -> bool:
