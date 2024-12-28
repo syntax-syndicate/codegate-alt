@@ -46,12 +46,22 @@ class OllamaProvider(BaseProvider):
         Sets up Ollama API routes.
         """
 
+        # Special route for /api/tags that passes through directly
+        @self.router.get(f"/{self.provider_route_name}/api/tags")
+        async def get_tags(request: Request):
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.base_url}/api/tags")
+                return response.json()
+
         # Native Ollama API routes
         @self.router.post(f"/{self.provider_route_name}/api/chat")
         @self.router.post(f"/{self.provider_route_name}/api/generate")
         # OpenAI-compatible routes for backward compatibility
         @self.router.post(f"/{self.provider_route_name}/chat/completions")
         @self.router.post(f"/{self.provider_route_name}/completions")
+        # Cline API routes
+        @self.router.post(f"/{self.provider_route_name}/v1/chat/completions")
+        @self.router.post(f"/{self.provider_route_name}/v1/generate")
         async def create_completion(request: Request):
             body = await request.body()
             data = json.loads(body)
@@ -67,7 +77,7 @@ class OllamaProvider(BaseProvider):
                 logger.error("Error in OllamaProvider completion", error=str(e))
                 raise HTTPException(status_code=503, detail="Ollama service is unavailable")
             except Exception as e:
-                #  check if we have an status code there
+                #  check if we have an status code there
                 if hasattr(e, "status_code"):
                     # log the exception
                     logger = structlog.get_logger("codegate")
