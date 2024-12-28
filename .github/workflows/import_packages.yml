@@ -51,33 +51,31 @@ jobs:
         github_token: ${{ github.token }}
         workflow: ".github/workflows/import_packages.yml"
         workflow_conclusion: success
-        name: backup_weaviate
+        name: sqlite_vectordb_file
         path: /tmp/
         name_is_regexp: true
         skip_unpack: false
-        if_no_artifact_found: ignore
+        if_no_artifact_found: ignore      
 
-    - name: Create folder if artifact download is not enabled
-      if: ${{ github.event.inputs.enable_artifact_download == 'false' }}
+    - name: Install Poetry
       run: |
-        mkdir -p /tmp/backup_weaviate
-        echo "Folder ./backup_weaviate created because artifact download is disabled."        
+        curl -sSL https://install.python-poetry.org | python3 -
 
-    - name: Run sync
+    - name: Add Poetry to PATH
       run: |
-        export PYTHONPATH=$PYTHONPATH:./
-        export BACKUP_FILESYSTEM_PATH=/tmp/backup_weaviate/
-        export BACKUP_FOLDER=backup
-        # Conditionally export the variables only if artifact download is enabled
-        if [ "${{ github.event.inputs.enable_artifact_download }}" == "true" ]; then
-          python scripts/import_packages.py --jsonl-dir /tmp/jsonl-files/
-        else
-          python scripts/import_packages.py --restore-backup False --jsonl-dir /tmp/jsonl-files/
-        fi
+        echo "source $HOME/.poetry/env" >> $GITHUB_ENV
 
-    - name: 'Upload Backup Files'
+    - name: Install dependencies with Poetry
+      run: |
+        poetry install
+
+    - name: 'Run import_packages.py with poetry'
+      run: |
+        poetry run python scripts/import_packages.py --jsonl-dir /tmp --vec-db-path /tmp/sqlite_data/vectordb.db
+
+    - name: 'Upload SQLite Vector DB File'
       uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
       with:
-        name: backup_weaviate
-        path: /tmp/backup_weaviate/backup*
+        name: sqlite_vectordb_file
+        path: /tmp/sqlite_data/vectordb.db
         retention-days: 90
