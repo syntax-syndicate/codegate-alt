@@ -12,9 +12,9 @@ from codegate.utils.utils import generate_vector_string
 
 
 class PackageImporter:
-    def __init__(self, jsonl_dir="data", db_path="./sqlite_data/vectordb.db"):
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        self.db_path = db_path
+    def __init__(self, jsonl_dir="data", vec_db_path="./sqlite_data/vectordb.db"):
+        os.makedirs(os.path.dirname(vec_db_path), exist_ok=True)
+        self.vec_db_path = vec_db_path
         self.json_files = [
             os.path.join(jsonl_dir, "archived.jsonl"),
             os.path.join(jsonl_dir, "deprecated.jsonl"),
@@ -25,7 +25,7 @@ class PackageImporter:
         self.model_path = "./codegate_volume/models/all-minilm-L6-v2-q5_k_m.gguf"
 
     def _get_connection(self):
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.vec_db_path)
         conn.enable_load_extension(True)
         sqlite_vec_sl_tmp.load(conn)
         conn.enable_load_extension(False)
@@ -129,12 +129,12 @@ if __name__ == "__main__":
         help="Directory containing JSONL files. Default is 'data'.",
     )
     parser.add_argument(
-        "--db-path",
+        "--vec-db-path",
         type=str,
         default="./sqlite_data/vectordb.db",
         help="Path to SQLite database file. Default is './sqlite_data/vectordb.db'.",
     )
     args = parser.parse_args()
 
-    importer = PackageImporter(jsonl_dir=args.jsonl_dir, db_path=args.db_path)
+    importer = PackageImporter(jsonl_dir=args.jsonl_dir, vec_db_path=args.vec_db_path)
     asyncio.run(importer.run_import())
