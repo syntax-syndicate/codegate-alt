@@ -59,7 +59,7 @@ jobs:
           github_token: ${{ github.token }}
           workflow: ".github/workflows/import_packages.yml"
           workflow_conclusion: success
-          name: sqlite_vectordb_file
+          name: sqlite_data
           name_is_regexp: true
           skip_unpack: false
           if_no_artifact_found: ignore

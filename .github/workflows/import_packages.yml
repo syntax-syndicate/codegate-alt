@@ -79,4 +79,3 @@ jobs:
         name: sqlite_vectordb_file
         path: /tmp/sqlite_data/vectordb.db
         retention-days: 90
-
