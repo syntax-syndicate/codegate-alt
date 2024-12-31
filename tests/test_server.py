@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from click.testing import CliRunner
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,7 +144,7 @@ def test_system_routes(mock_pipeline_factory) -> None:
 async def test_async_health_check(mock_pipeline_factory) -> None:
     """Test the health check endpoint with async client."""
     app = init_app(mock_pipeline_factory)
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "healthy"}
