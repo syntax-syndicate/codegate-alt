@@ -144,7 +144,8 @@ class DbRecorder(DbCodeGate):
                 """
         )
         recorded_output = await self._insert_pydantic_model(output_db, sql)
-        logger.debug(f"Recorded output: {recorded_output}")
+        # Uncomment to debug
+        # logger.debug(f"Recorded output: {recorded_output}")
         return recorded_output
 
     async def record_alerts(self, alerts: List[Alert]) -> List[Alert]:
@@ -177,8 +178,8 @@ class DbRecorder(DbCodeGate):
             recorded_alerts.append(alert_result)
             if alert_result and alert_result.trigger_category == "critical":
                 await alert_queue.put(f"New alert detected: {alert.timestamp}")
-
-        logger.debug(f"Recorded alerts: {recorded_alerts}")
+        # Uncomment to debug the recorded alerts
+        # logger.debug(f"Recorded alerts: {recorded_alerts}")
         return recorded_alerts
 
     def _should_record_context(self, context: Optional[PipelineContext]) -> bool:

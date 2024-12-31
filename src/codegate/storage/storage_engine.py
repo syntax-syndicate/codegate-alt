@@ -200,14 +200,15 @@ class StorageEngine:
 
             # Log the raw SQL results
             rows = cursor.fetchall()
-            logger.debug(
-                "Raw SQL results",
-                row_count=len(rows),
-                rows=[
-                    {"name": row[0], "type": row[1], "status": row[2], "description": row[3]}
-                    for row in rows
-                ],
-            )
+            # Uncomment the following lines to log
+            # logger.debug(
+            #     "Raw SQL results",
+            #     row_count=len(rows),
+            #     rows=[
+            #         {"name": row[0], "type": row[1], "status": row[2], "description": row[3]}
+            #         for row in rows
+            #     ],
+            # )
 
             results = []
             query_words = None
