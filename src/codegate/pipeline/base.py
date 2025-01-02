@@ -117,7 +117,8 @@ class PipelineContext:
                 timestamp=datetime.datetime.now(datetime.timezone.utc),
             )
         )
-        logger.debug(f"Added alert to context: {self.alerts_raised[-1]}")
+        # Uncomment the below to debug
+        # logger.debug(f"Added alert to context: {self.alerts_raised[-1]}")
 
     def add_input_request(
         self, normalized_request: ChatCompletionRequest, is_fim_request: bool, provider: str
@@ -159,7 +160,8 @@ class PipelineContext:
                     output=output_str,
                 )
             )
-            logger.debug(f"Added output to context: {self.output_responses[-1]}")
+            # Uncomment the below to debug the responses
+            # logger.debug(f"Added output to context: {self.output_responses[-1]}")
         except Exception as e:
             logger.error(f"Failed to serialize output: {model_response}", error=str(e))
             return
