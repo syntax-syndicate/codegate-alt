@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from typing import List, Optional, Tuple, Union
 
 import structlog
@@ -180,6 +181,20 @@ async def parse_get_prompt_with_output(
     )
 
 
+def parse_question_answer(input_text: str) -> str:
+    # given a string, detect if we have a pattern of "Context: xxx \n\nQuery: xxx" and strip it
+    pattern = r'^Context:.*?\n\n\s*Query:\s*(.*)$'
+
+    # Search using the regex pattern
+    match = re.search(pattern, input_text, re.DOTALL)
+
+    # If a match is found, return the captured group after "Query:"
+    if match:
+        return match.group(1)
+    else:
+        return input_text
+
+
 async def match_conversations(
     partial_conversations: List[Optional[PartialConversation]],
 ) -> List[Conversation]:
@@ -206,6 +221,8 @@ async def match_conversations(
     for chat_id, sorted_convers in sorted_convers.items():
         questions_answers = []
         for partial_conversation in sorted_convers:
+            partial_conversation.question_answer.question.message = parse_question_answer(
+                partial_conversation.question_answer.question.message)
             questions_answers.append(partial_conversation.question_answer)
         conversations.append(
             Conversation(
