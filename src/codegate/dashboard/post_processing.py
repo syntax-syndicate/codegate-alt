@@ -220,19 +220,26 @@ async def match_conversations(
     conversations = []
     for chat_id, sorted_convers in sorted_convers.items():
         questions_answers = []
+        first_partial_conversation = None
         for partial_conversation in sorted_convers:
-            partial_conversation.question_answer.question.message = parse_question_answer(
-                partial_conversation.question_answer.question.message)
-            questions_answers.append(partial_conversation.question_answer)
-        conversations.append(
-            Conversation(
-                question_answers=questions_answers,
-                provider=partial_conversation.provider,
-                type=partial_conversation.type,
-                chat_id=chat_id,
-                conversation_timestamp=sorted_convers[0].request_timestamp,
+            #  check if we have an answer, otherwise do not add it
+            if partial_conversation.question_answer.answer is not None:
+                first_partial_conversation = partial_conversation
+                partial_conversation.question_answer.question.message = parse_question_answer(
+                    partial_conversation.question_answer.question.message)
+                questions_answers.append(partial_conversation.question_answer)
+
+        # only add conversation if we have some answers
+        if len(questions_answers) > 0 and first_partial_conversation is not None:
+            conversations.append(
+                Conversation(
+                    question_answers=questions_answers,
+                    provider=first_partial_conversation.provider,
+                    type=first_partial_conversation.type,
+                    chat_id=chat_id,
+                    conversation_timestamp=sorted_convers[0].request_timestamp,
+                )
             )
-        )
 
     return conversations
 
