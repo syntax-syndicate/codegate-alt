@@ -69,7 +69,7 @@ class PackageExtractor:
                         (use_wildcard) @import_name)
                     (use_declaration
                         (use_as_clause (scoped_identifier) @import_name))
-                """
+                """,
     }
 
     @staticmethod
