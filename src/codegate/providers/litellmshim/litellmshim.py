@@ -1,5 +1,6 @@
 from typing import Any, AsyncIterator, Callable, Optional, Union
 
+import litellm
 import structlog
 from fastapi.responses import JSONResponse, StreamingResponse
 from litellm import (
@@ -11,6 +12,8 @@ from litellm import (
 from codegate.providers.base import BaseCompletionHandler, StreamGenerator
 
 logger = structlog.get_logger("codegate")
+
+litellm.drop_params = True
 
 
 class LiteLLmShim(BaseCompletionHandler):

@@ -1,6 +1,7 @@
 import json
 from typing import Any, Dict, Optional
 
+import litellm
 import structlog
 from litellm import acompletion
 from ollama import Client as OllamaClient
@@ -9,6 +10,8 @@ from codegate.config import Config
 from codegate.inference import LlamaCppInferenceEngine
 
 logger = structlog.get_logger("codegate")
+
+litellm.drop_params = True
 
 
 class LLMClient:
