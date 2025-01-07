@@ -34,11 +34,10 @@ WORKDIR /usr/src/
 
 # To ensure we always download the latest release of the webapp, we use a build argument.
 # This prevents the curl command from being cached by Docker.
+
 ARG LATEST_RELEASE=LATEST
 RUN echo "Latest FE release: $LATEST_RELEASE"
-RUN --mount=type=secret,id=gh_token \
-    LATEST_RELEASE=${LATEST_RELEASE} \
-    curl -L -H "Authorization: Bearer $(cat /run/secrets/gh_token)" -o main.zip ${LATEST_RELEASE}
+RUN LATEST_RELEASE=${LATEST_RELEASE} curl -L  -o main.zip ${LATEST_RELEASE}
 
 # Extract the downloaded zip file
 RUN unzip main.zip
