@@ -157,16 +157,16 @@ make image-build
 
 ```bash
 # Basic usage with local image
-docker run -p 8989:8989 -p 9090:80 codegate:latest
+docker run -p 8989:8989 -p 9090:9090 codegate:latest
 
 # With pre-built pulled image
 docker pull ghcr.io/stacklok/codegate:latest
-docker run --name codegate -d -p 8989:8989 -p 9090:80 ghcr.io/stacklok/codegate:latest
+docker run --name codegate -d -p 8989:8989 -p 9090:9090 ghcr.io/stacklok/codegate:latest
 
 # It will mount a volume to /app/codegate_volume
 # The directory supports storing Llama CPP models under subdirectory /models
 # A sqlite DB with the messages and alerts is stored under the subdirectory /db
-docker run --name codegate -d -v /path/to/volume:/app/codegate_volume -p 8989:8989 -p 9090:80 ghcr.io/stacklok/codegate:latest
+docker run --name codegate -d -v /path/to/volume:/app/codegate_volume -p 8989:8989 -p 9090:9090 ghcr.io/stacklok/codegate:latest
 ```
 
 ### Exposed parameters
@@ -185,7 +185,7 @@ docker run --name codegate -d -v /path/to/volume:/app/codegate_volume -p 8989:89
   server (default to TEXT, can be JSON/TEXT)
 
 ```bash
-docker run -p 8989:8989 -p 9090:80 -e CODEGATE_OLLAMA_URL=http://1.2.3.4:11434/api ghcr.io/stacklok/codegate:latest
+docker run -p 8989:8989 -p 9090:9090 -e CODEGATE_OLLAMA_URL=http://1.2.3.4:11434/api ghcr.io/stacklok/codegate:latest
 ```
 
 ## 🤝 Contributing
