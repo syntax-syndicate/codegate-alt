@@ -66,7 +66,7 @@ jobs:
       - name: Fetch latest FE commit SHA
         id: fetch_commit_fe_sha
         run: |
-          echo "LATEST_RELEASE=$(curl -s "https://api.github.com/repos/stacklok/codegate-ui/releases/latest" -H "Authorization: Bearer ${{ secrets.GH_CI_TOKEN }}" | grep '"zipball_url":' | cut -d '"' -f 4)" >> $GITHUB_ENV
+          echo "LATEST_RELEASE=$(curl -s "https://api.github.com/repos/stacklok/codegate-ui/releases/latest" | grep '"zipball_url":' | cut -d '"' -f 4)" >> $GITHUB_ENV
       - name: Download git lfs dependencies
         run: |
           git lfs install
