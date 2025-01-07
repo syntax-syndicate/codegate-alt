@@ -18,7 +18,7 @@ from potential AI-related security risks. Key features include:
 
 ### Prerequisites
 
-- Python 3.11 or higher
+- Python 3.12 or higher
 - [Poetry](https://python-poetry.org/docs/#installation) for dependency
   management
 - [Docker](https://docs.docker.com/get-docker/) or
