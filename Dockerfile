@@ -82,7 +82,7 @@ COPY --from=builder /app /app
 # Copy necessary artifacts from the webbuilder stage
 COPY --from=webbuilder /usr/src/webapp/dist /var/www/html
 # Expose nginx
-EXPOSE 80
+EXPOSE 9090
 
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app/src

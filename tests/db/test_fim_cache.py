@@ -127,7 +127,7 @@ def test_extract_message_from_fim_request(test_request, expected_result_content)
 
 def test_are_new_alerts_present():
     fim_cache = FimCache()
-    cached_entry = CachedFim(timestamp=datetime.now(), critical_alerts=[])
+    cached_entry = CachedFim(timestamp=datetime.now(), critical_alerts=[], initial_id="1")
     context = PipelineContext()
     context.alerts_raised = [mock.MagicMock(trigger_category=AlertSeverity.CRITICAL.value)]
     result = fim_cache._are_new_alerts_present(context, cached_entry)
@@ -146,6 +146,7 @@ def test_are_new_alerts_present():
                 trigger_string=None,
             )
         ],
+        initial_id='2'
     )
     result = fim_cache._are_new_alerts_present(context, populated_cache)
     assert result is False
@@ -155,15 +156,17 @@ def test_are_new_alerts_present():
     "cached_entry, is_old",
     [
         (
-            CachedFim(timestamp=datetime.now(timezone.utc) - timedelta(days=1), critical_alerts=[]),
+            CachedFim(timestamp=datetime.now(timezone.utc) - timedelta(days=1),
+                      critical_alerts=[], initial_id='1'),
             True,
         ),
-        (CachedFim(timestamp=datetime.now(timezone.utc), critical_alerts=[]), False),
+        (CachedFim(timestamp=datetime.now(timezone.utc), critical_alerts=[],
+                   initial_id='2'), False),
     ],
 )
 def test_is_cached_entry_old(cached_entry, is_old):
     context = PipelineContext()
-    context.add_input_request("test", True, "test_provider")
+    context.add_input_request("test", True, "test_provider")  # type: ignore
     fim_cache = FimCache()
     result = fim_cache._is_cached_entry_old(context, cached_entry)
     assert result == is_old

@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Optional
 
 import structlog
 from fastapi import APIRouter, Depends, FastAPI
@@ -37,7 +37,7 @@ def get_messages(db_reader: DbReader = Depends(get_db_reader)) -> List[Conversat
 
 
 @dashboard_router.get("/dashboard/alerts")
-def get_alerts(db_reader: DbReader = Depends(get_db_reader)) -> List[AlertConversation]:
+def get_alerts(db_reader: DbReader = Depends(get_db_reader)) -> List[Optional[AlertConversation]]:
     """
     Get all the messages from the database and return them as a list of conversations.
     """
