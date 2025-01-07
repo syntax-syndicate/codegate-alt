@@ -90,7 +90,7 @@ class CodegateContextRetriever(PipelineStep):
         user_messages = re.sub(r"```.*?```", "", user_messages, flags=re.DOTALL)
 
         # Vector search to find bad packages
-        bad_packages = await storage_engine.search(query=user_messages, distance=0.8, limit=100)
+        bad_packages = await storage_engine.search(query=user_messages, distance=0.5, limit=100)
 
         # All bad packages
         all_bad_packages = bad_snippet_packages + bad_packages
