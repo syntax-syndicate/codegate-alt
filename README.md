@@ -125,19 +125,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-### Running locally with several network interfaces
-
-By default weaviate is picking the default route as the ip for the cluster
-nodes. It may cause some issues when dealing with multiple interfaces. To make
-it work, localhost needs to be the default route:
-
-```bash
-sudo route delete default
-sudo route add default 127.0.0.1
-sudo route add -net 0.0.0.0/1 <public_ip_gateway>
-sudo route add -net 128.0.0.0/1 <public_ip_gateway>
-```
-
 ### Testing
 
 To run the unit tests, execute this command:
