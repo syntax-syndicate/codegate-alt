@@ -36,8 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /usr/src/
 
 # Set the release URL (this should be static and not change often) and download latest 
-ARG LATEST_RELEASE="https://api.github.com/repos/stacklok/codegate-ui/releases/latest"
-RUN curl -s ${LATEST_RELEASE} | jq -r '.zipball_url' | xargs curl -L -o main.zip
+RUN curl -s https://api.github.com/repos/stacklok/codegate-ui/releases/latest | jq -r '.zipball_url' | xargs curl -L -o main.zip
 
 # Extract the downloaded zip file
 RUN unzip main.zip
