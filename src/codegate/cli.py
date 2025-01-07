@@ -313,7 +313,7 @@ def serve(
         ca = CertificateAuthority.get_instance()
 
         certs_check = ca.check_and_ensure_certificates()
-        if certs_check:
+        if not certs_check:
             click.echo("New Certificates generated successfully.")
         else:
             click.echo("Existing Certificates are already present.")
@@ -515,7 +515,7 @@ def generate_certs(
         ca.remove_certificates()
 
     certs_check = ca.check_and_ensure_certificates()
-    if certs_check:
+    if not certs_check:
         logger.info("New Certificates generated successfully.")
     else:
         logger.info("Existing Certificates are already present.")
