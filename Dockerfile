@@ -24,20 +24,29 @@ COPY . /app
 # Build the webapp
 FROM node:23-slim AS webbuilder
 
+
+
 # Install curl for downloading the webapp from GH and unzip to extract it
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    jq \
     unzip\
     ca-certificates
 
 WORKDIR /usr/src/
 
-# To ensure we always download the latest release of the webapp, we use a build argument.
-# This prevents the curl command from being cached by Docker.
+# Set build arg for latest release URL (optional)
+ARG LATEST_RELEASE
 
-ARG LATEST_RELEASE=LATEST
-RUN echo "Latest FE release: $LATEST_RELEASE"
-RUN LATEST_RELEASE=${LATEST_RELEASE} curl -L  -o main.zip ${LATEST_RELEASE}
+# Download the latest release - if LATEST_RELEASE is provided use it, otherwise fetch from API
+RUN if [ -n "$LATEST_RELEASE" ]; then \
+        echo "Using provided release URL" && \
+        curl -L -o main.zip "${LATEST_RELEASE}"; \
+    else \
+        echo "Fetching latest release URL" && \
+        curl -s https://api.github.com/repos/stacklok/codegate-ui/releases/latest | \
+        jq -r '.zipball_url' | xargs curl -L -o main.zip; \
+    fi
 
 # Extract the downloaded zip file
 RUN unzip main.zip
