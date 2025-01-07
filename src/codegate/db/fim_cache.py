@@ -18,6 +18,7 @@ class CachedFim(BaseModel):
 
     timestamp: datetime.datetime
     critical_alerts: List[Alert]
+    initial_id: str
 
 
 class FimCache:
@@ -86,16 +87,40 @@ class FimCache:
 
     def _add_cache_entry(self, hash_key: str, context: PipelineContext):
         """Add a new cache entry"""
+        if not context.input_request:
+            logger.warning("No input request found. Skipping creating a mapping entry")
+            return
         critical_alerts = [
             alert
             for alert in context.alerts_raised
             if alert.trigger_category == AlertSeverity.CRITICAL.value
         ]
         new_cache = CachedFim(
-            timestamp=context.input_request.timestamp, critical_alerts=critical_alerts
+            timestamp=context.input_request.timestamp, critical_alerts=critical_alerts, initial_id=context.input_request.id
         )
         self.cache[hash_key] = new_cache
         logger.info(f"Added cache entry for hash key: {hash_key}")
+        return self.cache[hash_key]
+
+    def _update_cache_entry(self, hash_key: str, context: PipelineContext):
+        """Update an existing cache entry without changing the timestamp."""
+        existing_entry = self.cache.get(hash_key)
+        if existing_entry is not None:
+            # Update critical alerts while retaining the original timestamp.
+            critical_alerts = [
+                alert
+                for alert in context.alerts_raised
+                if alert.trigger_category == AlertSeverity.CRITICAL.value
+            ]
+            # Update the entry in the cache with new critical alerts but keep the old timestamp.
+            updated_cache = CachedFim(
+                timestamp=existing_entry.timestamp, critical_alerts=critical_alerts, initial_id=existing_entry.initial_id
+            )
+            self.cache[hash_key] = updated_cache
+            logger.info(f"Updated cache entry for hash key: {hash_key}")
+        else:
+            # Log a warning if trying to update a non-existent entry - ideally should not happen.
+            logger.warning(f"Attempted to update non-existent cache entry for hash key: {hash_key}")
 
     def _are_new_alerts_present(self, context: PipelineContext, cached_entry: CachedFim) -> bool:
         """Check if there are new alerts present"""
@@ -108,29 +133,34 @@ class FimCache:
 
     def _is_cached_entry_old(self, context: PipelineContext, cached_entry: CachedFim) -> bool:
         """Check if the cached entry is old"""
+        if not context.input_request:
+            logger.warning("No input request found. Skipping checking if the cache entry is old")
+            return False
         elapsed_seconds = (context.input_request.timestamp - cached_entry.timestamp).total_seconds()
-        return elapsed_seconds > Config.get_config().max_fim_hash_lifetime
+        config = Config.get_config()
+        if config is None:
+            logger.warning("No configuration found. Skipping checking if the cache entry is old")
+            return True
+        return elapsed_seconds > Config.get_config().max_fim_hash_lifetime  # type: ignore
 
     def could_store_fim_request(self, context: PipelineContext):
+        if not context.input_request:
+            logger.warning("No input request found. Skipping creating a mapping entry")
+            return False, '', ''
         # Couldn't process the user message. Skip creating a mapping entry.
         message = self._extract_message_from_fim_request(context.input_request.request)
         if message is None:
             logger.warning(f"Couldn't read FIM message: {message}. Will not record to DB.")
-            return False
+            return False, '', ''
 
-        hash_key = self._calculate_hash_key(message, context.input_request.provider)
+        hash_key = self._calculate_hash_key(message, context.input_request.provider)  # type: ignore
         cached_entry = self.cache.get(hash_key, None)
-        if cached_entry is None:
-            self._add_cache_entry(hash_key, context)
-            return True
+        if cached_entry is None or self._is_cached_entry_old(context, cached_entry) or self._are_new_alerts_present(context, cached_entry):
+            cached_entry = self._add_cache_entry(hash_key, context)
+            if cached_entry is None:
+                logger.warning("Failed to add cache entry")
+                return False, '', ''
+            return True, 'add', cached_entry.initial_id
 
-        if self._is_cached_entry_old(context, cached_entry):
-            self._add_cache_entry(hash_key, context)
-            return True
-
-        if self._are_new_alerts_present(context, cached_entry):
-            self._add_cache_entry(hash_key, context)
-            return True
-
-        logger.debug(f"FIM entry already in cache: {hash_key}.")
-        return False
+        self._update_cache_entry(hash_key, context)
+        return True, 'update', cached_entry.initial_id
