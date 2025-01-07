@@ -173,7 +173,7 @@ class CertificateAuthority:
                         self._cert_cache[common_name] = CachedCertificate(
                             cert_path=cert_path,
                             key_path=key_path,
-                            creation_time=datetime.now(datetime.UTC),
+                            creation_time=datetime.now(timezone.utc),
                         )
                     else:
                         logger.debug(f"Skipping expired certificate for {common_name}")
