@@ -24,22 +24,20 @@ COPY . /app
 # Build the webapp
 FROM node:23-slim AS webbuilder
 
+
+
 # Install curl for downloading the webapp from GH and unzip to extract it
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
-    unzip \
+    unzip\
     ca-certificates
 
 WORKDIR /usr/src/
 
-# Ensure the LATEST_RELEASE argument is passed or set a default value
+# Set the release URL (this should be static and not change often) and download latest 
 ARG LATEST_RELEASE="https://api.github.com/repos/stacklok/codegate-ui/releases/latest"
-RUN echo "Latest FE release: $LATEST_RELEASE" \
-    && TAG=$(curl -s $LATEST_RELEASE | jq -r '.tag_name') \
-    && echo "Latest FE release: ${TAG}" \
-    && ZIP_URL=$(curl -s $LATEST_RELEASE | jq -r '.zipball_url') \
-    && curl -L -o main.zip $ZIP_URL
+RUN curl -s ${LATEST_RELEASE} | jq -r '.zipball_url' | xargs curl -L -o main.zip
 
 # Extract the downloaded zip file
 RUN unzip main.zip
