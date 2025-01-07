@@ -42,7 +42,7 @@ class SSEProcessor:
                         data = json.loads(data_content)
                         records.append({"type": "data", "content": data})
                     except json.JSONDecodeError:
-                        print(f"Failed to parse JSON: {data_content}")
+                        logger.debug(f"Failed to parse JSON: {data_content}")
 
         return records
 
