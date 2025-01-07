@@ -49,6 +49,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 codegate = "codegate.cli:main"
+generate-openapi = "src.codegate.dashboard.dashboard:generate_openapi"
 
 [tool.black]
 line-length = 100
