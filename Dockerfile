@@ -31,14 +31,15 @@ ARG LATEST_RELEASE=https://api.github.com/repos/stacklok/codegate-ui/releases/la
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
-    unzip\
+    unzip \
     ca-certificates
 
 WORKDIR /usr/src/
 
-# Download the latest release of the webapp
-RUN echo "Latest FE release: $(curl -s ${LATEST_RELEASE} | jq -r '.tag_name')"
-RUN curl -s ${LATEST_RELEASE} | jq -r '.zipball_url' | xargs curl -L -o main.zip
+# Download the latest release of the webapp in one single RUN instruction
+RUN TAG=$(curl -s ${LATEST_RELEASE} | jq -r '.tag_name') && \
+    echo "Latest FE release: ${TAG}" && \
+    curl -s ${LATEST_RELEASE} | jq -r '.zipball_url' | xargs curl -L -o main.zip
 
 # Extract the downloaded zip file
 RUN unzip main.zip
