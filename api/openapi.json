@@ -46,7 +46,14 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/AlertConversation"
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/AlertConversation"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "type": "array",
                   "title": "Response Get Alerts Dashboard Alerts Get"
