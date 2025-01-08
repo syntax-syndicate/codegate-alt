@@ -52,6 +52,9 @@ jobs:
             latest=true
           tags: |
             type=raw,value=${{ steps.version-string.outputs.tag }}
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}
+            type=semver,pattern=v{{major}}.{{minor}}
       - name: Download artifact
         id: download-artifact
         uses: dawidd6/action-download-artifact@80620a5d27ce0ae443b965134db88467fc607b43 # v7
