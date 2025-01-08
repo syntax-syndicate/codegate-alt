@@ -146,7 +146,7 @@ def test_are_new_alerts_present():
                 trigger_string=None,
             )
         ],
-        initial_id='2'
+        initial_id="2",
     )
     result = fim_cache._are_new_alerts_present(context, populated_cache)
     assert result is False
@@ -156,12 +156,17 @@ def test_are_new_alerts_present():
     "cached_entry, is_old",
     [
         (
-            CachedFim(timestamp=datetime.now(timezone.utc) - timedelta(days=1),
-                      critical_alerts=[], initial_id='1'),
+            CachedFim(
+                timestamp=datetime.now(timezone.utc) - timedelta(days=1),
+                critical_alerts=[],
+                initial_id="1",
+            ),
             True,
         ),
-        (CachedFim(timestamp=datetime.now(timezone.utc), critical_alerts=[],
-                   initial_id='2'), False),
+        (
+            CachedFim(timestamp=datetime.now(timezone.utc), critical_alerts=[], initial_id="2"),
+            False,
+        ),
     ],
 )
 def test_is_cached_entry_old(cached_entry, is_old):

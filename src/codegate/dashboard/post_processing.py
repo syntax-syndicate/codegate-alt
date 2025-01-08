@@ -12,7 +12,7 @@ from codegate.dashboard.request_models import (
     PartialConversation,
     QuestionAnswer,
 )
-from codegate.db.queries import GetAlertsWithPromptAndOutputRow, GetPromptWithOutputsRow
+from codegate.db.models import GetAlertsWithPromptAndOutputRow, GetPromptWithOutputsRow
 
 logger = structlog.get_logger("codegate")
 
@@ -183,7 +183,7 @@ async def parse_get_prompt_with_output(
 
 def parse_question_answer(input_text: str) -> str:
     # given a string, detect if we have a pattern of "Context: xxx \n\nQuery: xxx" and strip it
-    pattern = r'^Context:.*?\n\n\s*Query:\s*(.*)$'
+    pattern = r"^Context:.*?\n\n\s*Query:\s*(.*)$"
 
     # Search using the regex pattern
     match = re.search(pattern, input_text, re.DOTALL)
@@ -226,7 +226,8 @@ async def match_conversations(
             if partial_conversation.question_answer.answer is not None:
                 first_partial_conversation = partial_conversation
                 partial_conversation.question_answer.question.message = parse_question_answer(
-                    partial_conversation.question_answer.question.message)
+                    partial_conversation.question_answer.question.message
+                )
                 questions_answers.append(partial_conversation.question_answer)
 
         # only add conversation if we have some answers
