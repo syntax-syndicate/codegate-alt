@@ -659,6 +659,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
     def connection_made(self, transport: asyncio.Transport) -> None:
         """Handle successful connection to target"""
         self.transport = transport
+        logger.debug(f"Target transport peer: {transport.get_extra_info('peername')}")
         self.proxy.target_transport = transport
 
     def _ensure_output_processor(self) -> None:
@@ -703,9 +704,10 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                         streaming_choices.append(
                             StreamingChoices(
                                 finish_reason=choice.get("finish_reason", None),
-                                index=0,
+                                index=choice.get("index", 0),
                                 delta=Delta(content=content, role="assistant"),
-                                logprobs=None,
+                                logprobs=choice.get("logprobs", None),
+                                p=choice.get("p", None),
                             )
                         )
 
@@ -716,12 +718,13 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                         created=record_content.get("created", 0),
                         model=record_content.get("model", ""),
                         object="chat.completion.chunk",
+                        stream=True,
                     )
                     yield mr
 
             async for record in self.output_pipeline_instance.process_stream(stream_iterator()):
                 chunk = record.model_dump_json(exclude_none=True, exclude_unset=True)
-                sse_data = f"data:{chunk}\n\n".encode("utf-8")
+                sse_data = f"data: {chunk}\n\n".encode("utf-8")
                 chunk_size = hex(len(sse_data))[2:] + "\r\n"
                 self._proxy_transport_write(chunk_size.encode())
                 self._proxy_transport_write(sse_data)
@@ -764,6 +767,10 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             logger.error("Proxy transport not available")
             return
         self.proxy.transport.write(data)
+        # print("DEBUG =================================")
+        # print(data)
+        # print("DEBUG =================================")
+
 
     def data_received(self, data: bytes) -> None:
         """Handle data received from target"""
@@ -781,11 +788,21 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                 if header_end != -1:
                     self.headers_sent = True
                     # Send headers first
-                    headers = data[: header_end + 4]
+                    headers = data[: header_end]
+
+                    # If Transfer-Encoding is not present, add it
+                    if b"Transfer-Encoding:" not in headers:
+                        headers = headers + b"\r\nTransfer-Encoding: chunked"
+
+                    headers = headers + b"\r\n\r\n"
+
                     self._proxy_transport_write(headers)
                     logger.debug(f"Headers sent: {headers}")
 
                     data = data[header_end + 4 :]
+                    # print("DEBUG =================================")
+                    # print(data)
+                    # print("DEBUG =================================")
 
             self._process_chunk(data)
 
