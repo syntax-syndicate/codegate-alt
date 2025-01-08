@@ -1,8 +1,9 @@
 import asyncio
+import json
 from typing import AsyncGenerator, List, Optional
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import StreamingResponse
 
 from codegate.dashboard.post_processing import (
@@ -59,3 +60,18 @@ async def stream_sse():
     Send alerts event
     """
     return StreamingResponse(generate_sse_events(), media_type="text/event-stream")
+
+
+def generate_openapi():
+    # Create a temporary FastAPI app instance
+    app = FastAPI()
+
+    # Include your defined router
+    app.include_router(dashboard_router)
+
+    # Generate OpenAPI JSON
+    openapi_schema = app.openapi()
+
+    # Convert the schema to JSON string for easier handling or storage
+    openapi_json = json.dumps(openapi_schema, indent=2)
+    print(openapi_json)
