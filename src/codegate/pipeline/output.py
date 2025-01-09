@@ -115,7 +115,7 @@ class OutputPipelineInstance:
         await self._db_recorder.record_context(self._input_context)
 
     async def process_stream(
-        self, stream: AsyncIterator[ModelResponse]
+        self, stream: AsyncIterator[ModelResponse], cleanup_sensitive: bool = True
     ) -> AsyncIterator[ModelResponse]:
         """
         Process a stream through all pipeline steps
@@ -182,7 +182,7 @@ class OutputPipelineInstance:
                 self._context.buffer.clear()
 
             # Cleanup sensitive data through the input context
-            if self._input_context and self._input_context.sensitive:
+            if cleanup_sensitive and self._input_context and self._input_context.sensitive:
                 self._input_context.sensitive.secure_cleanup()
 
 

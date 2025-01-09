@@ -656,10 +656,15 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         self.stream_queue: Optional[asyncio.Queue] = None
         self.processing_task: Optional[asyncio.Task] = None
 
+        self.finish_stream = False
+
+        # For debugging only
+        # self.data_sent = []
+
     def connection_made(self, transport: asyncio.Transport) -> None:
         """Handle successful connection to target"""
         self.transport = transport
-        logger.debug(f"Target transport peer: {transport.get_extra_info('peername')}")
+        logger.debug(f"Connection established to target: {transport.get_extra_info('peername')}")
         self.proxy.target_transport = transport
 
     def _ensure_output_processor(self) -> None:
@@ -688,7 +693,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         try:
 
             async def stream_iterator():
-                while True:
+                while not self.stream_queue.empty():
                     incoming_record = await self.stream_queue.get()
 
                     record_content = incoming_record.get("content", {})
@@ -700,6 +705,9 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                             content = choice.get("text", "")
                         else:
                             content = choice.get("delta", {}).get("content")
+
+                        if choice.get("finish_reason", None) == "stop":
+                            self.finish_stream = True
 
                         streaming_choices.append(
                             StreamingChoices(
@@ -722,7 +730,9 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                     )
                     yield mr
 
-            async for record in self.output_pipeline_instance.process_stream(stream_iterator()):
+            async for record in self.output_pipeline_instance.process_stream(
+                stream_iterator(), cleanup_sensitive=False
+            ):
                 chunk = record.model_dump_json(exclude_none=True, exclude_unset=True)
                 sse_data = f"data: {chunk}\n\n".encode("utf-8")
                 chunk_size = hex(len(sse_data))[2:] + "\r\n"
@@ -730,14 +740,8 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                 self._proxy_transport_write(sse_data)
                 self._proxy_transport_write(b"\r\n")
 
-            sse_data = b"data: [DONE]\n\n"
-            # Add chunk size for DONE message too
-            chunk_size = hex(len(sse_data))[2:] + "\r\n"
-            self._proxy_transport_write(chunk_size.encode())
-            self._proxy_transport_write(sse_data)
-            self._proxy_transport_write(b"\r\n")
-            # Now send the final zero chunk
-            self._proxy_transport_write(b"0\r\n\r\n")
+            if self.finish_stream:
+                self.finish_data()
 
         except asyncio.CancelledError:
             logger.debug("Stream processing cancelled")
@@ -746,12 +750,37 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             logger.error(f"Error processing stream: {e}")
         finally:
             # Clean up
+            self.stream_queue = None
             if self.processing_task and not self.processing_task.done():
                 self.processing_task.cancel()
-            if self.proxy.context_tracking and self.proxy.context_tracking.sensitive:
-                self.proxy.context_tracking.sensitive.secure_cleanup()
+
+    def finish_data(self):
+        logger.debug("Finishing data stream")
+        sse_data = b"data: [DONE]\n\n"
+        # Add chunk size for DONE message too
+        chunk_size = hex(len(sse_data))[2:] + "\r\n"
+        self._proxy_transport_write(chunk_size.encode())
+        self._proxy_transport_write(sse_data)
+        self._proxy_transport_write(b"\r\n")
+        # Now send the final zero chunk
+        self._proxy_transport_write(b"0\r\n\r\n")
+
+        # For debugging only
+        # print("===========START DATA SENT====================")
+        # for data in self.data_sent:
+        #     print(data)
+        # self.data_sent = []
+        # print("===========START DATA SENT====================")
+
+        self.finish_stream = False
+        self.headers_sent = False
 
     def _process_chunk(self, chunk: bytes):
+        # For debugging only
+        # print("===========START DATA RECVD====================")
+        # print(chunk)
+        # print("===========END DATA RECVD======================")
+
         records = self.sse_processor.process_chunk(chunk)
 
         for record in records:
@@ -763,14 +792,12 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
             self.stream_queue.put_nowait(record)
 
     def _proxy_transport_write(self, data: bytes):
+        # For debugging only
+        # self.data_sent.append(data)
         if not self.proxy.transport or self.proxy.transport.is_closing():
             logger.error("Proxy transport not available")
             return
         self.proxy.transport.write(data)
-        # print("DEBUG =================================")
-        # print(data)
-        # print("DEBUG =================================")
-
 
     def data_received(self, data: bytes) -> None:
         """Handle data received from target"""
@@ -788,7 +815,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                 if header_end != -1:
                     self.headers_sent = True
                     # Send headers first
-                    headers = data[: header_end]
+                    headers = data[:header_end]
 
                     # If Transfer-Encoding is not present, add it
                     if b"Transfer-Encoding:" not in headers:
@@ -800,15 +827,13 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                     logger.debug(f"Headers sent: {headers}")
 
                     data = data[header_end + 4 :]
-                    # print("DEBUG =================================")
-                    # print(data)
-                    # print("DEBUG =================================")
 
             self._process_chunk(data)
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection loss to target"""
 
+        logger.debug("Lost connection to target")
         if (
             not self.proxy._closing
             and self.proxy.transport
