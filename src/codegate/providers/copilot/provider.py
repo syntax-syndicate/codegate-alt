@@ -151,20 +151,6 @@ class CopilotProvider(asyncio.Protocol):
         self._closing = False
         self.pipeline_factory = PipelineFactory(SecretsManager())
         self.context_tracking: Optional[PipelineContext] = None
-        self.idle_timeout = 10
-        self.idle_timer = None
-
-    def _reset_idle_timer(self) -> None:
-            if self.idle_timer:
-                self.idle_timer.cancel()
-            self.idle_timer = asyncio.get_event_loop().call_later(
-                self.idle_timeout, self._handle_idle_timeout
-            )
-
-    def _handle_idle_timeout(self) -> None:
-        logger.warning("Idle timeout reached, closing connection")
-        if self.transport and not self.transport.is_closing():
-            self.transport.close()
 
     def _select_pipeline(self, method: str, path: str) -> Optional[CopilotPipeline]:
         if method == "POST" and path == "v1/engines/copilot-codex/completions":
@@ -229,7 +215,6 @@ class CopilotProvider(asyncio.Protocol):
         self.transport = transport
         self.peername = transport.get_extra_info("peername")
         logger.debug(f"Client connected from {self.peername}")
-        self._reset_idle_timer()
 
     def get_headers_dict(self) -> Dict[str, str]:
         """Convert raw headers to dictionary format"""
@@ -365,10 +350,8 @@ class CopilotProvider(asyncio.Protocol):
                     pipeline_output = pipeline_output.reconstruct()
                 self.target_transport.write(pipeline_output)
 
-
     def data_received(self, data: bytes) -> None:
         """Handle received data from client"""
-        self._reset_idle_timer()        
         try:
             if not self._check_buffer_size(data):
                 self.send_error_response(413, b"Request body too large")
@@ -573,7 +556,6 @@ class CopilotProvider(asyncio.Protocol):
             logger.error(f"Error during TLS handshake: {e}")
             self.send_error_response(502, b"TLS handshake failed")
 
-
     def send_error_response(self, status: int, message: bytes) -> None:
         """Send error response to client"""
         if self._closing:
@@ -610,37 +592,6 @@ class CopilotProvider(asyncio.Protocol):
         self.target_transport = None
         self.buffer.clear()
         self.ssl_context = None
-
-        if self.idle_timer:
-            self.idle_timer.cancel()        
-
-    def eof_received(self) -> None:
-        print("in eof received")
-        """Handle connection loss"""
-        if self._closing:
-            return
-
-        self._closing = True
-        logger.debug(f"EOF received from {self.peername}")
-
-        # Close target transport if it exists and isn't already closing
-        if self.target_transport and not self.target_transport.is_closing():
-            try:
-                self.target_transport.close()
-            except Exception as e:
-                logger.error(f"Error closing target transport when EOF: {e}")
-
-        # Clear references to help with cleanup
-        self.transport = None
-        self.target_transport = None
-        self.buffer.clear()
-        self.ssl_context = None
-
-    def pause_writing(self) -> None:
-        print("Transport buffer full, pausing writing")        
-
-    def resume_writing(self) -> None:
-        print("Transport buffer ready, resuming writing")        
 
     @classmethod
     async def create_proxy_server(
