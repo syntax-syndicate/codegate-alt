@@ -771,7 +771,6 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         # print(data)
         # print("DEBUG =================================")
 
-
     def data_received(self, data: bytes) -> None:
         """Handle data received from target"""
         self._ensure_output_processor()
@@ -788,7 +787,7 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
                 if header_end != -1:
                     self.headers_sent = True
                     # Send headers first
-                    headers = data[: header_end]
+                    headers = data[:header_end]
 
                     # If Transfer-Encoding is not present, add it
                     if b"Transfer-Encoding:" not in headers:
