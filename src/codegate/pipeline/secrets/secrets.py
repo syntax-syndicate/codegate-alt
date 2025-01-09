@@ -139,11 +139,11 @@ class SecretsModifier:
         logger.info("\nFound secrets:")
         for start, end, match in absolute_matches:
             hidden_secret = self._hide_secret(match)
-            self._notify_secret(match, protected_text)
 
             # Replace the secret in the text
             protected_text[start:end] = hidden_secret
 
+            self._notify_secret(match, protected_text)
             found_secrets += 1
             # Log the findings
             logger.info(

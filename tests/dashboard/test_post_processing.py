@@ -16,7 +16,7 @@ from codegate.dashboard.request_models import (
     PartialConversation,
     QuestionAnswer,
 )
-from codegate.db.queries import GetPromptWithOutputsRow
+from codegate.db.models import GetPromptWithOutputsRow
 
 
 @pytest.mark.asyncio
