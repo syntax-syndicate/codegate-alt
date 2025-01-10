@@ -52,7 +52,9 @@ class CodeCommentStep(OutputPipelineStep):
 
         # Check if any of the snippet libraries is a bad package
         storage_engine = StorageEngine()
-        libobjects = await storage_engine.search_by_property("name", snippet.libraries)
+        libobjects = await storage_engine.search(
+            language=snippet.language, packages=snippet.libraries
+        )
         logger.info(f"Found {len(libobjects)} libraries in the storage engine")
 
         # If no bad packages are found, just return empty comment
