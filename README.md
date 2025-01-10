@@ -67,6 +67,16 @@ With Continue, you can choose from several leading AI model providers:
 
 🔮 Many more on the way!
 
+- **[Aider](https://aider.chat)
+
+With Aider, you can choose from two leading AI model providers:
+
+- 💻 Local LLMs with [Ollama](https://ollama.com/) and
+  [llama.cpp](https://github.com/ggerganov/llama.cpp) (run AI completely
+  offline!)
+- 🧠 [OpenAI API](https://openai.com/api/)
+
+
 ### Privacy first
 
 Unlike E.T., your code never phones home! 🛸 CodeGate is designed with privacy
@@ -83,6 +93,8 @@ Check out the quickstart guides to get up and running quickly!
 
 - [Quickstart guide for GitHub Copilot with VS Code](https://docs.codegate.ai/quickstart)
 - [Quickstart guide for Continue with VS Code and Ollama](https://docs.codegate.ai/quickstart-continue)
+- [Quickstart guide for Aider with Open AI and Ollama](https://docs.codegate.ai/quickstart-aider)
+
 
 ## 🎯 Usage
 
