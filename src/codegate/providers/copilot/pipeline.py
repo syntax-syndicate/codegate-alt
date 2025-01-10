@@ -24,6 +24,7 @@ class CopilotPipeline(ABC):
 
     def __init__(self, pipeline_factory: PipelineFactory):
         self.pipeline_factory = pipeline_factory
+        self.instance = self._create_pipeline()
         self.normalizer = self._create_normalizer()
         self.provider_name = "openai"
 
@@ -33,7 +34,7 @@ class CopilotPipeline(ABC):
         pass
 
     @abstractmethod
-    def create_pipeline(self) -> SequentialPipelineProcessor:
+    def _create_pipeline(self) -> SequentialPipelineProcessor:
         """Each strategy defines which pipeline to create"""
         pass
 
@@ -84,7 +85,11 @@ class CopilotPipeline(ABC):
         body = response.model_dump_json(exclude_none=True, exclude_unset=True).encode()
         return body
 
-    async def process_body(self, headers: list[str], body: bytes) -> Tuple[bytes, PipelineContext]:
+    async def process_body(
+        self,
+        headers: list[str],
+        body: bytes,
+    ) -> Tuple[bytes, PipelineContext | None]:
         """Common processing logic for all strategies"""
         try:
             normalized_body = self.normalizer.normalize(body)
@@ -97,8 +102,7 @@ class CopilotPipeline(ABC):
                 except ValueError:
                     continue
 
-            pipeline = self.create_pipeline()
-            result = await pipeline.process_request(
+            result = await self.instance.process_request(
                 request=normalized_body,
                 provider=self.provider_name,
                 model=normalized_body.get("model", "gpt-4o-mini"),
@@ -168,10 +172,13 @@ class CopilotFimPipeline(CopilotPipeline):
     format and the FIM pipeline used by all providers.
     """
 
+    def __init__(self, pipeline_factory: PipelineFactory):
+        super().__init__(pipeline_factory)
+
     def _create_normalizer(self):
         return CopilotFimNormalizer()
 
-    def create_pipeline(self) -> SequentialPipelineProcessor:
+    def _create_pipeline(self) -> SequentialPipelineProcessor:
         return self.pipeline_factory.create_fim_pipeline()
 
 
@@ -181,8 +188,11 @@ class CopilotChatPipeline(CopilotPipeline):
     format and the FIM pipeline used by all providers.
     """
 
+    def __init__(self, pipeline_factory: PipelineFactory):
+        super().__init__(pipeline_factory)
+
     def _create_normalizer(self):
         return CopilotChatNormalizer()
 
-    def create_pipeline(self) -> SequentialPipelineProcessor:
+    def _create_pipeline(self) -> SequentialPipelineProcessor:
         return self.pipeline_factory.create_input_pipeline()

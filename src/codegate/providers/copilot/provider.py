@@ -150,7 +150,15 @@ class CopilotProvider(asyncio.Protocol):
         self.cert_manager = TLSCertDomainManager(self.ca)
         self._closing = False
         self.pipeline_factory = PipelineFactory(SecretsManager())
+        self.input_pipeline: Optional[CopilotPipeline] = None
+        self.fim_pipeline: Optional[CopilotPipeline] = None
+        # the context as provided by the pipeline
         self.context_tracking: Optional[PipelineContext] = None
+
+    def _ensure_pipelines(self):
+        if not self.input_pipeline or not self.fim_pipeline:
+            self.input_pipeline = CopilotChatPipeline(self.pipeline_factory)
+            self.fim_pipeline = CopilotFimPipeline(self.pipeline_factory)
 
     def _select_pipeline(self, method: str, path: str) -> Optional[CopilotPipeline]:
         if method != "POST":
@@ -161,10 +169,10 @@ class CopilotProvider(asyncio.Protocol):
             if path == route.path:
                 if route.pipeline_type == PipelineType.FIM:
                     logger.debug("Selected FIM pipeline")
-                    return CopilotFimPipeline(self.pipeline_factory)
+                    return self.fim_pipeline
                 elif route.pipeline_type == PipelineType.CHAT:
                     logger.debug("Selected CHAT pipeline")
-                    return CopilotChatPipeline(self.pipeline_factory)
+                    return self.input_pipeline
 
         logger.debug("No pipeline selected")
         return None
@@ -181,7 +189,6 @@ class CopilotProvider(asyncio.Protocol):
             # if we didn't select any strategy that would change the request
             # let's just pass through the body as-is
             return body, None
-        logger.debug(f"Processing body through pipeline: {len(body)} bytes")
         return await strategy.process_body(headers, body)
 
     async def _request_to_target(self, headers: list[str], body: bytes):
@@ -288,6 +295,9 @@ class CopilotProvider(asyncio.Protocol):
             http_request.headers,
             http_request.body,
         )
+        # TODO: it's weird that we're overwriting the context.
+        # Should we set the context once? Maybe when
+        # creating the pipeline instance?
         self.context_tracking = context
 
         if context and context.shortcut_response:
@@ -442,6 +452,7 @@ class CopilotProvider(asyncio.Protocol):
             if not self.headers_parsed:
                 self.headers_parsed = self.parse_headers()
                 if self.headers_parsed:
+                    self._ensure_pipelines()
                     if self.request.method == "CONNECT":
                         self.handle_connect()
                         self.buffer.clear()
@@ -756,10 +767,12 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
 
     def _ensure_output_processor(self) -> None:
         if self.proxy.context_tracking is None:
+            logger.debug("No context tracking, no need to process pipeline")
             # No context tracking, no need to process pipeline
             return
 
         if self.sse_processor is not None:
+            logger.debug("Already initialized, no need to reinitialize")
             # Already initialized, no need to reinitialize
             return
 
