@@ -340,8 +340,9 @@ class SequentialPipelineProcessor:
         self.pipeline_steps = pipeline_steps
         self.secret_manager = secret_manager
         self.is_fim = is_fim
+        self.instance = self._create_instance()
 
-    def create_instance(self) -> InputPipelineInstance:
+    def _create_instance(self) -> InputPipelineInstance:
         """Create a new pipeline instance for processing a request"""
         return InputPipelineInstance(self.pipeline_steps, self.secret_manager, self.is_fim)
 
@@ -356,7 +357,6 @@ class SequentialPipelineProcessor:
         is_copilot: bool = False,
     ) -> PipelineResult:
         """Create a new pipeline instance and process the request"""
-        instance = self.create_instance()
-        return await instance.process_request(
+        return await self.instance.process_request(
             request, provider, model, api_key, api_base, extra_headers, is_copilot
         )
