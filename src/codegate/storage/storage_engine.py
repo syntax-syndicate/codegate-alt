@@ -12,6 +12,13 @@ from codegate.inference.inference_engine import LlamaCppInferenceEngine
 
 logger = structlog.get_logger("codegate")
 VALID_ECOSYSTEMS = ["npm", "pypi", "crates", "maven", "go"]
+LANGUAGE_TO_ECOSYSTEM = {
+    "javascript": "npm",
+    "go": "go",
+    "python": "pypi",
+    "java": "maven",
+    "rust": "crates",
+}
 
 
 class StorageEngine:
@@ -125,6 +132,7 @@ class StorageEngine:
     async def search(
         self,
         query: str = None,
+        language: str = None,
         ecosystem: str = None,
         packages: List[str] = None,
         limit: int = 50,
@@ -135,6 +143,9 @@ class StorageEngine:
         """
         try:
             cursor = self.conn.cursor()
+
+            if language and language in LANGUAGE_TO_ECOSYSTEM.keys():
+                ecosystem = LANGUAGE_TO_ECOSYSTEM[language]
 
             if packages and ecosystem and ecosystem in VALID_ECOSYSTEMS:
                 placeholders = ",".join("?" * len(packages))

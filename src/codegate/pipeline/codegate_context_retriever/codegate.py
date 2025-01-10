@@ -73,17 +73,21 @@ class CodegateContextRetriever(PipelineStep):
         # Extract any code snippets
         snippets = extract_snippets(user_messages)
 
-        # Collect all packages referenced in the snippets
-        snippet_packages = []
-        for snippet in snippets:
-            snippet_packages.extend(
-                PackageExtractor.extract_packages(snippet.code, snippet.language)
-            )
-        logger.info(f"Found {len(snippet_packages)} packages in code snippets.")
+        bad_snippet_packages = []
+        if len(snippets) > 0:
+            # Collect all packages referenced in the snippets
+            snippet_packages = []
+            for snippet in snippets:
+                snippet_packages.extend(
+                    PackageExtractor.extract_packages(snippet.code, snippet.language)
+                )
+            logger.info(f"Found {len(snippet_packages)} packages in code snippets.")
 
-        # Find bad packages in the snippets
-        bad_snippet_packages = await storage_engine.search_by_property("name", snippet_packages)
-        logger.info(f"Found {len(bad_snippet_packages)} bad packages in code snippets.")
+            # Find bad packages in the snippets
+            bad_snippet_packages = await storage_engine.search(
+                language=snippets[0].language, packages=snippet_packages
+            )
+            logger.info(f"Found {len(bad_snippet_packages)} bad packages in code snippets.")
 
         # Remove code snippets from the user messages and search for bad packages
         # in the rest of the user query/messsages
