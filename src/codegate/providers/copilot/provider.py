@@ -754,12 +754,12 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
         logger.debug(f"Connection established to target: {transport.get_extra_info('peername')}")
         self.proxy.target_transport = transport
 
-    def _ensure_output_processor(self) -> None:
+    def _ensure_output_processor(self, reinitialize=False) -> None:
         if self.proxy.context_tracking is None:
             # No context tracking, no need to process pipeline
             return
 
-        if self.sse_processor is not None:
+        if (self.sse_processor is not None) and (not reinitialize):
             # Already initialized, no need to reinitialize
             return
 
@@ -861,6 +861,8 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
 
         self.finish_stream = False
         self.headers_sent = False
+
+        self._ensure_output_processor(reinitialize=True)
 
     def _process_chunk(self, chunk: bytes):
         # For debugging only
