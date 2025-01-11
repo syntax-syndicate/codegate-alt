@@ -14,7 +14,7 @@ except metadata.PackageNotFoundError:  # pragma: no cover
     __version__ = "unknown"
     __description__ = "codegate"
 
-__version__ = "0.1.0"
+__version__ = "0.1.5"
 __description__ = "A configurable service gateway"
 
 __all__ = ["Config", "ConfigurationError", "LogFormat", "LogLevel", "setup_logging"]
