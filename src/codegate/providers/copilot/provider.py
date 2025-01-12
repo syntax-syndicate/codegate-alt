@@ -452,7 +452,7 @@ class CopilotProvider(asyncio.Protocol):
                 if self._has_complete_body():
                     # Process the complete request through the pipeline
                     complete_request = bytes(self.buffer)
-                    logger.debug(f"Complete request: {complete_request}")
+                    # logger.debug(f"Complete request: {complete_request}")
                     self.buffer.clear()
                     asyncio.create_task(self._forward_data_to_target(complete_request))
 
