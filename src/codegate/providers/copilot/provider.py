@@ -229,15 +229,15 @@ class CopilotProvider(asyncio.Protocol):
         self.peername = transport.get_extra_info("peername")
         logger.debug(f"Client connected from {self.peername}")
 
-    def get_headers_dict(self) -> Dict[str, str]:
+    def get_headers_dict(self, complete_request) -> Dict[str, str]:
         """Convert raw headers to dictionary format"""
         headers_dict = {}
         try:
-            if b"\r\n\r\n" not in self.buffer:
+            if b"\r\n\r\n" not in complete_request:
                 return {}
 
-            headers_end = self.buffer.index(b"\r\n\r\n")
-            headers = self.buffer[:headers_end].split(b"\r\n")[1:]
+            headers_end = complete_request.index(b"\r\n\r\n")
+            headers = complete_request[:headers_end].split(b"\r\n")[1:]
 
             for header in headers:
                 try:
@@ -449,32 +449,50 @@ class CopilotProvider(asyncio.Protocol):
 
             self.buffer.extend(data)
 
-            if not self.headers_parsed:
-                self.headers_parsed = self.parse_headers()
-                if self.headers_parsed:
-                    self._ensure_pipelines()
-                    if self.request.method == "CONNECT":
-                        self.handle_connect()
-                        self.buffer.clear()
-                    else:
-                        # Only process the request once we have the complete body
-                        asyncio.create_task(self.handle_http_request())
-            else:
-                if self._has_complete_body():
-                    # Process the complete request through the pipeline
-                    complete_request = bytes(self.buffer)
-                    # logger.debug(f"Complete request: {complete_request}")
-                    self.buffer.clear()
-                    asyncio.create_task(self._forward_data_to_target(complete_request))
+            while self.buffer:  # Process as many complete requests as we have
+                if not self.headers_parsed:
+                    self.headers_parsed = self.parse_headers()
+                    if self.headers_parsed:
+                        self._ensure_pipelines()
+                        if self.request.method == "CONNECT":
+                            if self._has_complete_body():
+                                self.handle_connect()
+                                self.buffer.clear()  # CONNECT requests are handled differently
+                            break  # CONNECT handling complete
+                        elif self._has_complete_body():
+                            # Find where this request ends
+                            headers_end = self.buffer.index(b"\r\n\r\n")
+                            headers = self.buffer[:headers_end].split(b"\r\n")[1:]
+                            content_length = 0
+                            for header in headers:
+                                if header.lower().startswith(b"content-length:"):
+                                    content_length = int(header.split(b":", 1)[1])
+                                    break
+
+                            request_end = headers_end + 4 + content_length
+                            complete_request = self.buffer[:request_end]
+
+                            self.buffer = self.buffer[request_end:]  # Keep remaining data
+
+                            self.headers_parsed = False  # Reset for next request
+
+                            asyncio.create_task(self.handle_http_request(complete_request))
+                    break  # Either processing request or need more data
+                else:
+                    if self._has_complete_body():
+                        complete_request = bytes(self.buffer)
+                        self.buffer.clear()  # Clear buffer for next request
+                        asyncio.create_task(self._forward_data_to_target(complete_request))
+                    break  # Either processing request or need more data
 
         except Exception as e:
             logger.error(f"Error processing received data: {e}")
             self.send_error_response(502, str(e).encode())
 
-    async def handle_http_request(self) -> None:
+    async def handle_http_request(self, complete_request: bytes) -> None:
         """Handle standard HTTP request"""
         try:
-            target_url = await self._get_target_url()
+            target_url = await self._get_target_url(complete_request)
         except Exception as e:
             logger.error(f"Error getting target URL: {e}")
             self.send_error_response(404, b"Not Found")
@@ -518,9 +536,9 @@ class CopilotProvider(asyncio.Protocol):
                 new_headers.append(f"Host: {self.target_host}")
 
             if self.target_transport:
-                if self.buffer:
-                    body_start = self.buffer.index(b"\r\n\r\n") + 4
-                    body = self.buffer[body_start:]
+                if complete_request:
+                    body_start = complete_request.index(b"\r\n\r\n") + 4
+                    body = complete_request[body_start:]
                     await self._request_to_target(new_headers, body)
                 else:
                     # just skip it
@@ -532,9 +550,9 @@ class CopilotProvider(asyncio.Protocol):
             logger.error(f"Error preparing or sending request to target: {e}")
             self.send_error_response(502, b"Bad Gateway")
 
-    async def _get_target_url(self) -> Optional[str]:
+    async def _get_target_url(self, complete_request) -> Optional[str]:
         """Determine target URL based on request path and headers"""
-        headers_dict = self.get_headers_dict()
+        headers_dict = self.get_headers_dict(complete_request)
         auth_header = headers_dict.get("authorization", "")
 
         if auth_header:
