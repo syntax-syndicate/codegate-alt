@@ -431,7 +431,7 @@ class CopilotProvider(asyncio.Protocol):
         Handle received data from client. Since we need to process the complete body
         through our pipeline before forwarding, we accumulate the entire request first.
         """
-        logger.info(f"Received data from {self.peername}: {data}")
+        # logger.debug(f"Received data from {self.peername}: {data}")
         try:
             if not self._check_buffer_size(data):
                 self.send_error_response(413, b"Request body too large")
