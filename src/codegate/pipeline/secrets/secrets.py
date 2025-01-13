@@ -135,15 +135,13 @@ class SecretsModifier:
         # Store matches for logging
         found_secrets = 0
 
-        # Replace each match with its encrypted value
+        # First pass. Replace each match with its encrypted value
         logger.info("\nFound secrets:")
         for start, end, match in absolute_matches:
             hidden_secret = self._hide_secret(match)
 
             # Replace the secret in the text
             protected_text[start:end] = hidden_secret
-
-            self._notify_secret(match, protected_text)
             found_secrets += 1
             # Log the findings
             logger.info(
@@ -152,6 +150,10 @@ class SecretsModifier:
                 f"\nOriginal: {match.value}"
                 f"\nEncrypted: {hidden_secret}"
             )
+
+        # Second pass. Notify the secrets in DB over the complete protected text.
+        for _, _, match in absolute_matches:
+            self._notify_secret(match, protected_text)
 
         # Convert back to string
         protected_string = "".join(protected_text)
