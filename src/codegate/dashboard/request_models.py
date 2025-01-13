@@ -25,16 +25,25 @@ class QuestionAnswer(BaseModel):
     answer: Optional[ChatMessage]
 
 
-class PartialConversation(BaseModel):
+class PartialQuestions(BaseModel):
     """
-    Represents a partial conversation obtained from a DB row.
+    Represents all user messages obtained from a DB row.
     """
 
-    question_answer: QuestionAnswer
+    messages: List[str]
+    timestamp: datetime.datetime
+    message_id: str
     provider: Optional[str]
     type: str
-    chat_id: str
-    request_timestamp: datetime.datetime
+
+
+class PartialQuestionAnswer(BaseModel):
+    """
+    Represents a partial conversation.
+    """
+
+    partial_questions: PartialQuestions
+    answer: Optional[ChatMessage]
 
 
 class Conversation(BaseModel):

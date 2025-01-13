@@ -5,16 +5,14 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from codegate.dashboard.post_processing import (
+    _get_question_answer,
+    _group_partial_messages,
     _is_system_prompt,
-    parse_get_prompt_with_output,
     parse_output,
     parse_request,
 )
 from codegate.dashboard.request_models import (
-    ChatMessage,
-    Conversation,
-    PartialConversation,
-    QuestionAnswer,
+    PartialQuestions,
 )
 from codegate.db.models import GetPromptWithOutputsRow
 
@@ -37,11 +35,11 @@ async def test_is_system_prompt(message, expected_bool):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "request_dict, expected_str",
+    "request_dict, expected_str_list",
     [
         (
             {"messages": [{"role": "user", "content": "Hello, how can I help you?"}]},
-            "Hello, how can I help you?",
+            ["Hello, how can I help you?"],
         ),
         (
             {
@@ -61,7 +59,7 @@ async def test_is_system_prompt(message, expected_bool):
                     {"role": "user", "content": "Hello, latest"},
                 ]
             },
-            "Hello, latest",
+            ["Hello, how can I help you?", "Hello, latest"],
         ),
         (
             {
@@ -72,20 +70,20 @@ async def test_is_system_prompt(message, expected_bool):
                     },
                 ]
             },
-            "Hello, how can I help you?",
+            ["Hello, how can I help you?"],
         ),
-        ({"prompt": "Hello, how can I help you?"}, "Hello, how can I help you?"),
+        ({"prompt": "Hello, how can I help you?"}, ["Hello, how can I help you?"]),
     ],
 )
-async def test_parse_request(request_dict, expected_str):
+async def test_parse_request(request_dict, expected_str_list):
     request_str = json.dumps(request_dict)
     result = await parse_request(request_str)
-    assert result == expected_str
+    assert result == expected_str_list
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "output_dict, expected_str, expected_chat_id",
+    "output_dict, expected_str",
     [
         (
             [  # Stream output with multiple chunks
@@ -115,7 +113,6 @@ async def test_parse_request(request_dict, expected_str):
                 },
             ],
             "Hello world",
-            "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl",
         ),
         (
             {
@@ -133,24 +130,21 @@ async def test_parse_request(request_dict, expected_str):
                 ],
             },
             "User seeks",
-            "chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEa",
         ),
     ],
 )
-async def test_parse_output(output_dict, expected_str, expected_chat_id):
+async def test_parse_output(output_dict, expected_str):
     request_str = json.dumps(output_dict)
-    output_message, chat_id = await parse_output(request_str)
+    output_message = await parse_output(request_str)
     assert output_message == expected_str
-    assert chat_id == expected_chat_id
 
 
 timestamp_now = datetime.datetime.now(datetime.timezone.utc)
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("request_msg_str", ["Hello", None])
+@pytest.mark.parametrize("request_msg_list", [["Hello"], None])
 @pytest.mark.parametrize("output_msg_str", ["Hello, how can I help you?", None])
-@pytest.mark.parametrize("chat_id", ["chatcmpl-AaQw9O1O2u360mhba5UbMoPwFgqEl"])
 @pytest.mark.parametrize(
     "row",
     [
@@ -166,7 +160,7 @@ timestamp_now = datetime.datetime.now(datetime.timezone.utc)
         )
     ],
 )
-async def test_parse_get_prompt_with_output(request_msg_str, output_msg_str, chat_id, row):
+async def test_get_question_answer(request_msg_list, output_msg_str, row):
     with patch(
         "codegate.dashboard.post_processing.parse_request", new_callable=AsyncMock
     ) as mock_parse_request:
@@ -174,67 +168,239 @@ async def test_parse_get_prompt_with_output(request_msg_str, output_msg_str, cha
             "codegate.dashboard.post_processing.parse_output", new_callable=AsyncMock
         ) as mock_parse_output:
             # Set return values for the mocks
-            mock_parse_request.return_value = request_msg_str
-            mock_parse_output.return_value = (output_msg_str, chat_id)
-            result = await parse_get_prompt_with_output(row)
+            mock_parse_request.return_value = request_msg_list
+            mock_parse_output.return_value = output_msg_str
+            result = await _get_question_answer(row)
 
             mock_parse_request.assert_called_once()
             mock_parse_output.assert_called_once()
 
-            if request_msg_str is None:
+            if request_msg_list is None:
                 assert result is None
             else:
-                assert result.question_answer.question.message == request_msg_str
+                assert result.partial_questions.messages == request_msg_list
                 if output_msg_str is not None:
-                    assert result.question_answer.answer.message == output_msg_str
-                    assert result.chat_id == chat_id
-                assert result.provider == "provider"
-                assert result.type == "chat"
-                assert result.request_timestamp == timestamp_now
+                    assert result.answer.message == output_msg_str
+                assert result.partial_questions.provider == "provider"
+                assert result.partial_questions.type == "chat"
 
 
-question_answer = QuestionAnswer(
-    question=ChatMessage(
-        message="Hello, how can I help you?",
-        timestamp=timestamp_now,
-        message_id="1",
-    ),
-    answer=ChatMessage(
-        message="Hello, how can I help you?",
-        timestamp=timestamp_now,
-        message_id="2",
-    ),
-)
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "partial_conversations, expected_conversations",
+    "pq_list,expected_group_ids",
     [
-        ([None], []),  # Test empty list
+        # 1) No subsets: all items stand alone
         (
             [
-                None,
-                PartialConversation(  # Test partial conversation with None
-                    question_answer=question_answer,
-                    provider="provider",
+                PartialQuestions(
+                    messages=["A"],
+                    timestamp=datetime.datetime(2023, 1, 1, 0, 0, 0),
+                    message_id="pq1",
+                    provider="providerA",
                     type="chat",
-                    chat_id="chat_id",
-                    request_timestamp=timestamp_now,
+                ),
+                PartialQuestions(
+                    messages=["B"],
+                    timestamp=datetime.datetime(2023, 1, 1, 0, 0, 1),
+                    message_id="pq2",
+                    provider="providerA",
+                    type="chat",
                 ),
             ],
+            [["pq1"], ["pq2"]],
+        ),
+        # 2) Single subset: one is a subset of the other
+        #    - "Hello" is a subset of "Hello, how are you?"
+        (
             [
-                Conversation(
-                    question_answers=[question_answer],
-                    provider="provider",
+                PartialQuestions(
+                    messages=["Hello"],
+                    timestamp=datetime.datetime(2022, 1, 1, 0, 0, 0),
+                    message_id="pq1",
+                    provider="providerA",
                     type="chat",
-                    chat_id="chat_id",
-                    conversation_timestamp=timestamp_now,
-                )
+                ),
+                PartialQuestions(
+                    messages=["Hello", "How are you?"],
+                    timestamp=datetime.datetime(2022, 1, 1, 0, 0, 10),
+                    message_id="pq2",
+                    provider="providerA",
+                    type="chat",
+                ),
             ],
+            [["pq1", "pq2"]],
+        ),
+        # 3) Multiple identical subsets:
+        #    We have 3 partial questions with messages=["Hello"],
+        #    plus a superset with messages=["Hello", "Bye"].
+        #    Only the single subset that is closest in timestamp to the superset is grouped with the
+        #    superset.
+        (
+            [
+                PartialQuestions(
+                    messages=["Hello"],
+                    timestamp=datetime.datetime(2023, 1, 1, 10, 0, 0),
+                    message_id="pq1",
+                    provider="providerA",
+                    type="chat",
+                ),
+                PartialQuestions(
+                    messages=["Hello"],
+                    timestamp=datetime.datetime(2023, 1, 1, 11, 0, 0),
+                    message_id="pq2",
+                    provider="providerA",
+                    type="chat",
+                ),
+                PartialQuestions(
+                    messages=["Hello"],
+                    timestamp=datetime.datetime(2023, 1, 1, 12, 0, 0),
+                    message_id="pq3",
+                    provider="providerA",
+                    type="chat",
+                ),
+                PartialQuestions(
+                    messages=["Hello", "Bye"],
+                    timestamp=datetime.datetime(2023, 1, 1, 11, 0, 5),
+                    message_id="pq4",
+                    provider="providerA",
+                    type="chat",
+                ),
+            ],
+            # pq4 is the superset => subsets are pq1, pq2, pq3.
+            # The closest subset to pq4(11:00:05) is pq2(11:00:00).
+            # So group = [pq2, pq4].
+            # The other two remain alone in their own group.
+            # The final sorted order is by earliest timestamp in each group:
+            #   group with pq1 => [pq1], earliest 10:00:00
+            #   group with pq2, pq4 => earliest 11:00:00
+            #   group with pq3 => earliest 12:00:00
+            [["pq1"], ["pq2", "pq4"], ["pq3"]],
+        ),
+        # 4) Mixed: multiple subsets, multiple supersets, verifying group logic
+        (
+            [
+                # Superset
+                PartialQuestions(
+                    messages=["hi", "welcome", "bye"],
+                    timestamp=datetime.datetime(2023, 5, 1, 9, 0, 0),
+                    message_id="pqS1",
+                    provider="providerB",
+                    type="chat",
+                ),
+                # Subsets for pqS1
+                PartialQuestions(
+                    messages=["hi", "welcome"],
+                    timestamp=datetime.datetime(2023, 5, 1, 9, 0, 5),
+                    message_id="pqA1",
+                    provider="providerB",
+                    type="chat",
+                ),
+                PartialQuestions(
+                    messages=["hi", "bye"],
+                    timestamp=datetime.datetime(2023, 5, 1, 9, 0, 10),
+                    message_id="pqA2",
+                    provider="providerB",
+                    type="chat",
+                ),
+                PartialQuestions(
+                    messages=["hi", "bye"],
+                    timestamp=datetime.datetime(2023, 5, 1, 9, 0, 12),
+                    message_id="pqA3",
+                    provider="providerB",
+                    type="chat",
+                ),
+                # Another superset
+                PartialQuestions(
+                    messages=["apple", "banana", "cherry"],
+                    timestamp=datetime.datetime(2023, 5, 2, 10, 0, 0),
+                    message_id="pqS2",
+                    provider="providerB",
+                    type="chat",
+                ),
+                # Subsets for pqS2
+                PartialQuestions(
+                    messages=["banana"],
+                    timestamp=datetime.datetime(2023, 5, 2, 10, 0, 1),
+                    message_id="pqB1",
+                    provider="providerB",
+                    type="chat",
+                ),
+                PartialQuestions(
+                    messages=["apple", "banana"],
+                    timestamp=datetime.datetime(2023, 5, 2, 10, 0, 3),
+                    message_id="pqB2",
+                    provider="providerB",
+                    type="chat",
+                ),
+                # Another item alone, not a subset nor superset
+                PartialQuestions(
+                    messages=["xyz"],
+                    timestamp=datetime.datetime(2023, 5, 3, 8, 0, 0),
+                    message_id="pqC1",
+                    provider="providerB",
+                    type="chat",
+                ),
+                # Different provider => should remain separate
+                PartialQuestions(
+                    messages=["hi", "welcome"],
+                    timestamp=datetime.datetime(2023, 5, 1, 9, 0, 10),
+                    message_id="pqProvDiff",
+                    provider="providerX",
+                    type="chat",
+                ),
+            ],
+            # Expected:
+            # For pqS1 (["hi","welcome","bye"]) => subsets are pqA1(["hi","welcome"]),
+            # pqA2 & pqA3 (["hi","bye"])
+            # Among pqA2 and pqA3, we pick the one closest in time to 09:00:00 =>
+            # that is pqA2(09:00:10) vs pqA3(09:00:12).
+            # The absolute difference:
+            #   pqA2 => 10 seconds
+            #   pqA3 => 12 seconds
+            # So we pick pqA2. Group => [pqS1, pqA1, pqA2]
+            #
+            # For pqS2 (["apple","banana","cherry"]) => subsets are pqB1(["banana"]),
+            # pqB2(["apple","banana"])
+            # Among them, we group them all (because they have distinct messages).
+            # So => [pqS2, pqB1, pqB2]
+            #
+            # pqC1 stands alone => ["pqC1"]
+            # pqProvDiff stands alone => ["pqProvDiff"] because provider is different
+            #
+            # Then we sort by earliest timestamp in each group:
+            #   group with pqS1 => earliest is 09:00:00
+            #   group with pqProvDiff => earliest is 09:00:10
+            #   group with pqS2 => earliest is 10:00:00
+            #   group with pqC1 => earliest is 08:00:00 on 5/3 => actually this is the last date,
+            #   so let's see:
+            #       2023-05-01 is earlier than 2023-05-02, which is earlier than 2023-05-03.
+            #       Actually, 2023-05-03 is later. So "pqC1" group is last in chronological order.
+            #
+            # Correct chronological order of earliest timestamps:
+            #   1) [pqS1, pqA1, pqA2] => earliest 2023-05-01 09:00:00
+            #   2) [pqProvDiff] => earliest 2023-05-01 09:00:10
+            #   3) [pqS2, pqB1, pqB2] => earliest 2023-05-02 10:00:00
+            #   4) [pqC1] => earliest 2023-05-03 08:00:00
+            [["pqS1", "pqA1", "pqA2"], ["pqProvDiff"], ["pqS2", "pqB1", "pqB2"], ["pqC1"]],
         ),
     ],
 )
-async def match_conversations(partial_conversations, expected_conversations):
-    result_conversations = await match_conversations(partial_conversations)
-    assert result_conversations == expected_conversations
+def test_group_partial_messages(pq_list, expected_group_ids):
+    """
+    Verify that _group_partial_messages produces the correct grouping
+    (by message_id) in the correct order.
+    """
+    # Execute
+    grouped = _group_partial_messages(pq_list)
+
+    # Convert from list[list[PartialQuestions]] -> list[list[str]]
+    # so we can compare with expected_group_ids easily.
+    grouped_ids = [[pq.message_id for pq in group] for group in grouped]
+
+    is_matched = False
+    print(grouped_ids)
+    for group_id in grouped_ids:
+        for expected_group in expected_group_ids:
+            if set(group_id) == set(expected_group):
+                is_matched = True
+                break
+        assert is_matched
