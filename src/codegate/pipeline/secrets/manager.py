@@ -21,7 +21,7 @@ class SecretsManager:
 
     def __init__(self):
         self.crypto = CodeGateCrypto()
-        self._session_store: dict[str, SecretEntry] = {}
+        self._session_store: dict[str, dict[str, SecretEntry]] = {}
         self._encrypted_to_session: dict[str, str] = {}  # Reverse lookup index
 
     def store_secret(self, value: str, service: str, secret_type: str, session_id: str) -> str:
@@ -41,12 +41,14 @@ class SecretsManager:
         encrypted_value = self.crypto.encrypt_token(value, session_id)
 
         # Store mappings
-        self._session_store[session_id] = SecretEntry(
+        session_secrets = self._session_store.get(session_id, {})
+        session_secrets[encrypted_value] = SecretEntry(
             original=value,
             encrypted=encrypted_value,
             service=service,
             secret_type=secret_type,
         )
+        self._session_store[session_id] = session_secrets
         self._encrypted_to_session[encrypted_value] = session_id
 
         logger.debug("Stored secret", service=service, type=secret_type, encrypted=encrypted_value)
@@ -58,7 +60,9 @@ class SecretsManager:
         try:
             stored_session_id = self._encrypted_to_session.get(encrypted_value)
             if stored_session_id == session_id:
-                return self._session_store[session_id].original
+                session_secrets = self._session_store[session_id].get(encrypted_value)
+                if session_secrets:
+                    return session_secrets.original
         except Exception as e:
             logger.error("Error retrieving secret", error=str(e))
         return None
@@ -71,9 +75,10 @@ class SecretsManager:
         """Securely wipe sensitive data"""
         try:
             # Convert and wipe original values
-            for entry in self._session_store.values():
-                original_bytes = bytearray(entry.original.encode())
-                self.crypto.wipe_bytearray(original_bytes)
+            for secrets in self._session_store.values():
+                for entry in secrets.values():
+                    original_bytes = bytearray(entry.original.encode())
+                    self.crypto.wipe_bytearray(original_bytes)
 
             # Clear the dictionaries
             self._session_store.clear()
@@ -92,9 +97,9 @@ class SecretsManager:
         """
         try:
             # Get the secret entry for the session
-            entry = self._session_store.get(session_id)
+            secrets = self._session_store.get(session_id, {})
 
-            if entry:
+            for entry in secrets.values():
                 # Securely wipe the original value
                 original_bytes = bytearray(entry.original.encode())
                 self.crypto.wipe_bytearray(original_bytes)

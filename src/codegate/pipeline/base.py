@@ -277,6 +277,13 @@ class InputPipelineInstance:
         self.secret_manager = secret_manager
         self.is_fim = is_fim
         self.context = PipelineContext()
+
+        # we create the sesitive context here so that it is not shared between individual requests
+        # TODO: could we get away with just generating the session ID for an instance?
+        self.context.sensitive = PipelineSensitiveData(
+            manager=self.secret_manager,
+            session_id=str(uuid.uuid4()),
+        )
         self.context.metadata["is_fim"] = is_fim
 
     async def process_request(
@@ -290,16 +297,13 @@ class InputPipelineInstance:
         is_copilot: bool = False,
     ) -> PipelineResult:
         """Process a request through all pipeline steps"""
-        self.context.sensitive = PipelineSensitiveData(
-            manager=self.secret_manager,
-            session_id=str(uuid.uuid4()),
-            api_key=api_key,
-            model=model,
-            provider=provider,
-            api_base=api_base,
-        )
         self.context.metadata["extra_headers"] = extra_headers
         current_request = request
+
+        self.context.sensitive.api_key = api_key
+        self.context.sensitive.model = model
+        self.context.sensitive.provider = provider
+        self.context.sensitive.api_base = api_base
 
         # For Copilot provider=openai. Use a flag to not clash with other places that may use that.
         provider_db = "copilot" if is_copilot else provider
@@ -336,8 +340,9 @@ class SequentialPipelineProcessor:
         self.pipeline_steps = pipeline_steps
         self.secret_manager = secret_manager
         self.is_fim = is_fim
+        self.instance = self._create_instance()
 
-    def create_instance(self) -> InputPipelineInstance:
+    def _create_instance(self) -> InputPipelineInstance:
         """Create a new pipeline instance for processing a request"""
         return InputPipelineInstance(self.pipeline_steps, self.secret_manager, self.is_fim)
 
@@ -352,7 +357,6 @@ class SequentialPipelineProcessor:
         is_copilot: bool = False,
     ) -> PipelineResult:
         """Create a new pipeline instance and process the request"""
-        instance = self.create_instance()
-        return await instance.process_request(
+        return await self.instance.process_request(
             request, provider, model, api_key, api_base, extra_headers, is_copilot
         )

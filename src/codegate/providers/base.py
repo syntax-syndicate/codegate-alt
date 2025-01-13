@@ -10,9 +10,9 @@ from codegate.db.connection import DbRecorder
 from codegate.pipeline.base import (
     PipelineContext,
     PipelineResult,
-    SequentialPipelineProcessor,
 )
-from codegate.pipeline.output import OutputPipelineInstance, OutputPipelineProcessor
+from codegate.pipeline.factory import PipelineFactory
+from codegate.pipeline.output import OutputPipelineInstance
 from codegate.providers.completion.base import BaseCompletionHandler
 from codegate.providers.formatting.input_pipeline import PipelineResponseFormatter
 from codegate.providers.normalizer.base import ModelInputNormalizer, ModelOutputNormalizer
@@ -34,19 +34,13 @@ class BaseProvider(ABC):
         input_normalizer: ModelInputNormalizer,
         output_normalizer: ModelOutputNormalizer,
         completion_handler: BaseCompletionHandler,
-        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
-        fim_output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
+        pipeline_factory: PipelineFactory,
     ):
         self.router = APIRouter()
         self._completion_handler = completion_handler
         self._input_normalizer = input_normalizer
         self._output_normalizer = output_normalizer
-        self._pipeline_processor = pipeline_processor
-        self._fim_pipelin_processor = fim_pipeline_processor
-        self._output_pipeline_processor = output_pipeline_processor
-        self._fim_output_pipeline_processor = fim_output_pipeline_processor
+        self._pipeline_factory = pipeline_factory
         self._db_recorder = DbRecorder()
         self._pipeline_response_formatter = PipelineResponseFormatter(
             output_normalizer, self._db_recorder
@@ -73,10 +67,10 @@ class BaseProvider(ABC):
         # Decide which pipeline processor to use
         out_pipeline_processor = None
         if is_fim_request:
-            out_pipeline_processor = self._fim_output_pipeline_processor
+            out_pipeline_processor = self._pipeline_factory.create_fim_output_pipeline()
             logger.info("FIM pipeline selected for output.")
         else:
-            out_pipeline_processor = self._output_pipeline_processor
+            out_pipeline_processor = self._pipeline_factory.create_output_pipeline()
             logger.info("Chat completion pipeline selected for output.")
         if out_pipeline_processor is None:
             logger.info("No output pipeline processor found, passing through")
@@ -117,11 +111,11 @@ class BaseProvider(ABC):
     ) -> PipelineResult:
         # Decide which pipeline processor to use
         if is_fim_request:
-            pipeline_processor = self._fim_pipelin_processor
+            pipeline_processor = self._pipeline_factory.create_fim_pipeline()
             logger.info("FIM pipeline selected for execution.")
             normalized_request = self._fim_normalizer.normalize(normalized_request)
         else:
-            pipeline_processor = self._pipeline_processor
+            pipeline_processor = self._pipeline_factory.create_input_pipeline()
             logger.info("Chat completion pipeline selected for execution.")
         if pipeline_processor is None:
             return PipelineResult(request=normalized_request)

@@ -1,13 +1,11 @@
 import json
-from typing import Optional
 
 import httpx
 import structlog
 from fastapi import HTTPException, Request
 
 from codegate.config import Config
-from codegate.pipeline.base import SequentialPipelineProcessor
-from codegate.pipeline.output import OutputPipelineProcessor
+from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.base import BaseProvider
 from codegate.providers.ollama.adapter import OllamaInputNormalizer, OllamaOutputNormalizer
 from codegate.providers.ollama.completion_handler import OllamaShim
@@ -16,10 +14,7 @@ from codegate.providers.ollama.completion_handler import OllamaShim
 class OllamaProvider(BaseProvider):
     def __init__(
         self,
-        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
-        fim_output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
+        pipeline_factory: PipelineFactory,
     ):
         config = Config.get_config()
         if config is None:
@@ -32,9 +27,7 @@ class OllamaProvider(BaseProvider):
             OllamaInputNormalizer(),
             OllamaOutputNormalizer(),
             completion_handler,
-            pipeline_processor,
-            fim_pipeline_processor,
-            output_pipeline_processor,
+            pipeline_factory,
         )
 
     @property
@@ -45,6 +38,7 @@ class OllamaProvider(BaseProvider):
         """
         Sets up Ollama API routes.
         """
+
         @self.router.get(f"/{self.provider_route_name}/api/tags")
         async def get_tags(request: Request):
             """

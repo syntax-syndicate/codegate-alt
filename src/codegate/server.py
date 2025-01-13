@@ -51,47 +51,30 @@ def init_app(pipeline_factory: PipelineFactory) -> FastAPI:
     # Register all known providers
     registry.add_provider(
         "openai",
-        OpenAIProvider(
-            pipeline_processor=pipeline_factory.create_input_pipeline(),
-            fim_pipeline_processor=pipeline_factory.create_fim_pipeline(),
-            output_pipeline_processor=pipeline_factory.create_output_pipeline(),
-            fim_output_pipeline_processor=pipeline_factory.create_fim_output_pipeline(),
-        ),
+        OpenAIProvider(pipeline_factory),
     )
     registry.add_provider(
         "anthropic",
         AnthropicProvider(
-            pipeline_processor=pipeline_factory.create_input_pipeline(),
-            fim_pipeline_processor=pipeline_factory.create_fim_pipeline(),
-            output_pipeline_processor=pipeline_factory.create_output_pipeline(),
-            fim_output_pipeline_processor=pipeline_factory.create_fim_output_pipeline(),
+            pipeline_factory,
         ),
     )
     registry.add_provider(
         "llamacpp",
         LlamaCppProvider(
-            pipeline_processor=pipeline_factory.create_input_pipeline(),
-            fim_pipeline_processor=pipeline_factory.create_fim_pipeline(),
-            output_pipeline_processor=pipeline_factory.create_output_pipeline(),
-            fim_output_pipeline_processor=pipeline_factory.create_fim_output_pipeline(),
+            pipeline_factory,
         ),
     )
     registry.add_provider(
         "vllm",
         VLLMProvider(
-            pipeline_processor=pipeline_factory.create_input_pipeline(),
-            fim_pipeline_processor=pipeline_factory.create_fim_pipeline(),
-            output_pipeline_processor=pipeline_factory.create_output_pipeline(),
-            fim_output_pipeline_processor=pipeline_factory.create_fim_output_pipeline(),
+            pipeline_factory,
         ),
     )
     registry.add_provider(
         "ollama",
         OllamaProvider(
-            pipeline_processor=pipeline_factory.create_input_pipeline(),
-            fim_pipeline_processor=pipeline_factory.create_fim_pipeline(),
-            output_pipeline_processor=pipeline_factory.create_output_pipeline(),
-            fim_output_pipeline_processor=pipeline_factory.create_fim_output_pipeline(),
+            pipeline_factory,
         ),
     )
 

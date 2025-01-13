@@ -11,14 +11,12 @@ class MockProvider(BaseProvider):
         mocked_input_normalizer = MagicMock()
         mocked_output_normalizer = MagicMock()
         mocked_completion_handler = MagicMock()
-        mocked_pipepeline = MagicMock()
-        mocked_fim_pipeline = MagicMock()
+        mocked_factory = MagicMock()
         super().__init__(
             mocked_input_normalizer,
             mocked_output_normalizer,
             mocked_completion_handler,
-            mocked_pipepeline,
-            mocked_fim_pipeline,
+            mocked_factory,
         )
 
     def _setup_routes(self) -> None:

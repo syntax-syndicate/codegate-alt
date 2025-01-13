@@ -150,7 +150,15 @@ class CopilotProvider(asyncio.Protocol):
         self.cert_manager = TLSCertDomainManager(self.ca)
         self._closing = False
         self.pipeline_factory = PipelineFactory(SecretsManager())
+        self.input_pipeline: Optional[CopilotPipeline] = None
+        self.fim_pipeline: Optional[CopilotPipeline] = None
+        # the context as provided by the pipeline
         self.context_tracking: Optional[PipelineContext] = None
+
+    def _ensure_pipelines(self):
+        if not self.input_pipeline or not self.fim_pipeline:
+            self.input_pipeline = CopilotChatPipeline(self.pipeline_factory)
+            self.fim_pipeline = CopilotFimPipeline(self.pipeline_factory)
 
     def _select_pipeline(self, method: str, path: str) -> Optional[CopilotPipeline]:
         if method != "POST":
@@ -161,10 +169,10 @@ class CopilotProvider(asyncio.Protocol):
             if path == route.path:
                 if route.pipeline_type == PipelineType.FIM:
                     logger.debug("Selected FIM pipeline")
-                    return CopilotFimPipeline(self.pipeline_factory)
+                    return self.fim_pipeline
                 elif route.pipeline_type == PipelineType.CHAT:
                     logger.debug("Selected CHAT pipeline")
-                    return CopilotChatPipeline(self.pipeline_factory)
+                    return self.input_pipeline
 
         logger.debug("No pipeline selected")
         return None
@@ -181,7 +189,6 @@ class CopilotProvider(asyncio.Protocol):
             # if we didn't select any strategy that would change the request
             # let's just pass through the body as-is
             return body, None
-        logger.debug(f"Processing body through pipeline: {len(body)} bytes")
         return await strategy.process_body(headers, body)
 
     async def _request_to_target(self, headers: list[str], body: bytes):
@@ -222,15 +229,15 @@ class CopilotProvider(asyncio.Protocol):
         self.peername = transport.get_extra_info("peername")
         logger.debug(f"Client connected from {self.peername}")
 
-    def get_headers_dict(self) -> Dict[str, str]:
+    def get_headers_dict(self, complete_request) -> Dict[str, str]:
         """Convert raw headers to dictionary format"""
         headers_dict = {}
         try:
-            if b"\r\n\r\n" not in self.buffer:
+            if b"\r\n\r\n" not in complete_request:
                 return {}
 
-            headers_end = self.buffer.index(b"\r\n\r\n")
-            headers = self.buffer[:headers_end].split(b"\r\n")[1:]
+            headers_end = complete_request.index(b"\r\n\r\n")
+            headers = complete_request[:headers_end].split(b"\r\n")[1:]
 
             for header in headers:
                 try:
@@ -288,6 +295,9 @@ class CopilotProvider(asyncio.Protocol):
             http_request.headers,
             http_request.body,
         )
+        # TODO: it's weird that we're overwriting the context.
+        # Should we set the context once? Maybe when
+        # creating the pipeline instance?
         self.context_tracking = context
 
         if context and context.shortcut_response:
@@ -439,31 +449,50 @@ class CopilotProvider(asyncio.Protocol):
 
             self.buffer.extend(data)
 
-            if not self.headers_parsed:
-                self.headers_parsed = self.parse_headers()
-                if self.headers_parsed:
-                    if self.request.method == "CONNECT":
-                        self.handle_connect()
-                        self.buffer.clear()
-                    else:
-                        # Only process the request once we have the complete body
-                        asyncio.create_task(self.handle_http_request())
-            else:
-                if self._has_complete_body():
-                    # Process the complete request through the pipeline
-                    complete_request = bytes(self.buffer)
-                    # logger.debug(f"Complete request: {complete_request}")
-                    self.buffer.clear()
-                    asyncio.create_task(self._forward_data_to_target(complete_request))
+            while self.buffer:  # Process as many complete requests as we have
+                if not self.headers_parsed:
+                    self.headers_parsed = self.parse_headers()
+                    if self.headers_parsed:
+                        self._ensure_pipelines()
+                        if self.request.method == "CONNECT":
+                            if self._has_complete_body():
+                                self.handle_connect()
+                                self.buffer.clear()  # CONNECT requests are handled differently
+                            break  # CONNECT handling complete
+                        elif self._has_complete_body():
+                            # Find where this request ends
+                            headers_end = self.buffer.index(b"\r\n\r\n")
+                            headers = self.buffer[:headers_end].split(b"\r\n")[1:]
+                            content_length = 0
+                            for header in headers:
+                                if header.lower().startswith(b"content-length:"):
+                                    content_length = int(header.split(b":", 1)[1])
+                                    break
+
+                            request_end = headers_end + 4 + content_length
+                            complete_request = self.buffer[:request_end]
+
+                            self.buffer = self.buffer[request_end:]  # Keep remaining data
+
+                            self.headers_parsed = False  # Reset for next request
+
+                            asyncio.create_task(self.handle_http_request(complete_request))
+                    break  # Either processing request or need more data
+                else:
+                    if self._has_complete_body():
+                        complete_request = bytes(self.buffer)
+                        self.buffer.clear()  # Clear buffer for next request
+                        asyncio.create_task(self._forward_data_to_target(complete_request))
+                    break  # Either processing request or need more data
 
         except Exception as e:
             logger.error(f"Error processing received data: {e}")
             self.send_error_response(502, str(e).encode())
 
-    async def handle_http_request(self) -> None:
+    async def handle_http_request(self, complete_request: bytes) -> None:
         """Handle standard HTTP request"""
         try:
-            target_url = await self._get_target_url()
+            target_url = await self._get_target_url(complete_request)
         except Exception as e:
             logger.error(f"Error getting target URL: {e}")
             self.send_error_response(404, b"Not Found")
@@ -507,9 +536,9 @@ class CopilotProvider(asyncio.Protocol):
                 new_headers.append(f"Host: {self.target_host}")
 
             if self.target_transport:
-                if self.buffer:
-                    body_start = self.buffer.index(b"\r\n\r\n") + 4
-                    body = self.buffer[body_start:]
+                if complete_request:
+                    body_start = complete_request.index(b"\r\n\r\n") + 4
+                    body = complete_request[body_start:]
                     await self._request_to_target(new_headers, body)
                 else:
                     # just skip it
@@ -521,9 +550,9 @@ class CopilotProvider(asyncio.Protocol):
             logger.error(f"Error preparing or sending request to target: {e}")
             self.send_error_response(502, b"Bad Gateway")
 
-    async def _get_target_url(self) -> Optional[str]:
+    async def _get_target_url(self, complete_request) -> Optional[str]:
         """Determine target URL based on request path and headers"""
-        headers_dict = self.get_headers_dict()
+        headers_dict = self.get_headers_dict(complete_request)
         auth_header = headers_dict.get("authorization", "")
 
         if auth_header:
@@ -756,10 +785,12 @@ class CopilotProxyTargetProtocol(asyncio.Protocol):
 
     def _ensure_output_processor(self) -> None:
         if self.proxy.context_tracking is None:
+            logger.debug("No context tracking, no need to process pipeline")
             # No context tracking, no need to process pipeline
             return
 
         if self.sse_processor is not None:
+            logger.debug("Already initialized, no need to reinitialize")
             # Already initialized, no need to reinitialize
             return
 

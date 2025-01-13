@@ -16,6 +16,7 @@ async def ollama_stream_generator(
     """OpenAI-style SSE format"""
     try:
         async for chunk in stream:
+            print(chunk)
             try:
                 yield f"{chunk.model_dump_json()}\n\n"
             except Exception as e:

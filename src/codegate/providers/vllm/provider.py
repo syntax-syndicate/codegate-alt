@@ -1,5 +1,4 @@
 import json
-from typing import Optional
 
 import httpx
 import structlog
@@ -7,8 +6,7 @@ from fastapi import Header, HTTPException, Request
 from litellm import atext_completion
 
 from codegate.config import Config
-from codegate.pipeline.base import SequentialPipelineProcessor
-from codegate.pipeline.output import OutputPipelineProcessor
+from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.base import BaseProvider
 from codegate.providers.litellmshim import LiteLLmShim, sse_stream_generator
 from codegate.providers.vllm.adapter import VLLMInputNormalizer, VLLMOutputNormalizer
@@ -17,10 +15,7 @@ from codegate.providers.vllm.adapter import VLLMInputNormalizer, VLLMOutputNorma
 class VLLMProvider(BaseProvider):
     def __init__(
         self,
-        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
-        fim_output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
+        pipeline_factory: PipelineFactory,
     ):
         completion_handler = LiteLLmShim(
             stream_generator=sse_stream_generator, fim_completion_func=atext_completion
@@ -29,10 +24,7 @@ class VLLMProvider(BaseProvider):
             VLLMInputNormalizer(),
             VLLMOutputNormalizer(),
             completion_handler,
-            pipeline_processor,
-            fim_pipeline_processor,
-            output_pipeline_processor,
-            fim_output_pipeline_processor,
+            pipeline_factory,
         )
 
     @property

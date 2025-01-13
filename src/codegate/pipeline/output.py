@@ -162,6 +162,10 @@ class OutputPipelineInstance:
             logger.error(f"Error processing stream: {e}")
             raise e
         finally:
+            # Don't flush the buffer if we assume we'll call the pipeline again
+            if cleanup_sensitive is False:
+                return
+
             # Process any remaining content in buffer when stream ends
             if self._context.buffer:
                 final_content = "".join(self._context.buffer)

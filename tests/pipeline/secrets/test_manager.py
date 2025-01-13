@@ -1,6 +1,6 @@
 import pytest
 
-from codegate.pipeline.secrets.manager import SecretEntry, SecretsManager
+from codegate.pipeline.secrets.manager import SecretsManager
 
 
 class TestSecretsManager:
@@ -21,11 +21,8 @@ class TestSecretsManager:
 
         # Verify the secret was stored
         stored = self.manager.get_by_session_id(self.test_session)
-        assert isinstance(stored, SecretEntry)
-        assert stored.original == self.test_value
-        assert stored.encrypted == encrypted
-        assert stored.service == self.test_service
-        assert stored.secret_type == self.test_type
+        assert isinstance(stored, dict)
+        assert stored[encrypted].original == self.test_value
 
         # Verify encrypted value can be retrieved
         retrieved = self.manager.get_original_value(encrypted, self.test_session)
@@ -86,10 +83,15 @@ class TestSecretsManager:
         encrypted1 = self.manager.store_secret("secret1", "service1", "type1", self.test_session)
         encrypted2 = self.manager.store_secret("secret2", "service2", "type2", self.test_session)
 
-        # Latest secret should be retrievable
+        # Latest secret should be retrievable in the session
         stored = self.manager.get_by_session_id(self.test_session)
-        assert stored.original == "secret2"
-        assert stored.encrypted == encrypted2
+        assert isinstance(stored, dict)
+        assert stored[encrypted1].original == "secret1"
+        assert stored[encrypted2].original == "secret2"
+
+        # Both secrets should be retrievable directly
+        assert self.manager.get_original_value(encrypted1, self.test_session) == "secret1"
+        assert self.manager.get_original_value(encrypted2, self.test_session) == "secret2"
 
         # Both encrypted values should map to the session
         assert self.manager._encrypted_to_session[encrypted1] == self.test_session
@@ -119,7 +121,7 @@ class TestSecretsManager:
 
         # Get reference to stored data before cleanup
         stored = self.manager.get_by_session_id(self.test_session)
-        original_value = stored.original
+        assert len(stored) == 1
 
         # Perform cleanup
         self.manager.cleanup()
@@ -127,7 +129,6 @@ class TestSecretsManager:
         # Verify the original string was overwritten, not just removed
         # This test is a bit tricky since Python strings are immutable,
         # but we can at least verify the data is no longer accessible
-        assert original_value not in str(self.manager._session_store)
         assert self.test_value not in str(self.manager._session_store)
 
     def test_session_isolation(self):
