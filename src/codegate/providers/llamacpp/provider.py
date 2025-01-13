@@ -1,11 +1,9 @@
 import json
-from typing import Optional
 
 import structlog
 from fastapi import HTTPException, Request
 
-from codegate.pipeline.base import SequentialPipelineProcessor
-from codegate.pipeline.output import OutputPipelineProcessor
+from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.base import BaseProvider
 from codegate.providers.llamacpp.completion_handler import LlamaCppCompletionHandler
 from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLamaCppOutputNormalizer
@@ -14,20 +12,14 @@ from codegate.providers.llamacpp.normalizer import LLamaCppInputNormalizer, LLam
 class LlamaCppProvider(BaseProvider):
     def __init__(
         self,
-        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
-        fim_output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
+        pipeline_factory: PipelineFactory,
     ):
         completion_handler = LlamaCppCompletionHandler()
         super().__init__(
             LLamaCppInputNormalizer(),
             LLamaCppOutputNormalizer(),
             completion_handler,
-            pipeline_processor,
-            fim_pipeline_processor,
-            output_pipeline_processor,
-            fim_output_pipeline_processor,
+            pipeline_factory,
         )
 
     @property

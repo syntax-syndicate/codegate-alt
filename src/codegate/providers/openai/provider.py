@@ -1,11 +1,9 @@
 import json
-from typing import Optional
 
 import structlog
 from fastapi import Header, HTTPException, Request
 
-from codegate.pipeline.base import SequentialPipelineProcessor
-from codegate.pipeline.output import OutputPipelineProcessor
+from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.base import BaseProvider
 from codegate.providers.litellmshim import LiteLLmShim, sse_stream_generator
 from codegate.providers.openai.adapter import OpenAIInputNormalizer, OpenAIOutputNormalizer
@@ -14,20 +12,14 @@ from codegate.providers.openai.adapter import OpenAIInputNormalizer, OpenAIOutpu
 class OpenAIProvider(BaseProvider):
     def __init__(
         self,
-        pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        fim_pipeline_processor: Optional[SequentialPipelineProcessor] = None,
-        output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
-        fim_output_pipeline_processor: Optional[OutputPipelineProcessor] = None,
+        pipeline_factory: PipelineFactory,
     ):
         completion_handler = LiteLLmShim(stream_generator=sse_stream_generator)
         super().__init__(
             OpenAIInputNormalizer(),
             OpenAIOutputNormalizer(),
             completion_handler,
-            pipeline_processor,
-            fim_pipeline_processor,
-            output_pipeline_processor,
-            fim_output_pipeline_processor,
+            pipeline_factory,
         )
 
     @property
