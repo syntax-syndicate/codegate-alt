@@ -280,7 +280,7 @@ class CodegateSecrets(PipelineStep):
             if "content" in message and message["content"]:
                 # Protect the text
                 protected_string, redacted_count = self._redact_text(
-                    message["content"], secrets_manager, session_id, context
+                    str(message["content"]), secrets_manager, session_id, context
                 )
                 new_request["messages"][i]["content"] = protected_string
 
@@ -389,12 +389,17 @@ class SecretUnredactionStep(OutputPipelineStep):
             return [chunk]
 
         # If we have a partial marker at the end, keep buffering
-        if self.marker_start in buffered_content or self._is_partial_marker_prefix(
-            buffered_content
-        ):
+        if self.marker_start in buffered_content:
+            context.prefix_buffer = ""
+            return []
+
+        if self._is_partial_marker_prefix(buffered_content):
+            context.prefix_buffer += buffered_content
             return []
 
         # No markers or partial markers, let pipeline handle the chunk normally
+        chunk.choices[0].delta.content = context.prefix_buffer + chunk.choices[0].delta.content
+        context.prefix_buffer = ""
         return [chunk]
 
 

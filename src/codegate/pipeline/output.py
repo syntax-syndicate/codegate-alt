@@ -27,6 +27,8 @@ class OutputPipelineContext:
     snippets: List[CodeSnippet] = field(default_factory=list)
     # Store all content that has been processed by the pipeline
     processed_content: List[str] = field(default_factory=list)
+    # partial buffer to store prefixes
+    prefix_buffer: str = ""
 
 
 class OutputPipelineStep(ABC):

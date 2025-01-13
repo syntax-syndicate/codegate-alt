@@ -49,3 +49,4 @@ sqlite_data/vectordb.db
 
 # certificate directory
 *certs/
+.aider*

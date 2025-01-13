@@ -253,9 +253,11 @@ class PipelineStep(ABC):
 
         for message in reversed(request.get("messages", [])):
             if message["role"] == "user":
-                latest_user_messages += "\n" + message["content"]
-            else:
-                break
+                # if found we can stop here, if not we continue until we find it
+                message_str = message.get("content", "")
+                if message_str:
+                    latest_user_messages += "\n" + str(message_str)
+                    break
 
         return latest_user_messages
 
