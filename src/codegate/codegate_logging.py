@@ -82,7 +82,7 @@ def setup_logging(
     # Adds log level and timestamp to log entries
     shared_processors = [
         structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="%Y-%m-%dT%H:%M:%S.%03dZ", utc=True),
+        structlog.processors.TimeStamper(fmt="%Y-%m-%dT%H:%M:%S.%fZ", utc=True),
         add_origin,
         structlog.processors.CallsiteParameterAdder(
             [
