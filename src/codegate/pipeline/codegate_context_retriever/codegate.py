@@ -92,6 +92,12 @@ class CodegateContextRetriever(PipelineStep):
         # in the rest of the user query/messsages
         user_messages = re.sub(r"```.*?```", "", user_messages, flags=re.DOTALL)
 
+        # extract query from <task> if needed
+        task_match = re.search(r"<task>(.*?)</task>", user_messages, re.DOTALL)
+        if task_match:
+            # Extract content inside <task> tags
+            user_messages = task_match.group(1).strip()
+        
         # Vector search to find bad packages
         bad_packages = await storage_engine.search(query=user_messages, distance=0.5, limit=100)
 
