@@ -362,6 +362,7 @@ class SecretUnredactionStep(OutputPipelineStep):
         if match:
             # Found a complete marker, process it
             encrypted_value = match.group(1)
+            print("----> encrypted_value: ", encrypted_value)
             original_value = input_context.sensitive.manager.get_original_value(
                 encrypted_value,
                 input_context.sensitive.session_id,
@@ -370,6 +371,8 @@ class SecretUnredactionStep(OutputPipelineStep):
             if original_value is None:
                 # If value not found, leave as is
                 original_value = match.group(0)  # Keep the REDACTED marker
+            else:
+                print("----> original_value: ", original_value)
 
             # Post an alert with the redacted content
             input_context.add_alert(self.name, trigger_string=encrypted_value)

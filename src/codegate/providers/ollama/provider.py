@@ -38,6 +38,7 @@ class OllamaProvider(BaseProvider):
         """
         Sets up Ollama API routes.
         """
+
         @self.router.get(f"/{self.provider_route_name}/api/tags")
         async def get_tags(request: Request):
             """
