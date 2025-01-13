@@ -80,6 +80,11 @@ RUN chown -R codegate /var/lib/nginx && \
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Remove include /etc/nginx/sites-enabled/*; from the default nginx.conf
+# This way we don't introduce unnecessary configurations nor serve
+# any default content.
+RUN sed -i '/sites-enabled/d' /etc/nginx/nginx.conf
+
 # Switch to codegate user
 USER codegate
 WORKDIR /app
