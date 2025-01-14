@@ -20,6 +20,7 @@ from codegate.pipeline.secrets.manager import SecretsManager
 from codegate.providers.copilot.provider import CopilotProvider
 from codegate.server import init_app
 from codegate.storage.utils import restore_storage_backup
+from codegate.workspaces.workspaces import Workspaces
 
 
 class UvicornServer:
@@ -318,6 +319,7 @@ def serve(
         else:
             click.echo("Existing Certificates are already present.")
 
+        Workspaces().read_workspaces('/app/codegate_workspaces', cfg.ignore_paths_workspaces)
         # Initialize secrets manager and pipeline factory
         secrets_manager = SecretsManager()
         pipeline_factory = PipelineFactory(secrets_manager)

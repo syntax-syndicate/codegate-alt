@@ -37,6 +37,12 @@ class Setting(pydantic.BaseModel):
     other_settings: Optional[Any]
 
 
+class Workspace(pydantic.BaseModel):
+    id: Any
+    name: str
+    folder_tree_json: str
+
+
 # Models for select queries
 
 

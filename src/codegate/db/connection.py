@@ -15,6 +15,7 @@ from codegate.db.models import (
     GetPromptWithOutputsRow,
     Output,
     Prompt,
+    Workspace,
 )
 from codegate.pipeline.base import PipelineContext
 
@@ -251,6 +252,33 @@ class DbRecorder(DbCodeGate):
                 )
         except Exception as e:
             logger.error(f"Failed to record context: {context}.", error=str(e))
+
+    async def record_workspaces(self, workspaces: List[Workspace]) -> List[Workspace]:
+        if not workspaces:
+            return
+        sql = text(
+            """
+            INSERT INTO workspaces (id, name, folder_tree_json)
+            VALUES (:id, :name, :folder_tree_json)
+            RETURNING *
+            """
+        )
+        workspaces_tasks = []
+        async with asyncio.TaskGroup() as tg:
+            for workspace in workspaces:
+                try:
+                    result = tg.create_task(self._execute_update_pydantic_model(workspace, sql))
+                    workspaces_tasks.append(result)
+                except Exception as e:
+                    logger.error(f"Failed to record alert: {workspace}.", error=str(e))
+
+        recorded_workspaces = []
+        for workspace_coro in workspaces_tasks:
+            workspace_recorded = workspace_coro.result()
+            if workspace_recorded:
+                recorded_workspaces.append(workspace_recorded)
+
+        return recorded_workspaces
 
 
 class DbReader(DbCodeGate):

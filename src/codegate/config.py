@@ -54,6 +54,9 @@ class Config:
     force_certs: bool = False
 
     max_fim_hash_lifetime: int = 60 * 5  # Time in seconds. Default is 5 minutes.
+    ignore_paths_workspaces = [
+        ".git", "__pycache__", ".venv", ".DS_Store", "node_modules", ".pytest_cache", ".ruff_cache"
+    ]
 
     # Provider URLs with defaults
     provider_urls: Dict[str, str] = field(default_factory=lambda: DEFAULT_PROVIDER_URLS.copy())
