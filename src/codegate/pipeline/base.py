@@ -231,8 +231,45 @@ class PipelineStep(ABC):
             return None
         for i in reversed(range(len(request["messages"]))):
             if request["messages"][i]["role"] == "user":
-                content = request["messages"][i]["content"]
-                return content, i
+                content = request["messages"][i]["content"]  # type: ignore
+                return str(content), i
+
+        return None
+
+    @staticmethod
+    def get_last_user_message_block(
+        request: ChatCompletionRequest,
+    ) -> Optional[str]:
+        """
+        Get the last block of consecutive 'user' messages from the request.
+
+        Args:
+            request (ChatCompletionRequest): The chat completion request to process
+
+        Returns:
+            Optional[str]: A string containing all consecutive user messages in the
+                        last user message block, separated by newlines, or None if
+                        no user message block is found.
+        """
+        if request.get("messages") is None:
+            return None
+
+        user_messages = []
+        messages = request["messages"]
+
+        # Iterate in reverse to find the last block of consecutive 'user' messages
+        for i in reversed(range(len(messages))):
+            if messages[i]["role"] == "user" or messages[i]["role"] == "assistant":
+                if messages[i]["role"] == "user":
+                    user_messages.append(messages[i]["content"])  # type: ignore
+            else:
+                # Stop when a message with a different role is encountered
+                if user_messages:
+                    break
+
+        # Reverse the collected user messages to preserve the original order
+        if user_messages:
+            return "\n".join(reversed(user_messages))
 
         return None
 

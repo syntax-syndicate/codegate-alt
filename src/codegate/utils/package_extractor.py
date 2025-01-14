@@ -74,16 +74,21 @@ class PackageExtractor:
 
     @staticmethod
     def extract_packages(code: str, language_name: str) -> list[str]:
+        print("packages are")
+        print(code)
+        print(language_name)
         if (code is None) or (language_name is None):
             return []
 
         language_name = language_name.lower()
 
         if language_name not in PackageExtractor.__languages.keys():
+            print("no langauge")
             return []
 
         language = PackageExtractor.__languages[language_name]
         parser = PackageExtractor.__parsers[language_name]
+        print("here")
 
         # Create tree
         tree = parser.parse(bytes(code, "utf8"))
