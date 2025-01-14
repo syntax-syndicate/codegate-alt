@@ -1,7 +1,7 @@
 import traceback
 
 import structlog
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.errors import ServerErrorMiddleware
@@ -35,6 +35,15 @@ def init_app(pipeline_factory: PipelineFactory) -> FastAPI:
         description=__description__,
         version=__version__,
     )
+
+    @app.middleware("http")
+    async def log_user_agent(request: Request, call_next):
+        user_agent = request.headers.get("user-agent")
+        client_host = request.client.host if request.client else "unknown"
+        logger.debug(f"User-Agent header received: {user_agent} from {client_host}")
+        response = await call_next(request)
+        return response
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
