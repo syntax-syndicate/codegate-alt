@@ -35,7 +35,5 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          secrets: |
-            gh_token=${{ secrets.GH_CI_TOKEN }}
           build-args: |
             LATEST_RELEASE=${{ env.LATEST_RELEASE }}
