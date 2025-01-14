@@ -1,5 +1,7 @@
 import json
 import re
+import malicious_pypi_dummy
+
 
 import structlog
 from litellm import ChatCompletionRequest
@@ -72,18 +74,17 @@ class CodegateContextRetriever(PipelineStep):
 
         bad_snippet_packages = []
         if len(snippets) > 0:
+            snippet_language = snippets[0].language
             # Collect all packages referenced in the snippets
             snippet_packages = []
             for snippet in snippets:
                 snippet_packages.extend(
                     PackageExtractor.extract_packages(snippet.code, snippet.language)  # type: ignore
                 )
-            logger.info(f"Found {len(snippet_packages)} packages in code snippets.")
 
+            logger.info(f"Found {len(snippet_packages)} packages for language {snippet_language} in code snippets.")
             # Find bad packages in the snippets
-            bad_snippet_packages = await storage_engine.search(
-                language=snippets[0].language, packages=snippet_packages  # type: ignore
-            )
+            bad_snippet_packages = await storage_engine.search(language=snippet_language, packages=snippet_packages)  # type: ignore
             logger.info(f"Found {len(bad_snippet_packages)} bad packages in code snippets.")
 
         # Remove code snippets from the user messages and search for bad packages

@@ -1,5 +1,6 @@
 import os
 import re
+from pygments.lexers import guess_lexer
 from typing import List, Optional
 
 import structlog
@@ -85,7 +86,6 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
 
     # Find all code block matches
     for match in CODE_BLOCK_PATTERN.finditer(message):
-        print("i try to extract snippet")
         matched_language = match.group("language") if match.group("language") else None
         filename = match.group("filename") if match.group("filename") else None
         content = match.group("content")
@@ -95,24 +95,23 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
         # format ` ```python ` in output snippets
         if filename and not matched_language and "." not in filename:
             lang = filename
-            print("lang is")
-            print(lang)
             filename = None
         else:
             # Determine language from the message, either by the short
             # language identifier or by the filename
             lang = None
             if matched_language:
-                print("i have a matched language")
                 lang = ecosystem_from_message(matched_language.strip())
             if lang is None and filename:
-                print("I try to get from filename")
                 filename = filename.strip()
                 # Determine language from the filename
                 lang = ecosystem_from_filepath(filename)
+            if lang is None:
+                # try to guess it from the code
+                lexer = guess_lexer(content)
+                if lexer and lexer.name:
+                    lang = lexer.name.lower()
 
-        print("language is")
-        print(lang)
         snippets.append(CodeSnippet(filepath=filename, code=content, language=lang))
 
     return snippets
