@@ -1,6 +1,7 @@
 .PHONY: clean install format lint test security build all
 CONTAINER_BUILD?=docker buildx build
-VER?=0.1.7
+# This is the container tag. Only used for development purposes.
+VER?=latest
 
 clean:
 	rm -rf build/
