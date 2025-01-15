@@ -1,10 +1,10 @@
 import os
 import re
-from pygments.lexers import guess_lexer
 from typing import List, Optional
 
 import structlog
 from litellm.types.llms.openai import ChatCompletionRequest
+from pygments.lexers import guess_lexer
 
 from codegate.pipeline.base import CodeSnippet, PipelineContext, PipelineResult, PipelineStep
 

@@ -1,5 +1,6 @@
 import json
 import re
+
 import structlog
 from litellm import ChatCompletionRequest
 
@@ -79,17 +80,20 @@ class CodegateContextRetriever(PipelineStep):
                     PackageExtractor.extract_packages(snippet.code, snippet.language)  # type: ignore
                 )
 
-            logger.info(f"Found {len(snippet_packages)} packages "
-                        f"for language {snippet_language} in code snippets.")
+            logger.info(
+                f"Found {len(snippet_packages)} packages "
+                f"for language {snippet_language} in code snippets."
+            )
             # Find bad packages in the snippets
             bad_snippet_packages = await storage_engine.search(
-                language=snippet_language, packages=snippet_packages)  # type: ignore
+                language=snippet_language, packages=snippet_packages
+            )  # type: ignore
             logger.info(f"Found {len(bad_snippet_packages)} bad packages in code snippets.")
 
         # Remove code snippets from the user messages and search for bad packages
         # in the rest of the user query/messsages
         user_messages = re.sub(r"```.*?```", "", user_message, flags=re.DOTALL)
-        user_messages = re.sub(r"⋮...*?⋮...\n\n", "", user_messages, flags=re.DOTALL) # regex used in aider
+        user_messages = re.sub(r"⋮...*?⋮...\n\n", "", user_messages, flags=re.DOTALL)
 
         # split messages into double newlines, to avoid passing so many content in the search
         split_messages = user_messages.split("\n\n")
