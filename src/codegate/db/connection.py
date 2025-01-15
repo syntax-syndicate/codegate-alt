@@ -4,8 +4,11 @@ from pathlib import Path
 from typing import List, Optional, Type
 
 import structlog
+from alembic import command as alembic_command
+from alembic.config import Config as AlembicConfig
 from pydantic import BaseModel
 from sqlalchemy import TextClause, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from codegate.db.fim_cache import FimCache
@@ -34,7 +37,7 @@ class DbCodeGate:
             )  # type: ignore
         self._db_path = Path(sqlite_path).absolute()  # type: ignore
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Initializing DB from path: {self._db_path}")
+        logger.debug(f"Connecting to DB from path: {self._db_path}")
         engine_dict = {
             "url": f"sqlite+aiosqlite:///{self._db_path}",
             "echo": False,  # Set to False in production
@@ -50,38 +53,6 @@ class DbRecorder(DbCodeGate):
 
     def __init__(self, sqlite_path: Optional[str] = None):
         super().__init__(sqlite_path)
-
-        if not self.does_db_exist():
-            logger.info(f"Database does not exist at {self._db_path}. Creating..")
-            asyncio.run(self.init_db())
-
-    async def init_db(self):
-        """Initialize the database with the schema."""
-        if self.does_db_exist():
-            logger.info("Database already exists. Skipping initialization.")
-            return
-
-        # Get the absolute path to the schema file
-        current_dir = Path(__file__).parent
-        schema_path = current_dir.parent.parent.parent / "sql" / "schema" / "schema.sql"
-
-        if not schema_path.exists():
-            raise FileNotFoundError(f"Schema file not found at {schema_path}")
-
-        # Read the schema
-        with open(schema_path, "r") as f:
-            schema = f.read()
-
-        try:
-            # Execute the schema
-            async with self._async_db_engine.begin() as conn:
-                # Split the schema into individual statements and execute each one
-                statements = [stmt.strip() for stmt in schema.split(";") if stmt.strip()]
-                for statement in statements:
-                    # Use SQLAlchemy text() to create executable SQL statements
-                    await conn.execute(text(statement))
-        finally:
-            await self._async_db_engine.dispose()
 
     async def _execute_update_pydantic_model(
         self, model: BaseModel, sql_command: TextClause
@@ -318,8 +289,22 @@ class DbReader(DbCodeGate):
 
 def init_db_sync(db_path: Optional[str] = None):
     """DB will be initialized in the constructor in case it doesn't exist."""
-    db = DbRecorder(db_path)
-    asyncio.run(db.init_db())
+    current_dir = Path(__file__).parent
+    alembic_ini_path = current_dir.parent.parent.parent / "alembic.ini"
+    alembic_cfg = AlembicConfig(alembic_ini_path)
+    # Only set the db path if it's provided. Otherwise use the one in alembic.ini
+    if db_path:
+        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+
+    try:
+        alembic_command.upgrade(alembic_cfg, "head")
+    except OperationalError:
+        # An OperationalError is expected if the DB already exists, i.e. it was created before
+        # migrations were introduced. In this case, we need to stamp the DB with the initial
+        # revision and then upgrade it to the latest revision.
+        alembic_command.stamp(alembic_cfg, "30d0144e1a50")
+        alembic_command.upgrade(alembic_cfg, "head")
+    logger.info("DB initialized successfully.")
 
 
 if __name__ == "__main__":
