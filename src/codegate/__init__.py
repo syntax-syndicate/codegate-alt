@@ -14,9 +14,6 @@ except metadata.PackageNotFoundError:  # pragma: no cover
     __version__ = "unknown"
     __description__ = "codegate"
 
-__version__ = "0.1.7"
-__description__ = "A configurable service gateway"
-
 __all__ = ["Config", "ConfigurationError", "LogFormat", "LogLevel", "setup_logging"]
 
 # Set up null handler to avoid "No handler found" warnings.
