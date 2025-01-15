@@ -189,6 +189,8 @@ class CopilotProvider(asyncio.Protocol):
             # if we didn't select any strategy that would change the request
             # let's just pass through the body as-is
             return body, None
+        # Uncommnet to get the body received from copilot
+        logger.info(f"Request body copilot:\n{body.decode('utf-8')}")
         return await strategy.process_body(headers, body)
 
     async def _request_to_target(self, headers: list[str], body: bytes):

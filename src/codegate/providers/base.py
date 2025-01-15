@@ -212,6 +212,9 @@ class BaseProvider(ABC):
         - Execute the completion and translate the response back to the
           provider-specific format
         """
+        # Uncomment to check the incoming data
+        import json
+        logger.info(f"Received request:\n{json.dumps(data)}")
         normalized_request = self._input_normalizer.normalize(data)
         streaming = normalized_request.get("stream", False)
         input_pipeline_result = await self._run_input_pipeline(
