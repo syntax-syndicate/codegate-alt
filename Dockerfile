@@ -78,7 +78,7 @@ RUN chown -R codegate /var/lib/nginx && \
     chown -R codegate /var/log/nginx && \
     chown -R codegate /run
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Remove include /etc/nginx/sites-enabled/*; from the default nginx.conf
 # This way we don't introduce unnecessary configurations nor serve
