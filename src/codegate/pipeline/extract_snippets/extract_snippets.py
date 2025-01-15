@@ -66,6 +66,8 @@ def ecosystem_from_message(message: str) -> Optional[str]:
         "ts": "typescript",
         "tsx": "typescript",
         "go": "go",
+        "rs": "rust",
+        "java": "java",
     }
     return language_mapping.get(message, None)
 
@@ -83,6 +85,7 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
     # Regular expression to find code blocks
 
     snippets: List[CodeSnippet] = []
+    available_languages = ["python", "javascript", "typescript", "go", "rust", "java"]
 
     # Find all code block matches
     for match in CODE_BLOCK_PATTERN.finditer(message):
@@ -111,6 +114,9 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
                 lexer = guess_lexer(content)
                 if lexer and lexer.name:
                     lang = lexer.name.lower()
+                    # only add available languages
+                    if lang not in available_languages:
+                        lang = None
 
         snippets.append(CodeSnippet(filepath=filename, code=content, language=lang))
 

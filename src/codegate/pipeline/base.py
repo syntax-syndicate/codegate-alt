@@ -260,8 +260,17 @@ class PipelineStep(ABC):
         # Iterate in reverse to find the last block of consecutive 'user' messages
         for i in reversed(range(len(messages))):
             if messages[i]["role"] == "user" or messages[i]["role"] == "assistant":
+                content_str = None
+                if "content" in messages[i]:
+                    content_str = messages[i]["content"]  # type: ignore
+                else:
+                    continue
+
                 if messages[i]["role"] == "user":
-                    user_messages.append(messages[i]["content"])  # type: ignore
+                    user_messages.append(content_str)
+                # specifically for Aider, when "ok." block is found, stop
+                if content_str == "Ok." and messages[i]["role"] == "assistant":
+                    break
             else:
                 # Stop when a message with a different role is encountered
                 if user_messages:

@@ -80,7 +80,7 @@ class CodegateContextRetriever(PipelineStep):
                 )
 
             logger.info(f"Found {len(snippet_packages)} packages "
-                        "for language {snippet_language} in code snippets.")
+                        f"for language {snippet_language} in code snippets.")
             # Find bad packages in the snippets
             bad_snippet_packages = await storage_engine.search(
                 language=snippet_language, packages=snippet_packages)  # type: ignore
@@ -89,12 +89,19 @@ class CodegateContextRetriever(PipelineStep):
         # Remove code snippets from the user messages and search for bad packages
         # in the rest of the user query/messsages
         user_messages = re.sub(r"```.*?```", "", user_message, flags=re.DOTALL)
+        user_messages = re.sub(r"⋮...*?⋮...\n\n", "", user_messages, flags=re.DOTALL) # regex used in aider
 
-        # Vector search to find bad packages
-        bad_packages = await storage_engine.search(query=user_messages, distance=0.5, limit=100)
+        # split messages into double newlines, to avoid passing so many content in the search
+        split_messages = user_messages.split("\n\n")
+        collected_bad_packages = []
+        for item_message in split_messages:
+            # Vector search to find bad packages
+            bad_packages = await storage_engine.search(query=item_message, distance=0.5, limit=100)
+            if bad_packages and len(bad_packages) > 0:
+                collected_bad_packages.extend(bad_packages)
 
         # All bad packages
-        all_bad_packages = bad_snippet_packages + bad_packages
+        all_bad_packages = bad_snippet_packages + collected_bad_packages
 
         logger.info(f"Adding {len(all_bad_packages)} bad packages to the context.")
 
