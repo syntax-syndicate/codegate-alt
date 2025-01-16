@@ -98,6 +98,11 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
         # format ` ```python ` in output snippets
         if filename and not matched_language and "." not in filename:
             lang = filename
+            if lang not in available_languages:
+                #  try to get it from the extension
+                lang = ecosystem_from_message(filename)
+                if lang not in available_languages:
+                    lang = None
             filename = None
         else:
             # Determine language from the message, either by the short
@@ -118,6 +123,11 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
                     if lang not in available_languages:
                         lang = None
 
+        #  just correct the typescript exception
+        lang_map = {
+            "typescript": "javascript"
+        }
+        lang = lang_map.get(lang, lang)        
         snippets.append(CodeSnippet(filepath=filename, code=content, language=lang))
 
     return snippets
