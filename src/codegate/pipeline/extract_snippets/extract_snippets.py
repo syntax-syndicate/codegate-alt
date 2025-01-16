@@ -124,8 +124,10 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
                         lang = None
 
         #  just correct the typescript exception
-        if lang == "typescript":
-            lang = "javascript"
+        lang_map = {
+            "typescript": "javascript"
+        }
+        lang = lang_map.get(lang, lang)        
         snippets.append(CodeSnippet(filepath=filename, code=content, language=lang))
 
     return snippets
