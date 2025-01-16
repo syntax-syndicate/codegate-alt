@@ -4,6 +4,7 @@ from typing import List, Optional
 
 import structlog
 from litellm.types.llms.openai import ChatCompletionRequest
+from pygments.lexers import guess_lexer
 
 from codegate.pipeline.base import CodeSnippet, PipelineContext, PipelineResult, PipelineStep
 
@@ -65,6 +66,8 @@ def ecosystem_from_message(message: str) -> Optional[str]:
         "ts": "typescript",
         "tsx": "typescript",
         "go": "go",
+        "rs": "rust",
+        "java": "java",
     }
     return language_mapping.get(message, None)
 
@@ -82,6 +85,7 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
     # Regular expression to find code blocks
 
     snippets: List[CodeSnippet] = []
+    available_languages = ["python", "javascript", "typescript", "go", "rust", "java"]
 
     # Find all code block matches
     for match in CODE_BLOCK_PATTERN.finditer(message):
@@ -105,6 +109,14 @@ def extract_snippets(message: str) -> List[CodeSnippet]:
                 filename = filename.strip()
                 # Determine language from the filename
                 lang = ecosystem_from_filepath(filename)
+            if lang is None:
+                # try to guess it from the code
+                lexer = guess_lexer(content)
+                if lexer and lexer.name:
+                    lang = lexer.name.lower()
+                    # only add available languages
+                    if lang not in available_languages:
+                        lang = None
 
         snippets.append(CodeSnippet(filepath=filename, code=content, language=lang))
 
@@ -129,10 +141,9 @@ class CodeSnippetExtractor(PipelineStep):
         request: ChatCompletionRequest,
         context: PipelineContext,
     ) -> PipelineResult:
-        last_user_message = self.get_last_user_message(request)
-        if not last_user_message:
+        msg_content = self.get_last_user_message_block(request)
+        if not msg_content:
             return PipelineResult(request=request, context=context)
-        msg_content, _ = last_user_message
         snippets = extract_snippets(msg_content)
 
         logger.info(f"Extracted {len(snippets)} code snippets from the user message")
