@@ -51,7 +51,7 @@ class DbCodeGate:
                 )
             self._db_path = Path(sqlite_path).absolute()
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
-            logger.debug(f"Connecting to DB from path: {self._db_path}")
+            # logger.debug(f"Connecting to DB from path: {self._db_path}")
             engine_dict = {
                 "url": f"sqlite+aiosqlite:///{self._db_path}",
                 "echo": False,  # Set to False in production
