@@ -1,14 +1,12 @@
 import asyncio
-import json
 from typing import AsyncGenerator, List, Optional
 
 import requests
 import structlog
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from codegate import __version__
-from codegate.api.v1 import v1
 from codegate.dashboard.post_processing import (
     parse_get_alert_conversation,
     parse_messages_in_conversations,
@@ -107,19 +105,3 @@ def version_check():
             "is_latest": None,
             "error": "An unexpected error occurred",
         }
-
-
-def generate_openapi():
-    # Create a temporary FastAPI app instance
-    app = FastAPI()
-
-    # Include your defined router
-    app.include_router(dashboard_router)
-    app.include_router(v1, prefix="/api/v1", tags=["CodeGate API"])
-
-    # Generate OpenAPI JSON
-    openapi_schema = app.openapi()
-
-    # Convert the schema to JSON string for easier handling or storage
-    openapi_json = json.dumps(openapi_schema, indent=2)
-    print(openapi_json)

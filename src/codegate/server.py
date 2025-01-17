@@ -1,3 +1,4 @@
+import json
 import traceback
 
 import structlog
@@ -102,3 +103,15 @@ def init_app(pipeline_factory: PipelineFactory) -> FastAPI:
     app.include_router(v1, prefix="/api/v1", tags=["CodeGate API"])
 
     return app
+
+
+def generate_openapi():
+    # Create a temporary FastAPI app instance
+    app = init_app(None)
+
+    # Generate OpenAPI JSON
+    openapi_schema = app.openapi()
+
+    # Convert the schema to JSON string for easier handling or storage
+    openapi_json = json.dumps(openapi_schema, indent=2)
+    print(openapi_json)
