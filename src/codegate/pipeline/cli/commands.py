@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from pydantic import ValidationError
+
 from codegate import __version__
+from codegate.db.connection import AlreadyExistsError
 from codegate.workspaces.crud import WorkspaceCrud
 
 
@@ -63,19 +66,21 @@ class Workspace(CodegateCommand):
         Add a workspace
         """
         if args is None or len(args) == 0:
-            return "Please provide a name. Use `codegate-workspace add your_workspace_name`"
+            return "Please provide a name. Use `codegate workspace add your_workspace_name`"
 
         new_workspace_name = args[0]
         if not new_workspace_name:
-            return "Please provide a name. Use `codegate-workspace add your_workspace_name`"
+            return "Please provide a name. Use `codegate workspace add your_workspace_name`"
 
-        workspace_created = await self.workspace_crud.add_workspace(new_workspace_name)
-        if not workspace_created:
-            return (
-                "Something went wrong. Workspace could not be added.\n"
-                "1. Check if the name is alphanumeric and only contains dashes, and underscores.\n"
-                "2. Check if the workspace already exists."
-            )
+        try:
+            _ = await self.workspace_crud.add_workspace(new_workspace_name)
+        except ValidationError:
+            return "Invalid workspace name: It should be alphanumeric and dashes"
+        except AlreadyExistsError:
+            return f"Workspace **{new_workspace_name}** already exists"
+        except Exception:
+            return "An error occurred while adding the workspace"
+
         return f"Workspace **{new_workspace_name}** has been added"
 
     async def _activate_workspace(self, args: List[str]) -> str:
@@ -83,17 +88,17 @@ class Workspace(CodegateCommand):
         Activate a workspace
         """
         if args is None or len(args) == 0:
-            return "Please provide a name. Use `codegate-workspace activate workspace_name`"
+            return "Please provide a name. Use `codegate workspace activate workspace_name`"
 
         workspace_name = args[0]
         if not workspace_name:
-            return "Please provide a name. Use `codegate-workspace activate workspace_name`"
+            return "Please provide a name. Use `codegate workspace activate workspace_name`"
 
         was_activated = await self.workspace_crud.activate_workspace(workspace_name)
         if not was_activated:
             return (
                 f"Workspace **{workspace_name}** does not exist or was already active. "
-                f"Use `codegate-workspace add {workspace_name}` to add it"
+                f"Use `codegate workspace add {workspace_name}` to add it"
             )
         return f"Workspace **{workspace_name}** has been activated"
 

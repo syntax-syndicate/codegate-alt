@@ -1,16 +1,19 @@
 import datetime
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from codegate.db.connection import DbReader, DbRecorder
-from codegate.db.models import Session, Workspace
+from codegate.db.models import ActiveWorkspace, Session, Workspace, WorkspaceActive
 
+
+class WorkspaceCrudError(Exception):
+    pass
 
 class WorkspaceCrud:
 
     def __init__(self):
         self._db_reader = DbReader()
 
-    async def add_workspace(self, new_workspace_name: str) -> bool:
+    async def add_workspace(self, new_workspace_name: str) -> Workspace:
         """
         Add a workspace
 
@@ -19,13 +22,19 @@ class WorkspaceCrud:
         """
         db_recorder = DbRecorder()
         workspace_created = await db_recorder.add_workspace(new_workspace_name)
-        return bool(workspace_created)
+        return workspace_created
 
-    async def get_workspaces(self):
+    async def get_workspaces(self)-> List[WorkspaceActive]:
         """
         Get all workspaces
         """
         return await self._db_reader.get_workspaces()
+
+    async def get_active_workspace(self) -> Optional[ActiveWorkspace]:
+        """
+        Get the active workspace
+        """
+        return await self._db_reader.get_active_workspace()
 
     async def _is_workspace_active_or_not_exist(
         self, workspace_name: str
