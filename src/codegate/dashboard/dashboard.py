@@ -1,9 +1,11 @@
 import asyncio
 from typing import AsyncGenerator, List, Optional
 
+import requests
 import structlog
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import StreamingResponse
+from codegate import __version__
 
 from codegate.dashboard.post_processing import (
     parse_get_alert_conversation,
@@ -17,13 +19,22 @@ logger = structlog.get_logger("codegate")
 dashboard_router = APIRouter(tags=["Dashboard"])
 db_reader = None
 
-
 def get_db_reader():
     global db_reader
     if db_reader is None:
         db_reader = DbReader()
     return db_reader
 
+def fetch_latest_version() -> str:
+    url = "https://api.github.com/repos/stacklok/codegate/releases/latest"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    response = requests.get(url, headers=headers, timeout=5)
+    response.raise_for_status()
+    data = response.json()
+    return data.get("tag_name", "unknown")
 
 @dashboard_router.get("/dashboard/messages")
 def get_messages(db_reader: DbReader = Depends(get_db_reader)) -> List[Conversation]:
@@ -59,3 +70,37 @@ async def stream_sse():
     Send alerts event
     """
     return StreamingResponse(generate_sse_events(), media_type="text/event-stream")
+
+@dashboard_router.get("/dashboard/version")
+def version_check():
+    try:
+        latest_version = fetch_latest_version()
+
+        # normalize the versions as github will return them with a 'v' prefix
+        current_version = __version__.lstrip('v')
+        latest_version_stripped = latest_version.lstrip('v')
+
+        is_latest: bool = latest_version_stripped == current_version
+        
+        return {
+            "current_version": current_version,
+            "latest_version": latest_version_stripped,
+            "is_latest": is_latest,
+            "error": None,
+        }
+    except requests.RequestException as e:
+        logger.error(f"RequestException: {str(e)}")
+        return {
+            "current_version": __version__,
+            "latest_version": "unknown",
+            "is_latest": None,
+            "error": "An error occurred while fetching the latest version"
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return {
+            "current_version": __version__,
+            "latest_version": "unknown",
+            "is_latest": None,
+            "error": "An unexpected error occurred"
+        }
