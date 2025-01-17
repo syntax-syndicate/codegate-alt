@@ -1,5 +1,6 @@
 import json
 import traceback
+from unittest.mock import Mock
 
 import structlog
 from fastapi import APIRouter, FastAPI, Request
@@ -9,7 +10,6 @@ from starlette.middleware.errors import ServerErrorMiddleware
 
 from codegate import __description__, __version__
 from codegate.api.v1 import v1
-from codegate.dashboard.dashboard import dashboard_router
 from codegate.pipeline.factory import PipelineFactory
 from codegate.providers.anthropic.provider import AnthropicProvider
 from codegate.providers.llamacpp.provider import LlamaCppProvider
@@ -97,7 +97,6 @@ def init_app(pipeline_factory: PipelineFactory) -> FastAPI:
         return {"status": "healthy"}
 
     app.include_router(system_router)
-    app.include_router(dashboard_router)
 
     # CodeGate API
     app.include_router(v1, prefix="/api/v1", tags=["CodeGate API"])
@@ -106,11 +105,7 @@ def init_app(pipeline_factory: PipelineFactory) -> FastAPI:
 
 
 def generate_openapi():
-    # Create a temporary FastAPI app instance
-    app = FastAPI()
-
-    app.include_router(dashboard_router)
-    app.include_router(v1, prefix="/api/v1", tags=["CodeGate API"])
+    app = init_app(Mock(spec=PipelineFactory))
 
     # Generate OpenAPI JSON
     openapi_schema = app.openapi()

@@ -6,8 +6,11 @@ from pydantic import ValidationError
 from codegate.api import v1_models
 from codegate.db.connection import AlreadyExistsError
 from codegate.workspaces.crud import WorkspaceCrud
+from codegate.api.dashboard.dashboard import dashboard_router
 
 v1 = APIRouter()
+v1.include_router(dashboard_router)
+
 wscrud = WorkspaceCrud()
 
 

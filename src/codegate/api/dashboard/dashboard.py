@@ -5,13 +5,13 @@ import requests
 import structlog
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import StreamingResponse
-
 from codegate import __version__
-from codegate.dashboard.post_processing import (
+
+from codegate.api.dashboard.post_processing import (
     parse_get_alert_conversation,
     parse_messages_in_conversations,
 )
-from codegate.dashboard.request_models import AlertConversation, Conversation
+from codegate.api.dashboard.request_models import AlertConversation, Conversation
 from codegate.db.connection import DbReader, alert_queue
 
 logger = structlog.get_logger("codegate")
@@ -81,7 +81,7 @@ def version_check():
         latest_version_stripped = latest_version.lstrip('v')
 
         is_latest: bool = latest_version_stripped == current_version
-
+        
         return {
             "current_version": current_version,
             "latest_version": latest_version_stripped,
