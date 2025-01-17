@@ -1,6 +1,7 @@
 import asyncio
 from typing import AsyncGenerator, List, Optional
 
+from fastapi.routing import APIRoute
 import requests
 import structlog
 from fastapi import APIRouter, Depends, FastAPI
@@ -16,8 +17,11 @@ from codegate.db.connection import DbReader, alert_queue
 
 logger = structlog.get_logger("codegate")
 
-dashboard_router = APIRouter(tags=["Dashboard"])
+dashboard_router = APIRouter()
 db_reader = None
+
+def uniq_name(route: APIRoute):
+    return f"v1_{route.name}"
 
 def get_db_reader():
     global db_reader
@@ -36,7 +40,7 @@ def fetch_latest_version() -> str:
     data = response.json()
     return data.get("tag_name", "unknown")
 
-@dashboard_router.get("/dashboard/messages")
+@dashboard_router.get("/dashboard/messages", tags=["Dashboard"], generate_unique_id_function=uniq_name)
 def get_messages(db_reader: DbReader = Depends(get_db_reader)) -> List[Conversation]:
     """
     Get all the messages from the database and return them as a list of conversations.
@@ -46,7 +50,7 @@ def get_messages(db_reader: DbReader = Depends(get_db_reader)) -> List[Conversat
     return asyncio.run(parse_messages_in_conversations(prompts_outputs))
 
 
-@dashboard_router.get("/dashboard/alerts")
+@dashboard_router.get("/dashboard/alerts", tags=["Dashboard"], generate_unique_id_function=uniq_name)
 def get_alerts(db_reader: DbReader = Depends(get_db_reader)) -> List[Optional[AlertConversation]]:
     """
     Get all the messages from the database and return them as a list of conversations.
@@ -64,14 +68,14 @@ async def generate_sse_events() -> AsyncGenerator[str, None]:
         yield f"data: {message}\n\n"
 
 
-@dashboard_router.get("/dashboard/alerts_notification")
+@dashboard_router.get("/dashboard/alerts_notification", tags=["Dashboard"], generate_unique_id_function=uniq_name)
 async def stream_sse():
     """
     Send alerts event
     """
     return StreamingResponse(generate_sse_events(), media_type="text/event-stream")
 
-@dashboard_router.get("/dashboard/version")
+@dashboard_router.get("/dashboard/version", tags=["Dashboard"], generate_unique_id_function=uniq_name)
 def version_check():
     try:
         latest_version = fetch_latest_version()

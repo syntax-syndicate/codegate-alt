@@ -33,7 +33,7 @@
         ],
         "summary": "Get Messages",
         "description": "Get all the messages from the database and return them as a list of conversations.",
-        "operationId": "get_messages_api_v1_dashboard_messages_get",
+        "operationId": "v1_get_messages",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -44,7 +44,7 @@
                     "$ref": "#/components/schemas/Conversation"
                   },
                   "type": "array",
-                  "title": "Response Get Messages Api V1 Dashboard Messages Get"
+                  "title": "Response V1 Get Messages"
                 }
               }
             }
@@ -60,7 +60,7 @@
         ],
         "summary": "Get Alerts",
         "description": "Get all the messages from the database and return them as a list of conversations.",
-        "operationId": "get_alerts_api_v1_dashboard_alerts_get",
+        "operationId": "v1_get_alerts",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -78,7 +78,7 @@
                     ]
                   },
                   "type": "array",
-                  "title": "Response Get Alerts Api V1 Dashboard Alerts Get"
+                  "title": "Response V1 Get Alerts"
                 }
               }
             }
@@ -94,7 +94,7 @@
         ],
         "summary": "Stream Sse",
         "description": "Send alerts event",
-        "operationId": "stream_sse_api_v1_dashboard_alerts_notification_get",
+        "operationId": "v1_stream_sse",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -114,7 +114,7 @@
           "Dashboard"
         ],
         "summary": "Version Check",
-        "operationId": "version_check_api_v1_dashboard_version_get",
+        "operationId": "v1_version_check",
         "responses": {
           "200": {
             "description": "Successful Response",
