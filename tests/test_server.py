@@ -81,7 +81,7 @@ def test_health_check(test_client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
 
-@patch("codegate.api.dashboard.fetch_latest_version", return_value="foo")
+@patch("codegate.api.dashboard.dashboard.fetch_latest_version", return_value="foo")
 def test_version_endpoint(mock_fetch_latest_version, test_client: TestClient) -> None:
     """Test the version endpoint."""
     response = test_client.get("/api/v1/dashboard/version")
