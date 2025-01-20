@@ -43,6 +43,7 @@ class Setting(BaseModel):
 class Workspace(BaseModel):
     id: str
     name: str
+    system_prompt: Optional[str]
 
     @field_validator("name", mode="plain")
     @classmethod
@@ -98,5 +99,6 @@ class WorkspaceActive(BaseModel):
 class ActiveWorkspace(BaseModel):
     id: str
     name: str
+    system_prompt: Optional[str]
     session_id: str
     last_update: datetime.datetime

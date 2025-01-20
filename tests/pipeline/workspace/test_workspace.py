@@ -42,7 +42,7 @@ async def test_list_workspaces(mock_workspaces, expected_output):
     workspace_commands.workspace_crud.get_workspaces = mock_get_workspaces
 
     # Call the method
-    result = await workspace_commands._list_workspaces()
+    result = await workspace_commands._list_workspaces(None, None)
 
     # Check the result
     assert result == expected_output
@@ -83,7 +83,7 @@ async def test_add_workspaces(args, existing_workspaces, expected_message):
         mock_recorder.add_workspace = AsyncMock()
 
         # Call the method
-        result = await workspace_commands._add_workspace(args)
+        result = await workspace_commands._add_workspace(None, args)
 
         # Assertions
         assert result == expected_message

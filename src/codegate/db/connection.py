@@ -248,7 +248,7 @@ class DbRecorder(DbCodeGate):
         except Exception as e:
             logger.error(f"Failed to record context: {context}.", error=str(e))
 
-    async def add_workspace(self, workspace_name: str) -> Optional[Workspace]:
+    async def add_workspace(self, workspace_name: str) -> Workspace:
         """Add a new workspace to the DB.
 
         This handles validation and insertion of a new workspace.
@@ -256,8 +256,7 @@ class DbRecorder(DbCodeGate):
         It may raise a ValidationError if the workspace name is invalid.
         or a AlreadyExistsError if the workspace already exists.
         """
-        workspace = Workspace(id=str(uuid.uuid4()), name=workspace_name)
-
+        workspace = Workspace(id=str(uuid.uuid4()), name=workspace_name, system_prompt=None)
         sql = text(
             """
             INSERT INTO workspaces (id, name)
@@ -274,6 +273,21 @@ class DbRecorder(DbCodeGate):
             logger.debug(f"Exception type: {type(e)}")
             raise AlreadyExistsError(f"Workspace {workspace_name} already exists.")
         return added_workspace
+
+    async def update_workspace(self, workspace: Workspace) -> Workspace:
+        sql = text(
+            """
+            UPDATE workspaces SET
+            name = :name,
+            system_prompt = :system_prompt
+            WHERE id = :id
+            RETURNING *
+            """
+        )
+        updated_workspace = await self._execute_update_pydantic_model(
+            workspace, sql, should_raise=True
+        )
+        return updated_workspace
 
     async def update_session(self, session: Session) -> Optional[Session]:
         sql = text(
@@ -392,11 +406,11 @@ class DbReader(DbCodeGate):
         workspaces = await self._execute_select_pydantic_model(WorkspaceActive, sql)
         return workspaces
 
-    async def get_workspace_by_name(self, name: str) -> List[Workspace]:
+    async def get_workspace_by_name(self, name: str) -> Optional[Workspace]:
         sql = text(
             """
             SELECT
-                id, name
+                id, name, system_prompt
             FROM workspaces
             WHERE name = :name
             """
@@ -422,7 +436,7 @@ class DbReader(DbCodeGate):
         sql = text(
             """
             SELECT
-                w.id, w.name, s.id as session_id, s.last_update
+                w.id, w.name, w.system_prompt, s.id as session_id, s.last_update
             FROM sessions s
             INNER JOIN workspaces w ON w.id = s.active_workspace_id
             """
