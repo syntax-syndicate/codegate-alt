@@ -18,6 +18,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Turn off foreign key constraints for this migration
+    op.execute("PRAGMA foreign_keys=off;")
+
+    # Begin transaction
+    op.execute("BEGIN TRANSACTION;")
+
     # To add ON DELETE CASCADE to the foreign key constraint, we need to
     # rename the table, create a new table with the constraint, and copy
     # the data over.
@@ -100,6 +106,13 @@ def upgrade() -> None:
     op.execute("CREATE INDEX idx_alerts_prompt_id ON alerts(prompt_id);")
     op.execute("CREATE INDEX idx_prompts_workspace_id ON prompts (workspace_id);")
     op.execute("CREATE INDEX idx_sessions_workspace_id ON sessions (active_workspace_id);")
+
+    # Finish transaction
+    op.execute("COMMIT;")
+
+    # Turn on foreign key constraints after the migration. Just to be sure. This shouldn't
+    # be necessary, since it should be specified at the beginning of every connection, doesn't hurt.
+    op.execute("PRAGMA foreign_keys=on;")
 
 
 def downgrade() -> None:
