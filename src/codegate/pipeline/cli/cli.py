@@ -82,7 +82,7 @@ class CodegateCli(PipelineStep):
             base_tool = get_tool_name_from_messages(request)
             codegate_regex = re.compile(r"^codegate(?:\s+(.*))?", re.IGNORECASE)
 
-            if base_tool and base_tool == "cline":
+            if base_tool and base_tool in ["cline", "kodu"]:
                 # Check if there are <task> or <feedback> tags
                 tag_match = re.search(
                     r"<(task|feedback)>(.*?)</\1>", last_user_message_str, re.DOTALL
@@ -111,7 +111,7 @@ class CodegateCli(PipelineStep):
                 if args:
                     context.shortcut_response = True
                     cmd_out = await codegate_cli(args[1:])
-                    if base_tool and base_tool == "cline":
+                    if base_tool in ["cline", "kodu"]:
                         cmd_out = (
                             f"<attempt_completion><result>{cmd_out}</result></attempt_completion>\n"
                         )
