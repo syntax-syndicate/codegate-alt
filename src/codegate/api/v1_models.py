@@ -1,6 +1,6 @@
 import datetime
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pydantic
 
@@ -107,15 +107,6 @@ class PartialQuestions(pydantic.BaseModel):
     type: QuestionType
 
 
-class PartialQuestionAnswer(pydantic.BaseModel):
-    """
-    Represents a partial conversation.
-    """
-
-    partial_questions: PartialQuestions
-    answer: Optional[ChatMessage]
-
-
 class ProviderType(str, Enum):
     """
     Represents the different types of providers we support.
@@ -126,6 +117,7 @@ class ProviderType(str, Enum):
     vllm = "vllm"
     ollama = "ollama"
     lm_studio = "lm_studio"
+    llamacpp = "llamacpp"
 
 
 class TokenUsageByModel(pydantic.BaseModel):
@@ -135,17 +127,47 @@ class TokenUsageByModel(pydantic.BaseModel):
 
     provider_type: ProviderType
     model: str
-    used_tokens: int
+    token_usage: db_models.TokenUsage
 
 
-class TokenUsage(pydantic.BaseModel):
+class TokenUsageAggregate(pydantic.BaseModel):
     """
     Represents the tokens used. Includes the information of the tokens used by model.
     `used_tokens` are the total tokens used in the `tokens_by_model` list.
     """
 
-    tokens_by_model: List[TokenUsageByModel]
-    used_tokens: int
+    tokens_by_model: Dict[str, TokenUsageByModel]
+    token_usage: db_models.TokenUsage
+
+    def add_model_token_usage(self, model_token_usage: TokenUsageByModel) -> None:
+        # Copilot doesn't have a model name and we cannot obtain the tokens used. Skip it.
+        if model_token_usage.model == "":
+            return
+
+        # Skip if the model has not used any tokens.
+        if (
+            model_token_usage.token_usage.input_tokens == 0
+            and model_token_usage.token_usage.output_tokens == 0
+        ):
+            return
+
+        if model_token_usage.model in self.tokens_by_model:
+            self.tokens_by_model[
+                model_token_usage.model
+            ].token_usage += model_token_usage.token_usage
+        else:
+            self.tokens_by_model[model_token_usage.model] = model_token_usage
+        self.token_usage += model_token_usage.token_usage
+
+
+class PartialQuestionAnswer(pydantic.BaseModel):
+    """
+    Represents a partial conversation.
+    """
+
+    partial_questions: PartialQuestions
+    answer: Optional[ChatMessage]
+    model_token_usage: TokenUsageByModel
 
 
 class Conversation(pydantic.BaseModel):
@@ -158,7 +180,7 @@ class Conversation(pydantic.BaseModel):
     type: QuestionType
     chat_id: str
     conversation_timestamp: datetime.datetime
-    token_usage: Optional[TokenUsage]
+    token_usage_agg: Optional[TokenUsageAggregate]
 
 
 class AlertConversation(pydantic.BaseModel):
