@@ -1,4 +1,5 @@
 import json
+from typing import List
 from urllib.parse import urljoin
 
 import httpx
@@ -8,7 +9,7 @@ from litellm import atext_completion
 
 from codegate.config import Config
 from codegate.pipeline.factory import PipelineFactory
-from codegate.providers.base import BaseProvider
+from codegate.providers.base import BaseProvider, ModelFetchError
 from codegate.providers.litellmshim import LiteLLmShim, sse_stream_generator
 from codegate.providers.vllm.adapter import VLLMInputNormalizer, VLLMOutputNormalizer
 
@@ -45,8 +46,21 @@ class VLLMProvider(BaseProvider):
                 base_url = f"{base_url}/v1"
         return base_url
 
-    def models(self):
-        resp = httpx.get(f"{self.base_url}/v1/models")
+    def models(self, endpoint: str = None, api_key: str = None) -> List[str]:
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        if not endpoint:
+            endpoint = self._get_base_url()
+
+        resp = httpx.get(
+            f"{endpoint}/v1/models",
+            headers=headers,
+        )
+
+        if resp.status_code != 200:
+            raise ModelFetchError(f"Failed to fetch models from vLLM API: {resp.text}")
+
         jsonresp = resp.json()
 
         return [model["id"] for model in jsonresp.get("data", [])]
