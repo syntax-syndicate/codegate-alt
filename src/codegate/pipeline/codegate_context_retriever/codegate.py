@@ -53,7 +53,7 @@ class CodegateContextRetriever(PipelineStep):
             )
         return context_str
 
-    async def process(
+    async def process(  # noqa: C901
         self, request: ChatCompletionRequest, context: PipelineContext
     ) -> PipelineResult:
         """
@@ -100,9 +100,9 @@ class CodegateContextRetriever(PipelineStep):
         )
 
         # split messages into double newlines, to avoid passing so many content in the search
-        split_messages = re.split(r"</?task>|(\n\n)", user_messages)
+        split_messages = re.split(r"</?task>|\n|\\n", user_messages)
         collected_bad_packages = []
-        for item_message in split_messages:
+        for item_message in filter(None, map(str.strip, split_messages)):
             # Vector search to find bad packages
             bad_packages = await storage_engine.search(query=item_message, distance=0.5, limit=100)
             if bad_packages and len(bad_packages) > 0:
@@ -128,30 +128,39 @@ class CodegateContextRetriever(PipelineStep):
             new_request = request.copy()
 
             # perform replacement in all the messages starting from this index
-            for i in range(last_user_idx, len(new_request["messages"])):
-                message = new_request["messages"][i]
-                message_str = str(message["content"])  # type: ignore
-                context_msg = message_str
-                # Add the context to the last user message
-                base_tool = get_tool_name_from_messages(request)
-                if base_tool in ["cline", "kodu"]:
-                    match = re.search(r"<task>\s*(.*?)\s*</task>(.*)", message_str, re.DOTALL)
-                    if match:
-                        task_content = match.group(1)  # Content within <task>...</task>
-                        rest_of_message = match.group(2).strip()  # Content after </task>, if any
+            base_tool = get_tool_name_from_messages(request)
+            if base_tool != "open interpreter":
+                for i in range(last_user_idx, len(new_request["messages"])):
+                    message = new_request["messages"][i]
+                    message_str = str(message["content"])  # type: ignore
+                    context_msg = message_str
+                    # Add the context to the last user message
+                    if base_tool in ["cline", "kodu"]:
+                        match = re.search(r"<task>\s*(.*?)\s*</task>(.*)", message_str, re.DOTALL)
+                        if match:
+                            task_content = match.group(1)  # Content within <task>...</task>
+                            rest_of_message = match.group(
+                                2
+                            ).strip()  # Content after </task>, if any
 
-                        # Embed the context into the task block
-                        updated_task_content = (
-                            f"<task>Context: {context_str}"
-                            + f"Query: {task_content.strip()}</task>"
-                        )
+                            # Embed the context into the task block
+                            updated_task_content = (
+                                f"<task>Context: {context_str}"
+                                + f"Query: {task_content.strip()}</task>"
+                            )
 
-                        # Combine updated task content with the rest of the message
-                        context_msg = updated_task_content + rest_of_message
-
-                else:
-                    context_msg = f"Context: {context_str} \n\n Query: {message_str}"  # type: ignore
-
-                new_request["messages"][i]["content"] = context_msg
-                logger.debug("Final context message", context_message=context_msg)
+                            # Combine updated task content with the rest of the message
+                            context_msg = updated_task_content + rest_of_message
+                    else:
+                        context_msg = f"Context: {context_str} \n\n Query: {message_str}"
+                    new_request["messages"][i]["content"] = context_msg
+                    logger.debug("Final context message", context_message=context_msg)
+            else:
+                #  just add a message in the end
+                new_request["messages"].append(
+                    {
+                        "content": context_str,
+                        "role": "assistant",
+                    }
+                )
             return PipelineResult(request=new_request, context=context)
