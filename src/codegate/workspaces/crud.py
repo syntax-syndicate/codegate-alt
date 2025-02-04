@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 from typing import List, Optional, Tuple
 from uuid import uuid4 as uuid
@@ -7,11 +6,11 @@ from codegate.db.connection import DbReader, DbRecorder
 from codegate.db.models import (
     ActiveWorkspace,
     MuxRule,
-    MuxRuleProviderEndpoint,
     Session,
     WorkspaceRow,
     WorkspaceWithSessionInfo,
 )
+from codegate.muxing import rulematcher
 
 
 class WorkspaceCrudError(Exception):
@@ -136,6 +135,10 @@ class WorkspaceCrud:
         session.last_update = datetime.datetime.now(datetime.timezone.utc)
         db_recorder = DbRecorder()
         await db_recorder.update_session(session)
+
+        # Ensure the mux registry is updated
+        mux_registry = await rulematcher.get_muxing_rules_registry()
+        await mux_registry.set_active_workspace(workspace.name)
         return
 
     async def recover_workspace(self, workspace_name: str):
@@ -190,6 +193,10 @@ class WorkspaceCrud:
             _ = await db_recorder.soft_delete_workspace(selected_workspace)
         except Exception:
             raise WorkspaceCrudError(f"Error deleting workspace {workspace_name}")
+
+        # Remove the muxes from the registry
+        mux_registry = await rulematcher.get_muxing_rules_registry()
+        await mux_registry.delete_ws_rules(workspace_name)
         return
 
     async def hard_delete_workspace(self, workspace_name: str):
@@ -242,24 +249,10 @@ class WorkspaceCrud:
 
         return muxes
 
-    async def get_muxes_with_provider_info(
-        self, workspace_name: str
-    ) -> List[MuxRuleProviderEndpoint]:
-
-        # Verify if workspace exists
-        workspace = await self._db_reader.get_workspace_by_name(workspace_name)
-        if not workspace:
-            raise WorkspaceDoesNotExistError(f"Workspace {workspace_name} does not exist.")
-
-        try:
-            dbmuxes = await self._db_reader.get_muxes_with_provider_by_workspace(workspace.id)
-        except Exception:
-            raise WorkspaceCrudError(f"Error getting muxes for workspace {workspace_name}")
-
-        return dbmuxes
-
     # Can't use type hints since the models are not yet defined
     async def set_muxes(self, workspace_name: str, muxes):
+        from codegate.api import v1_models
+
         # Verify if workspace exists
         workspace = await self._db_reader.get_workspace_by_name(workspace_name)
         if not workspace:
@@ -269,23 +262,19 @@ class WorkspaceCrud:
         db_recorder = DbRecorder()
         await db_recorder.delete_muxes_by_workspace(workspace.id)
 
-        tasks = set()
-
         # Add the new muxes
         priority = 0
 
+        muxes_with_routes: List[Tuple[v1_models.MuxRule, rulematcher.ModelRoute]] = []
+
         # Verify all models are valid
         for mux in muxes:
-            dbm = await self._db_reader.get_provider_model_by_provider_id_and_name(
-                mux.provider_id,
-                mux.model,
-            )
-            if not dbm:
-                raise WorkspaceCrudError(
-                    f"Model {mux.model} does not exist for provider {mux.provider_id}"
-                )
+            route = await self.get_routing_for_mux(mux)
+            muxes_with_routes.append((mux, route))
 
-        for mux in muxes:
+        matchers: List[rulematcher.MuxingRuleMatcher] = []
+
+        for mux, route in muxes_with_routes:
             new_mux = MuxRule(
                 id=str(uuid()),
                 provider_endpoint_id=mux.provider_id,
@@ -295,14 +284,108 @@ class WorkspaceCrud:
                 matcher_blob=mux.matcher if mux.matcher else "",
                 priority=priority,
             )
-            tasks.add(db_recorder.add_mux(new_mux))
+            dbmux = await db_recorder.add_mux(new_mux)
+
+            matchers.append(rulematcher.MuxingMatcherFactory.create(dbmux, route))
 
             priority += 1
 
-        await asyncio.gather(*tasks)
+        # Set routing list for the workspace
+        mux_registry = await rulematcher.get_muxing_rules_registry()
+        await mux_registry.set_ws_rules(workspace_name, matchers)
 
-    async def get_active_workspace_muxes(self) -> List[MuxRuleProviderEndpoint]:
-        active_workspace = await self.get_active_workspace()
-        if not active_workspace:
-            raise WorkspaceCrudError("No active workspace found.")
-        return await self.get_muxes_with_provider_info(active_workspace.name)
+    async def get_routing_for_mux(self, mux) -> rulematcher.ModelRoute:
+        """Get the routing for a mux
+
+        Note that this particular mux object is the API model, not the database model.
+        It's only not annotated because of a circular import issue.
+        """
+        dbprov = await self._db_reader.get_provider_endpoint_by_id(mux.provider_id)
+        if not dbprov:
+            raise WorkspaceCrudError(f"Provider {mux.provider_id} does not exist")
+
+        dbm = await self._db_reader.get_provider_model_by_provider_id_and_name(
+            mux.provider_id,
+            mux.model,
+        )
+        if not dbm:
+            raise WorkspaceCrudError(
+                f"Model {mux.model} does not exist for provider {mux.provider_id}"
+            )
+        dbauth = await self._db_reader.get_auth_material_by_provider_id(mux.provider_id)
+        if not dbauth:
+            raise WorkspaceCrudError(f"Auth material for provider {mux.provider_id} does not exist")
+
+        return rulematcher.ModelRoute(
+            provider=dbprov,
+            model=dbm,
+            auth=dbauth,
+        )
+
+    async def get_routing_for_db_mux(self, mux: MuxRule) -> rulematcher.ModelRoute:
+        """Get the routing for a mux
+
+        Note that this particular mux object is the database model, not the API model.
+        It's only not annotated because of a circular import issue.
+        """
+        dbprov = await self._db_reader.get_provider_endpoint_by_id(mux.provider_endpoint_id)
+        if not dbprov:
+            raise WorkspaceCrudError(f"Provider {mux.provider_endpoint_id} does not exist")
+
+        dbm = await self._db_reader.get_provider_model_by_provider_id_and_name(
+            mux.provider_endpoint_id,
+            mux.provider_model_name,
+        )
+        if not dbm:
+            raise WorkspaceCrudError(
+                f"Model {mux.provider_model_name} does not "
+                "exist for provider {mux.provider_endpoint_id}"
+            )
+        dbauth = await self._db_reader.get_auth_material_by_provider_id(mux.provider_endpoint_id)
+        if not dbauth:
+            raise WorkspaceCrudError(
+                f"Auth material for provider {mux.provider_endpoint_id} does not exist"
+            )
+
+        return rulematcher.ModelRoute(
+            model=dbm,
+            endpoint=dbprov,
+            auth_material=dbauth,
+        )
+
+    async def initialize_mux_registry(self) -> None:
+        """Initialize the mux registry with all workspaces in the database"""
+
+        active_ws = await self.get_active_workspace()
+        if active_ws:
+            mux_registry = await rulematcher.get_muxing_rules_registry()
+            await mux_registry.set_active_workspace(active_ws.name)
+
+        await self.repopulate_mux_cache()
+
+    async def repopulate_mux_cache(self) -> None:
+        """Repopulate the mux cache with all muxes in the database"""
+
+        # Get all workspaces
+        workspaces = await self.get_workspaces()
+
+        mux_registry = await rulematcher.get_muxing_rules_registry()
+
+        # Remove any workspaces from cache that are not in the database
+        ws_names = set(ws.name for ws in workspaces)
+        cached_ws = set(await mux_registry.get_registries())
+        ws_to_remove = cached_ws - ws_names
+        for ws in ws_to_remove:
+            await mux_registry.delete_ws_rules(ws)
+
+        # For each workspace, get the muxes and set them in the registry
+        for ws in workspaces:
+            muxes = await self._db_reader.get_muxes_by_workspace(ws.id)
+
+            matchers: List[rulematcher.MuxingRuleMatcher] = []
+
+            for mux in muxes:
+                route = await self.get_routing_for_db_mux(mux)
+                matchers.append(rulematcher.MuxingMatcherFactory.create(mux, route))
+
+            await mux_registry.set_ws_rules(ws.name, matchers)
