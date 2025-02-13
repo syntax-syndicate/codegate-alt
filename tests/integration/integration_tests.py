@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Tuple
 import requests
 import structlog
 import yaml
-from checks import CheckLoader
+from checks import CheckLoader, CodeGateEnrichment
 from dotenv import find_dotenv, load_dotenv
 from requesters import RequesterFactory
 
@@ -21,7 +21,7 @@ class CodegateTestRunner:
         self.requester_factory = RequesterFactory()
         self.failed_tests = []  # Track failed tests
 
-    def call_codegate(
+    def call_provider(
         self, url: str, headers: dict, data: dict, provider: str, method: str = "POST"
     ) -> Optional[requests.Response]:
         logger.debug(f"Creating requester for provider: {provider}")
@@ -132,17 +132,28 @@ class CodegateTestRunner:
 
     async def run_test(self, test: dict, test_headers: dict) -> bool:
         test_name = test["name"]
-        url = test["url"]
         data = json.loads(test["data"])
+        codegate_url = test["url"]
         streaming = data.get("stream", False)
         provider = test["provider"]
-
         logger.info(f"Starting test: {test_name}")
 
-        response = self.call_codegate(url, test_headers, data, provider)
+        # Call Codegate
+        response = self.call_provider(codegate_url, test_headers, data, provider)
         if not response:
             logger.error(f"Test {test_name} failed: No response received")
             return False
+
+        # Call model directly if specified
+        direct_response = None
+        if test.get(CodeGateEnrichment.KEY) is not None:
+            direct_provider_url = test.get(CodeGateEnrichment.KEY)["provider_url"]
+            direct_response = self.call_provider(
+                direct_provider_url, test_headers, data, "not-codegate"
+            )
+            if not direct_response:
+                logger.error(f"Test {test_name} failed: No direct response received")
+                return False
 
         # Debug response info
         logger.debug(f"Response status: {response.status_code}")
@@ -152,13 +163,24 @@ class CodegateTestRunner:
             parsed_response = self.parse_response_message(response, streaming=streaming)
             logger.debug(f"Response message: {parsed_response}")
 
+            if direct_response:
+                # Dirty hack to pass direct response to checks
+                test["direct_response"] = self.parse_response_message(
+                    direct_response, streaming=streaming
+                )
+                logger.debug(f"Direct response message: {test['direct_response']}")
+
             # Load appropriate checks for this test
             checks = CheckLoader.load(test)
 
             # Run all checks
             all_passed = True
             for check in checks:
+                logger.info(f"Running check: {check.__class__.__name__}")
                 passed_check = await check.run_check(parsed_response, test)
+                logger.info(
+                    f"Check {check.__class__.__name__} {'passed' if passed_check else 'failed'}"
+                )
                 if not passed_check:
                     all_passed = False
 
@@ -379,6 +401,7 @@ async def main():
     # Exit with status code 1 if any tests failed
     if not all_tests_passed:
         sys.exit(1)
+    logger.info("All tests passed")
 
 
 if __name__ == "__main__":
