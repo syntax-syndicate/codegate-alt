@@ -37,20 +37,20 @@ models.
 </picture>
 
 ---
-## ✨ Why choose CodeGate?
+## Why choose CodeGate?
 
 AI coding assistants are powerful, but they can inadvertently introduce risks and configurations
 can sprawl across multiple IDE extensions, plugins and agent systems. CodeGate simplifies the management of AI model and provider configurations and provides additional features to help you keep your development process safe.
 
-- 🌐 Centralize and manage all your AI coding assistants in one place
-- 🔄 Mux / Route prompts to different AI models based on workspaces or file types 
-- 🔑 Centrally configure and manage your provider credentials and API keys
-- 🛡️ Protect your development process from accidental exposure of secrets and sensitive personal data to the cloud
-- 🔒 Ensure that the recommendations provided by your AI coding assistants follow secure coding practices
-- 🚫 Prevent malicious or deprecated libraries from being recommended to you by an LLM
+-  Centralize and manage all your AI coding assistants in one place
+-  Mux / Route prompts to different AI models based on workspaces or file types 
+-  Centrally configure and manage your provider credentials and API keys
+-  Protect your development process from accidental exposure of secrets and sensitive personal data to the cloud
+-  Ensure that the recommendations provided by your AI coding assistants follow secure coding practices
+-  Prevent malicious or deprecated libraries from being recommended to you by an LLM
 
 ---
-## 🚀 Quickstart
+##  Quickstart
 
 ### Prerequisites
 
@@ -83,7 +83,7 @@ Now it's time to configure your preferred AI coding assistant to use CodeGate
 documentation.
 
 ---
-## 🖥️ Dashboard
+##  Dashboard
 
 CodeGate includes a web dashboard that provides:
 
@@ -104,7 +104,7 @@ To learn more, visit the
 [CodeGate Dashboard documentation](https://docs.codegate.ai/how-to/dashboard).
 
 ---
-## 🔐 Features
+## Features
 
 ### Workspace management
 
@@ -196,18 +196,18 @@ or potential vulnerabilities to help you adopt more secure coding practices.
   - OpenAI and compatible APIs
 
 ---
-## 🛡️ Privacy first
+## Privacy first
 
 Unlike other tools, with CodeGate **your code never leaves your machine**.
 CodeGate is built with privacy at its core:
 
-- 🏠 **Everything stays local**
-- 🚫 **No external data collection**
-- 🔐 **No calling home or telemetry**
-- 💪 **Complete control over your data**
+-  **Everything stays local**
+-  **No external data collection**
+-  **No calling home or telemetry**
+-  **Complete control over your data**
 
 ---
-## 🛠️ Development
+## Development
 
 Are you a developer looking to contribute? Dive into our technical resources:
 
@@ -217,13 +217,13 @@ Are you a developer looking to contribute? Dive into our technical resources:
 - [Logging system](https://github.com/stacklok/codegate/blob/main/docs/logging.md)
 
 ---
-## 📜 License
+## License
 
 CodeGate is licensed under the terms specified in the
 [LICENSE file](https://github.com/stacklok/codegate/blob/main/LICENSE).
 
 ---
-## 🌟 Support us
+## Support us
 
 Love CodeGate? Starring this repository and sharing it with others helps
 CodeGate grow 🌱
@@ -231,7 +231,7 @@ CodeGate grow 🌱
 [![Star on GitHub](https://img.shields.io/github/stars/stacklok/codegate.svg?style=social)](https://github.com/stacklok/codegate)
 
 ---
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Whether you're submitting bug reports, feature
 requests, or code contributions, your input makes CodeGate better for everyone.
